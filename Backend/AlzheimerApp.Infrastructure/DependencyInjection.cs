@@ -1,4 +1,6 @@
-﻿using AlzheimerApp.Infrastructure.Persistence;
+﻿using AlzheimerApp.Application.Interfaces.Repositories;
+using AlzheimerApp.Infrastructure.Persistence;
+using AlzheimerApp.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +16,10 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString));
+
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ILocationLogRepository, LocationLogRepository>();
+
 
         return services;
     }
