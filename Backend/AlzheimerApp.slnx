@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="AlzheimerApp.API/AlzheimerApp.API.csproj" />
+  <Project Path="AlzheimerApp.Application/AlzheimerApp.Application.csproj" />
+  <Project Path="AlzheimerApp.Domain/AlzheimerApp.Domain.csproj" />
+  <Project Path="AlzheimerApp.Infrastructure/AlzheimerApp.Infrastructure.csproj" />
+</Solution>
