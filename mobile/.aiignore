@@ -1,0 +1,64 @@
+# Flutter Generated
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+android/.gradle/
+android/app/build/
+
+# iOS
+ios/Pods/
+ios/build/
+
+# macOS
+macos/Pods/
+macos/build/
+
+# Web
+web/build/
+
+# Coverage
+coverage/
+
+# Generated Dart Files
+*.g.dart
+*.freezed.dart
+*.gen.dart
+*.config.dart
+
+# Firebase Generated
+firebase_options.dart
+
+# Logs
+*.log
+
+# Binary Files
+*.apk
+*.aab
+*.ipa
+
+# Media
+*.mp4
+*.mov
+*.zip
+*.rar
+*.7z
+
+# IDE
+.idea/
+.vscode/
+
+# Git
+.git/
+
+# Environment
+.env
+.env.*
+*.keystore
+*.jks
+
+# Temporary
+.tmp/
+temp/
