@@ -5,9 +5,11 @@ import 'package:mobile/features/caregiver/geofence_alert_screen.dart';
 import 'package:mobile/features/patient/memory_module_screen.dart';
 import 'package:mobile/features/patient/patient_home_screen.dart';
 import 'core/app_theme.dart';
+import 'core/di/injection.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  configureDependencies();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
