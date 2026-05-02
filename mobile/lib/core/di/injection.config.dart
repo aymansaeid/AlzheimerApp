@@ -20,6 +20,8 @@ import '../../features/auth/data/repositories/auth_repository_impl.dart'
     as _i153;
 import '../../features/auth/domain/repositories/auth_repository.dart' as _i787;
 import '../../features/auth/domain/usecases/login_usecase.dart' as _i188;
+import '../../features/auth/domain/usecases/register_usecase.dart' as _i941;
+import '../../features/auth/presentation/bloc/auth_bloc.dart' as _i797;
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
@@ -38,18 +40,11 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
     );
+    gh.lazySingleton<_i107.AuthRemoteDataSource>(
+      () => _i107.AuthRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
-    );
-    gh.lazySingleton<_i667.DioClient>(
-      () => _i667.DioClient(
-        gh<_i361.Dio>(),
-        gh<_i745.AuthInterceptor>(),
-        gh<_i344.LoggingInterceptor>(),
-      ),
-    );
-    gh.lazySingleton<_i107.AuthRemoteDataSource>(
-      () => _i107.AuthRemoteDataSourceImpl(gh<_i667.DioClient>()),
     );
     gh.lazySingleton<_i787.AuthRepository>(
       () => _i153.AuthRepositoryImpl(
@@ -59,6 +54,20 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),
+    );
+    gh.lazySingleton<_i941.RegisterUseCase>(
+      () => _i941.RegisterUseCase(gh<_i787.AuthRepository>()),
+    );
+    gh.lazySingleton<_i667.DioClient>(
+      () => _i667.DioClient(
+        gh<_i361.Dio>(),
+        gh<_i745.AuthInterceptor>(),
+        gh<_i344.LoggingInterceptor>(),
+      ),
+    );
+    gh.factory<_i797.AuthBloc>(
+      () =>
+          _i797.AuthBloc(gh<_i188.LoginUseCase>(), gh<_i941.RegisterUseCase>()),
     );
     return this;
   }

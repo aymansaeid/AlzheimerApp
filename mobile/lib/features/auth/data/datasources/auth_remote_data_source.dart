@@ -1,32 +1,94 @@
+import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
-import '../../../../core/network/dio_client.dart';
 import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
-  Future<({UserModel user, String token})> login(String email, String password);
+  Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  });
+
+  Future<Map<String, dynamic>> register({
+    required String fullName,
+    required String email,
+    required String password,
+    required String role,
+  });
 }
 
 @LazySingleton(as: AuthRemoteDataSource)
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  final DioClient _dioClient;
+  final Dio dio;
 
-  AuthRemoteDataSourceImpl(this._dioClient);
+  AuthRemoteDataSourceImpl(this.dio);
 
   @override
-  Future<({UserModel user, String token})> login(String email, String password) async {
-    final response = await _dioClient.post(
-      '/auth/login',
-      data: {
-        'email': email,
-        'password': password,
-      },
+  Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  }) async {
+    // try {
+    //   final response = await dio.post('/api/auth/login', data: {
+    //     'email': email,
+    //     'password': password,
+    //   });
+    //   return response.data;
+    // } catch (e) {
+    //   throw ServerException();
+    // }
+
+    // Backend'i simüle etmek için 2 saniye bekle
+    await Future.delayed(const Duration(seconds: 2));
+
+    final mockUserModel = UserModel(
+      id: 'mock_id_123',
+      email: email,
+      role: 'patient',
+      fullName: 'Ahmet Bey',
+      isActive: true,
+      createdAt: DateTime.now(),
     );
 
-    // Assuming the API returns JSON like:
-    // { "user": { "id": "...", "email": "...", "name": "...", "role": "..." }, "token": "..." }
-    final user = UserModel.fromJson(response.data['user'] as Map<String, dynamic>);
-    final token = response.data['token'] as String;
-    
-    return (user: user, token: token);
+    return {
+      'user': mockUserModel.toJson(),
+      'token': 'mock_jwt_token_123',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> register({
+    required String fullName,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    // try {
+    //   final response = await dio.post('/api/auth/register', data: {
+    //     'full_name': fullName,
+    //     'email': email,
+    //     'password': password,
+    //     'role': role,
+    //   });
+    //   return response.data;
+    // } catch (e) {
+    //   throw ServerException();
+    // }
+
+    // Backend'i simüle etmek için 2 saniye bekle
+    await Future.delayed(const Duration(seconds: 2));
+
+    final mockUserModel = UserModel(
+      id: 'mock_id_999',
+      email: email,
+      role: role,
+      fullName: fullName,
+      isActive: true,
+      createdAt: DateTime.now(),
+    );
+
+    return {
+      'user': mockUserModel.toJson(),
+      'token': 'mock_jwt_token_123',
+    };
   }
 }
