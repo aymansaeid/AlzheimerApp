@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile/features/caregiver/caregiver_dashboard_screen.dart';
-import 'package:mobile/features/caregiver/geofence_alert_screen.dart';
-import 'package:mobile/features/patient/memory_module_screen.dart';
-import 'package:mobile/features/patient/patient_home_screen.dart';
 import 'core/app_theme.dart';
 import 'core/di/injection.dart';
+import 'core/router/app_router.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,17 +21,11 @@ class AlzheimerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Alzheimer Takip',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const DevPreviewScreen(), // Replace with real auth flow
-      routes: {
-        '/patient/home': (_) => const PatientHomeScreen(),
-        '/patient/memory': (_) => const MemoryModuleScreen(),
-        '/caregiver/dashboard': (_) => const CaregiverDashboardScreen(),
-        '/caregiver/geofence-alert': (_) => const GeofenceAlertScreen(),
-      },
+      routerConfig: appRouter,
     );
   }
 }
