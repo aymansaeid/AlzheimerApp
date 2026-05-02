@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '/core/app_theme.dart';
-import '/core/shared_widgets.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_bottom_nav_bar.dart';
 
-// ─── Data Model ──────────────────────────────────────────────────────────────
 class MemoryPerson {
   final String name;
   final String relationship;
@@ -21,9 +20,34 @@ class MemoryPerson {
   });
 }
 
-// ─── Screen ──────────────────────────────────────────────────────────────────
 class MemoryModuleScreen extends StatefulWidget {
-  const MemoryModuleScreen({super.key});
+  final List<MemoryPerson> people;
+  final int currentTabIndex;
+  final ValueChanged<int> onTabTapped;
+
+  const MemoryModuleScreen({
+    super.key,
+    required this.onTabTapped,
+    this.currentTabIndex = 2,
+    this.people = const [
+      MemoryPerson(
+        name: 'Fatma Hanım',
+        relationship: 'Eşiniz • 42 yıldır birliktesiniz',
+        emoji: '👩',
+        voiceMessage: '"Seni çok seviyorum Ahmet. Her zaman yanındayım."',
+        cardColor: Color(0xFFE1F5EE),
+        photoEmojis: ['📷', '🏡', '💒'],
+      ),
+      MemoryPerson(
+        name: 'Mehmet',
+        relationship: 'Oğlunuz • İstanbul\'da yaşıyor',
+        emoji: '👦',
+        voiceMessage: '"Babacığım, seni çok özledim. Yarın geliyorum."',
+        cardColor: Color(0xFFE6F1FB),
+        photoEmojis: ['📷', '⚽', '🎓'],
+      ),
+    ],
+  });
 
   @override
   State<MemoryModuleScreen> createState() => _MemoryModuleScreenState();
@@ -32,45 +56,16 @@ class MemoryModuleScreen extends StatefulWidget {
 class _MemoryModuleScreenState extends State<MemoryModuleScreen> {
   int _currentIndex = 0;
 
-  final List<MemoryPerson> _people = const [
-    MemoryPerson(
-      name: 'Fatma Hanım',
-      relationship: 'Eşiniz • 42 yıldır birliktesiniz',
-      emoji: '👩',
-      voiceMessage: '"Seni çok seviyorum Ahmet. Her zaman yanındayım."',
-      cardColor: AppColors.teal50,
-      photoEmojis: ['📷', '🏡', '💒'],
-    ),
-    MemoryPerson(
-      name: 'Mehmet',
-      relationship: 'Oğlunuz • İstanbul\'da yaşıyor',
-      emoji: '👦',
-      voiceMessage: '"Babacığım, seni çok özledim. Yarın geliyorum."',
-      cardColor: AppColors.blue50,
-      photoEmojis: ['📷', '⚽', '🎓'],
-    ),
-    MemoryPerson(
-      name: 'Zeynep',
-      relationship: 'Kızınız • Ankara\'da yaşıyor',
-      emoji: '👧',
-      voiceMessage:
-          '"Baba, seni çok seviyoruz. Geçen hafta ki piknik harikaydı!"',
-      cardColor: AppColors.coral50,
-      photoEmojis: ['📷', '🎨', '🌸'],
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Sevdiklerin 💝'),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: AppColors.border),
+          child: Container(height: 1, color: theme.colorScheme.outlineVariant),
         ),
       ),
       body: SafeArea(
@@ -78,42 +73,42 @@ class _MemoryModuleScreenState extends State<MemoryModuleScreen> {
           children: [
             Expanded(
               child: PageView.builder(
-                itemCount: _people.length,
+                itemCount: widget.people.length,
                 onPageChanged: (i) => setState(() => _currentIndex = i),
-                itemBuilder: (ctx, i) => _PersonCard(person: _people[i]),
+                itemBuilder: (ctx, i) => _PersonCard(person: widget.people[i]),
               ),
             ),
-            _buildPageIndicator(),
+            _buildPageIndicator(theme),
             const SizedBox(height: 16),
           ],
         ),
       ),
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: 2,
+        currentIndex: widget.currentTabIndex,
         items: const [
           AppNavItem(icon: Icons.home_rounded, label: 'Ana Sayfa'),
           AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlar'),
           AppNavItem(icon: Icons.photo_album_rounded, label: 'Anılar'),
           AppNavItem(icon: Icons.call_rounded, label: 'Ara'),
         ],
-        onTap: (_) {},
+        onTap: widget.onTabTapped,
       ),
     );
   }
 
-  Widget _buildPageIndicator() {
+  Widget _buildPageIndicator(ThemeData theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
-        _people.length,
+        widget.people.length,
         (i) => AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: i == _currentIndex ? 20 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: i == _currentIndex ? AppColors.teal400 : AppColors.border,
-            borderRadius: AppRadius.full,
+            color: i == _currentIndex ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
       ),
@@ -121,7 +116,6 @@ class _MemoryModuleScreenState extends State<MemoryModuleScreen> {
   }
 }
 
-// ─── Person Card ─────────────────────────────────────────────────────────────
 class _PersonCard extends StatefulWidget {
   final MemoryPerson person;
   const _PersonCard({required this.person});
@@ -130,8 +124,7 @@ class _PersonCard extends StatefulWidget {
   State<_PersonCard> createState() => _PersonCardState();
 }
 
-class _PersonCardState extends State<_PersonCard>
-    with SingleTickerProviderStateMixin {
+class _PersonCardState extends State<_PersonCard> with SingleTickerProviderStateMixin {
   bool _isPlayingVoice = false;
   late AnimationController _voiceAnimCtrl;
 
@@ -152,6 +145,8 @@ class _PersonCardState extends State<_PersonCard>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Column(
@@ -161,8 +156,8 @@ class _PersonCardState extends State<_PersonCard>
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _buildPhotoArea(),
-                  Expanded(child: _buildInfoArea()),
+                  _buildPhotoArea(theme),
+                  Expanded(child: _buildInfoArea(theme)),
                 ],
               ),
             ),
@@ -172,12 +167,11 @@ class _PersonCardState extends State<_PersonCard>
     );
   }
 
-  Widget _buildPhotoArea() {
+  Widget _buildPhotoArea(ThemeData theme) {
     return Container(
       height: 220,
       decoration: BoxDecoration(
         color: widget.person.cardColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Stack(
         children: [
@@ -191,22 +185,18 @@ class _PersonCardState extends State<_PersonCard>
             bottom: 12,
             right: 12,
             child: Row(
-              children: widget.person.photoEmojis
-                  .map(
-                    (e) => Container(
-                      width: 32,
-                      height: 32,
-                      margin: const EdgeInsets.only(left: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
-                        borderRadius: AppRadius.sm,
-                      ),
-                      child: Center(
-                        child: Text(e, style: const TextStyle(fontSize: 16)),
-                      ),
-                    ),
-                  )
-                  .toList(),
+              children: widget.person.photoEmojis.map((e) => Container(
+                width: 32,
+                height: 32,
+                margin: const EdgeInsets.only(left: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.85),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(e, style: const TextStyle(fontSize: 16)),
+                ),
+              )).toList(),
             ),
           ),
         ],
@@ -214,73 +204,65 @@ class _PersonCardState extends State<_PersonCard>
     );
   }
 
-  Widget _buildInfoArea() {
+  Widget _buildInfoArea(ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.person.name, style: AppTextStyles.headingLarge),
+          Text(widget.person.name, style: theme.textTheme.headlineLarge),
           const SizedBox(height: 4),
-          Text(widget.person.relationship, style: AppTextStyles.bodySmall),
-          const SizedBox(height: AppSpacing.lg),
-          _buildVoiceMessageCard(),
+          Text(widget.person.relationship, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 16),
+          _buildVoiceMessageCard(theme),
           const Spacer(),
-          _buildActionButtons(),
+          _buildActionButtons(theme),
         ],
       ),
     );
   }
 
-  Widget _buildVoiceMessageCard() {
+  Widget _buildVoiceMessageCard(ThemeData theme) {
     return GestureDetector(
       onTap: _toggleVoice,
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.gray50,
-          borderRadius: AppRadius.md,
-          border: Border.all(color: AppColors.border),
+          color: theme.colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              width: 40,
-              height: 40,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: _isPlayingVoice ? AppColors.teal400 : AppColors.teal50,
-                borderRadius: AppRadius.sm,
+                color: _isPlayingVoice ? theme.colorScheme.primary : theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                _isPlayingVoice
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
-                color: _isPlayingVoice ? Colors.white : AppColors.teal400,
-                size: 22,
+                _isPlayingVoice ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: _isPlayingVoice ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
+                size: 28,
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.person.voiceMessage,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
-                      fontStyle: FontStyle.italic,
-                      height: 1.4,
-                    ),
+                    style: theme.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
                   ),
                   const SizedBox(height: 4),
                   if (_isPlayingVoice)
                     _VoiceWaveform()
                   else
-                    const Text(
+                    Text(
                       'Sesli mesajı oynat',
-                      style: TextStyle(fontSize: 11, color: AppColors.teal600),
+                      style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary),
                     ),
                 ],
               ),
@@ -291,44 +273,22 @@ class _PersonCardState extends State<_PersonCard>
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(ThemeData theme) {
     return Row(
       children: [
         Expanded(
           child: ElevatedButton.icon(
             onPressed: _toggleVoice,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.teal400,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.md),
-            ),
-            icon: Icon(
-              _isPlayingVoice ? Icons.pause_rounded : Icons.volume_up_rounded,
-              size: 18,
-            ),
-            label: Text(
-              _isPlayingVoice ? 'Durdur' : 'Sesli Mesaj',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
+            icon: Icon(_isPlayingVoice ? Icons.pause_rounded : Icons.volume_up_rounded, size: 20),
+            label: Text(_isPlayingVoice ? 'Durdur' : 'Sesli Mesaj', style: const TextStyle(fontSize: 16)),
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
+        const SizedBox(width: 8),
         Expanded(
           child: OutlinedButton.icon(
             onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.teal400,
-              side: const BorderSide(color: AppColors.teal200, width: 1.5),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.md),
-            ),
-            icon: const Icon(Icons.photo_library_outlined, size: 18),
-            label: const Text(
-              'Fotoğraflar',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
+            icon: const Icon(Icons.photo_library_outlined, size: 20),
+            label: const Text('Fotoğraflar', style: TextStyle(fontSize: 16)),
           ),
         ),
       ],
@@ -347,14 +307,12 @@ class _PersonCardState extends State<_PersonCard>
   }
 }
 
-// ─── Voice Waveform ───────────────────────────────────────────────────────────
 class _VoiceWaveform extends StatefulWidget {
   @override
   State<_VoiceWaveform> createState() => _VoiceWaveformState();
 }
 
-class _VoiceWaveformState extends State<_VoiceWaveform>
-    with TickerProviderStateMixin {
+class _VoiceWaveformState extends State<_VoiceWaveform> with TickerProviderStateMixin {
   late List<AnimationController> _controllers;
   final List<double> _heights = [6, 10, 14, 10, 8, 14, 6, 10, 12, 8];
 
@@ -380,6 +338,7 @@ class _VoiceWaveformState extends State<_VoiceWaveform>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SizedBox(
       height: 18,
       child: Row(
@@ -392,8 +351,8 @@ class _VoiceWaveformState extends State<_VoiceWaveform>
               height: 4 + (_heights[i] * _controllers[i].value),
               margin: const EdgeInsets.symmetric(horizontal: 1),
               decoration: BoxDecoration(
-                color: AppColors.teal400,
-                borderRadius: AppRadius.full,
+                color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(999),
               ),
             ),
           ),
