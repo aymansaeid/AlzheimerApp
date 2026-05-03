@@ -1,6 +1,6 @@
 ﻿using AlzheimerApp.Domain.Enums;
 
-namespace AlzheimerApp.Application.DTOs;
+namespace AlzheimerApp.Application.DTOs.Auth;
 
 public class RegisterDto
 {

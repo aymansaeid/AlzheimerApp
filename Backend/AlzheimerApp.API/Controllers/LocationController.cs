@@ -1,5 +1,5 @@
 ﻿using AlzheimerApp.API.Hubs;
-using AlzheimerApp.Application.DTOs;
+using AlzheimerApp.Application.DTOs.Locations;
 using AlzheimerApp.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +22,7 @@ public class LocationController : ControllerBase
     }
 
     [HttpPost("log")]
-    public async Task<IActionResult> LogLocation([FromBody] LocationDto dto)
+    public async Task<IActionResult> LogLocation([FromBody] LocationRequest dto)
     {
         try
         {

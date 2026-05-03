@@ -6,4 +6,7 @@ public interface IPatientFollowerRepository
 {
     // We need this to find the family members tracking this specific patient
     Task<List<User>> GetFollowersByPatientIdAsync(Guid patientId);
+
+    Task<PatientFollower> AddAsync(PatientFollower patientFollower);
+    Task<bool> RelationshipExistsAsync(Guid patientId, Guid followerId);
 }

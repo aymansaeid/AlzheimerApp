@@ -1,4 +1,4 @@
-﻿using AlzheimerApp.Application.DTOs;
+﻿using AlzheimerApp.Application.DTOs.SafeZones;
 using AlzheimerApp.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

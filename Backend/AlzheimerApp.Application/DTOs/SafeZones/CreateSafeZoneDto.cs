@@ -1,4 +1,4 @@
-﻿namespace AlzheimerApp.Application.DTOs;
+﻿namespace AlzheimerApp.Application.DTOs.SafeZones;
 
 public class CreateSafeZoneDto
 {

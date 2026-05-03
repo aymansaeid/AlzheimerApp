@@ -1,6 +1,6 @@
-﻿namespace AlzheimerApp.Application.DTOs;
+﻿namespace AlzheimerApp.Application.DTOs.Locations;
 
-public class LocationDto
+public class LocationRequest
 {
     public Guid PatientId { get; set; }
     public double Latitude { get; set; }

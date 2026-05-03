@@ -23,4 +23,17 @@ public class PatientFollowerRepository : IPatientFollowerRepository
             .Select(pf => pf.Follower!)
             .ToListAsync();
     }
+
+    public async Task<PatientFollower> AddAsync(PatientFollower patientFollower)
+    {
+        await _context.PatientFollowers.AddAsync(patientFollower);
+        await _context.SaveChangesAsync();
+        return patientFollower;
+    }
+
+    public async Task<bool> RelationshipExistsAsync(Guid patientId, Guid followerId)
+    {
+        return await _context.PatientFollowers
+            .AnyAsync(pf => pf.PatientId == patientId && pf.FollowerId == followerId);
+    }
 }

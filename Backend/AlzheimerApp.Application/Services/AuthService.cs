@@ -1,4 +1,4 @@
-﻿using AlzheimerApp.Application.DTOs;
+﻿using AlzheimerApp.Application.DTOs.Auth;
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;

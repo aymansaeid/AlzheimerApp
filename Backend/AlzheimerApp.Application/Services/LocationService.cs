@@ -1,4 +1,4 @@
-﻿using AlzheimerApp.Application.DTOs;
+﻿using AlzheimerApp.Application.DTOs.Locations;
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
@@ -14,7 +14,6 @@ public class LocationService : ILocationService
     private readonly INotificationService _notificationService;
     private readonly IAlertHistoryRepository _alertRepository;
 
-    // 👉 Inject our new tools!
     public LocationService(
         ILocationLogRepository locationRepository,
         ISafeZoneRepository safeZoneRepository,
@@ -29,9 +28,9 @@ public class LocationService : ILocationService
         _alertRepository = alertRepository;
     }
 
-    public async Task<LocationLog> LogLocationAsync(LocationDto dto)
+    public async Task<LocationLog> LogLocationAsync(LocationRequest request) 
     {
-        var activeSafeZones = await _safeZoneRepository.GetActiveSafeZonesByPatientIdAsync(dto.PatientId);
+        var activeSafeZones = await _safeZoneRepository.GetActiveSafeZonesByPatientIdAsync(request.PatientId);
         bool isOutside = false;
         bool alertSent = false;
 
@@ -40,7 +39,7 @@ public class LocationService : ILocationService
             isOutside = true;
             foreach (var zone in activeSafeZones)
             {
-                double distanceToCenter = CalculateDistanceMeters(dto.Latitude, dto.Longitude, zone.CenterLat, zone.CenterLng);
+                double distanceToCenter = CalculateDistanceMeters(request.Latitude, request.Longitude, zone.CenterLat, zone.CenterLng);
                 if (distanceToCenter <= zone.RadiusMeters)
                 {
                     isOutside = false;
@@ -52,45 +51,45 @@ public class LocationService : ILocationService
         // THE ALARM TRIGGER LOGIC
         if (isOutside)
         {
-            // 1. Get all family members following this patient
-            var followers = await _followerRepository.GetFollowersByPatientIdAsync(dto.PatientId);
+            string alertMessage = "EMERGENCY: The patient has left the designated Safe Zone!";
 
-            // 2. Extract their mobile device tokens (ignoring ones who haven't logged in on a phone yet)
+            // 1. ALWAYS log the alert to the database history immediately!
+            var alertHistory = new AlertHistory
+            {
+                PatientId = request.PatientId,
+                AlertType = AlertType.SafeZoneBreach,
+                Message = alertMessage,
+                IsRead = false,
+                SentAt = DateTime.UtcNow
+            };
+            await _alertRepository.AddAsync(alertHistory);
+
+            // 2. Get all family members following this patient
+            var followers = await _followerRepository.GetFollowersByPatientIdAsync(request.PatientId);
+
+            // 3. Extract their mobile device tokens
             var tokens = followers.Where(f => !string.IsNullOrEmpty(f.FcmToken)).Select(f => f.FcmToken!).ToList();
 
+            // 4. IF they have tokens, send the Firebase Push Notification
             if (tokens.Any())
             {
-                string alertMessage = "EMERGENCY: The patient has left the designated Safe Zone!";
-
-                // 3. Blast the Push Notification to Flutter!
                 alertSent = await _notificationService.SendMulticastAlertAsync(
                     tokens,
                     "Safe Zone Breach!",
                     alertMessage,
                     AlertType.SafeZoneBreach.ToString());
-
-                // 4. Log the alert to the database history
-                var alertHistory = new AlertHistory
-                {
-                    PatientId = dto.PatientId,
-                    AlertType = AlertType.SafeZoneBreach,
-                    Message = alertMessage,
-                    IsRead = false,
-                    SentAt = DateTime.UtcNow
-                };
-                await _alertRepository.AddAsync(alertHistory);
             }
         }
 
         var locationLog = new LocationLog
         {
-            PatientId = dto.PatientId,
-            Latitude = dto.Latitude,
-            Longitude = dto.Longitude,
-            AccuracyMeters = dto.AccuracyMeters,
+            PatientId = request.PatientId,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            AccuracyMeters = request.AccuracyMeters,
             RecordedAt = DateTime.UtcNow,
             IsOutsideZone = isOutside,
-            AlertSent = alertSent // Will be true if Firebase successfully delivered it!
+            AlertSent = alertSent
         };
 
         return await _locationRepository.AddAsync(locationLog);

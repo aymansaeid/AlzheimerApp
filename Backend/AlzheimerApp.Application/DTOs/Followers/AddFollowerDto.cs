@@ -1,0 +1,9 @@
+﻿namespace AlzheimerApp.Application.DTOs.Followers;
+
+public class FollowerRequest
+{
+    public Guid PatientId { get; set; }
+    public Guid FollowerId { get; set; }
+    public string Relationship { get; set; } = string.Empty;
+    public bool IsPrimary { get; set; }
+}
