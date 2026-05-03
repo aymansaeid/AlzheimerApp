@@ -2,6 +2,7 @@
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
+using AlzheimerApp.Domain.Enums;
 
 namespace AlzheimerApp.Application.Services;
 
@@ -9,32 +10,37 @@ public class LocationService : ILocationService
 {
     private readonly ILocationLogRepository _locationRepository;
     private readonly ISafeZoneRepository _safeZoneRepository;
+    private readonly IPatientFollowerRepository _followerRepository;
+    private readonly INotificationService _notificationService;
+    private readonly IAlertHistoryRepository _alertRepository;
 
-    public LocationService(ILocationLogRepository locationRepository, ISafeZoneRepository safeZoneRepository)
+    // 👉 Inject our new tools!
+    public LocationService(
+        ILocationLogRepository locationRepository,
+        ISafeZoneRepository safeZoneRepository,
+        IPatientFollowerRepository followerRepository,
+        INotificationService notificationService,
+        IAlertHistoryRepository alertRepository)
     {
         _locationRepository = locationRepository;
         _safeZoneRepository = safeZoneRepository;
+        _followerRepository = followerRepository;
+        _notificationService = notificationService;
+        _alertRepository = alertRepository;
     }
 
     public async Task<LocationLog> LogLocationAsync(LocationDto dto)
     {
-        // 1. Fetch active safe zones for this patient
         var activeSafeZones = await _safeZoneRepository.GetActiveSafeZonesByPatientIdAsync(dto.PatientId);
-
         bool isOutside = false;
+        bool alertSent = false;
 
-        // 2. Geofencing Logic: If they have safe zones, check if they are outside ALL of them
         if (activeSafeZones.Any())
         {
-            isOutside = true; // Assume outside until proven inside
-
+            isOutside = true;
             foreach (var zone in activeSafeZones)
             {
-                double distanceToCenter = CalculateDistanceMeters(
-                    dto.Latitude, dto.Longitude,
-                    zone.CenterLat, zone.CenterLng);
-
-                // If they are within the radius of AT LEAST ONE safe zone, they are safe.
+                double distanceToCenter = CalculateDistanceMeters(dto.Latitude, dto.Longitude, zone.CenterLat, zone.CenterLng);
                 if (distanceToCenter <= zone.RadiusMeters)
                 {
                     isOutside = false;
@@ -43,7 +49,39 @@ public class LocationService : ILocationService
             }
         }
 
-        // 3. Create the log
+        // THE ALARM TRIGGER LOGIC
+        if (isOutside)
+        {
+            // 1. Get all family members following this patient
+            var followers = await _followerRepository.GetFollowersByPatientIdAsync(dto.PatientId);
+
+            // 2. Extract their mobile device tokens (ignoring ones who haven't logged in on a phone yet)
+            var tokens = followers.Where(f => !string.IsNullOrEmpty(f.FcmToken)).Select(f => f.FcmToken!).ToList();
+
+            if (tokens.Any())
+            {
+                string alertMessage = "EMERGENCY: The patient has left the designated Safe Zone!";
+
+                // 3. Blast the Push Notification to Flutter!
+                alertSent = await _notificationService.SendMulticastAlertAsync(
+                    tokens,
+                    "Safe Zone Breach!",
+                    alertMessage,
+                    AlertType.SafeZoneBreach.ToString());
+
+                // 4. Log the alert to the database history
+                var alertHistory = new AlertHistory
+                {
+                    PatientId = dto.PatientId,
+                    AlertType = AlertType.SafeZoneBreach,
+                    Message = alertMessage,
+                    IsRead = false,
+                    SentAt = DateTime.UtcNow
+                };
+                await _alertRepository.AddAsync(alertHistory);
+            }
+        }
+
         var locationLog = new LocationLog
         {
             PatientId = dto.PatientId,
@@ -52,16 +90,15 @@ public class LocationService : ILocationService
             AccuracyMeters = dto.AccuracyMeters,
             RecordedAt = DateTime.UtcNow,
             IsOutsideZone = isOutside,
-            AlertSent = false // We will trigger Firebase FCM alerts in the next step!
+            AlertSent = alertSent // Will be true if Firebase successfully delivered it!
         };
 
         return await _locationRepository.AddAsync(locationLog);
     }
 
-    // Standard Haversine formula to calculate distance between two GPS coordinates in meters
     private double CalculateDistanceMeters(double lat1, double lon1, double lat2, double lon2)
     {
-        var R = 6371e3; // Earth radius in meters
+        var R = 6371e3;
         var phi1 = lat1 * Math.PI / 180;
         var phi2 = lat2 * Math.PI / 180;
         var deltaPhi = (lat2 - lat1) * Math.PI / 180;

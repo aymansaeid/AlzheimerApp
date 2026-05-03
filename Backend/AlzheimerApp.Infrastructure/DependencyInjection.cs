@@ -1,6 +1,8 @@
 ﻿using AlzheimerApp.Application.Interfaces.Repositories;
+using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Infrastructure.Persistence;
 using AlzheimerApp.Infrastructure.Repositories;
+using AlzheimerApp.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +22,9 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ILocationLogRepository, LocationLogRepository>();
         services.AddScoped<ISafeZoneRepository, SafeZoneRepository>();
+        services.AddScoped<IPatientFollowerRepository, PatientFollowerRepository>();
+        services.AddScoped<IAlertHistoryRepository, AlertHistoryRepository>();
+        services.AddScoped<INotificationService, FirebaseNotificationService>();
 
         return services;
     }
