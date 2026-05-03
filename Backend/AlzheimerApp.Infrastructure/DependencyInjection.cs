@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IPatientFollowerRepository, PatientFollowerRepository>();
         services.AddScoped<IAlertHistoryRepository, AlertHistoryRepository>();
         services.AddScoped<INotificationService, FirebaseNotificationService>();
+        services.AddScoped<IMedicineRepository, MedicineRepository>();
 
         return services;
     }
