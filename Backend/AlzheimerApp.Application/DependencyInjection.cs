@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<ISafeZoneService, SafeZoneService>();
         services.AddScoped<IPatientFollowerService, PatientFollowerService>();
         services.AddScoped<IMedicineService, MedicineService>();
+        services.AddScoped<IMemoryContentService, MemoryContentService>();
 
         return services;
     }
