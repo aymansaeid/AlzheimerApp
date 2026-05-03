@@ -29,4 +29,26 @@ public class SafeZoneService : ISafeZoneService
 
         return await _safeZoneRepository.AddAsync(safeZone);
     }
+
+    public async Task UpdateSafeZoneAsync(Guid id, UpdateSafeZoneRequest request)
+    {
+        var safeZone = await _safeZoneRepository.GetByIdAsync(id);
+        if (safeZone == null) throw new Exception("Safe Zone not found.");
+
+        safeZone.Name = request.Name;
+        safeZone.CenterLat = request.CenterLat;
+        safeZone.CenterLng = request.CenterLng;
+        safeZone.RadiusMeters = request.RadiusMeters;
+        safeZone.IsActive = request.IsActive;
+
+        await _safeZoneRepository.UpdateAsync(safeZone);
+    }
+
+    public async Task DeleteSafeZoneAsync(Guid id)
+    {
+        var safeZone = await _safeZoneRepository.GetByIdAsync(id);
+        if (safeZone == null) throw new Exception("Safe Zone not found.");
+
+        await _safeZoneRepository.DeleteAsync(safeZone);
+    }
 }

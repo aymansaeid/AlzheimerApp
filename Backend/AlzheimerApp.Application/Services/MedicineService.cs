@@ -57,4 +57,29 @@ public class MedicineService : IMedicineService
             IsActive = medicine.IsActive
         };
     }
+
+    public async Task UpdateMedicineAsync(Guid id, UpdateMedicineRequest request)
+    {
+        var medicine = await _medicineRepository.GetByIdAsync(id);
+        if (medicine == null) throw new Exception("Medicine not found.");
+
+        medicine.Name = request.Name;
+        medicine.Dosage = request.Dosage;
+        medicine.Instructions = request.Instructions;
+        medicine.ScheduleTime = request.ScheduleTime;
+        medicine.DaysOfWeek = request.DaysOfWeek;
+        medicine.StartDate = request.StartDate;
+        medicine.EndDate = request.EndDate;
+        medicine.IsActive = request.IsActive;
+
+        await _medicineRepository.UpdateAsync(medicine);
+    }
+
+    public async Task DeleteMedicineAsync(Guid id)
+    {
+        var medicine = await _medicineRepository.GetByIdAsync(id);
+        if (medicine == null) throw new Exception("Medicine not found.");
+
+        await _medicineRepository.DeleteAsync(medicine);
+    }
 }

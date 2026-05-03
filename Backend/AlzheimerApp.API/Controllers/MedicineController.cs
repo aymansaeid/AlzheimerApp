@@ -17,6 +17,7 @@ public class MedicineController : ControllerBase
         _medicineService = medicineService;
     }
 
+    [Authorize(Roles = "Follower,Admin")]
     [HttpPost]
     public async Task<IActionResult> AddMedicine([FromBody] MedicineRequest request)
     {
@@ -42,6 +43,36 @@ public class MedicineController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [Authorize(Roles = "Follower,Admin")]
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateMedicine(Guid id, [FromBody] UpdateMedicineRequest request)
+    {
+        try
+        {
+            await _medicineService.UpdateMedicineAsync(id, request);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return NotFound(new { Error = ex.Message });
+        }
+    }
+
+    [Authorize(Roles = "Follower,Admin")]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteMedicine(Guid id)
+    {
+        try
+        {
+            await _medicineService.DeleteMedicineAsync(id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return NotFound(new { Error = ex.Message });
         }
     }
 }

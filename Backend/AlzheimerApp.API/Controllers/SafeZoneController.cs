@@ -17,6 +17,7 @@ public class SafeZoneController : ControllerBase
         _safeZoneService = safeZoneService;
     }
 
+    [Authorize(Roles = "Follower,Admin")]
     [HttpPost]
     public async Task<IActionResult> CreateSafeZone([FromBody] CreateSafeZoneDto dto)
     {
@@ -28,6 +29,36 @@ public class SafeZoneController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [Authorize(Roles = "Follower,Admin")]
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateSafeZone(Guid id, [FromBody] UpdateSafeZoneRequest request)
+    {
+        try
+        {
+            await _safeZoneService.UpdateSafeZoneAsync(id, request);
+            return NoContent(); 
+        }
+        catch (Exception ex)
+        {
+            return NotFound(new { Error = ex.Message });
+        }
+    }
+
+    [Authorize(Roles = "Follower,Admin")]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteSafeZone(Guid id)
+    {
+        try
+        {
+            await _safeZoneService.DeleteSafeZoneAsync(id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return NotFound(new { Error = ex.Message });
         }
     }
 }

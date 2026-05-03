@@ -28,4 +28,21 @@ public class MedicineRepository : IMedicineRepository
             .OrderBy(m => m.ScheduleTime) // Order by time of day!
             .ToListAsync();
     }
+
+    public async Task<Medicine?> GetByIdAsync(Guid id)
+    {
+        return await _context.Medicines.FindAsync(id);
+    }
+
+    public async Task UpdateAsync(Medicine medicine)
+    {
+        _context.Medicines.Update(medicine);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(Medicine medicine)
+    {
+        _context.Medicines.Remove(medicine);
+        await _context.SaveChangesAsync();
+    }
 }

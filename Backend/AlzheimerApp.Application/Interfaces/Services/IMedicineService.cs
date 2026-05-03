@@ -6,4 +6,6 @@ public interface IMedicineService
 {
     Task<MedicineResponse> AddMedicineAsync(MedicineRequest request);
     Task<List<MedicineResponse>> GetPatientMedicinesAsync(Guid patientId);
+    Task UpdateMedicineAsync(Guid id, UpdateMedicineRequest request);
+    Task DeleteMedicineAsync(Guid id);
 }

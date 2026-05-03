@@ -26,4 +26,21 @@ public class SafeZoneRepository : ISafeZoneRepository
         await _context.SaveChangesAsync();
         return safeZone;
     }
+
+    public async Task<SafeZone?> GetByIdAsync(Guid id)
+    {
+        return await _context.SafeZones.FindAsync(id);
+    }
+
+    public async Task UpdateAsync(SafeZone safeZone)
+    {
+        _context.SafeZones.Update(safeZone);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(SafeZone safeZone)
+    {
+        _context.SafeZones.Remove(safeZone);
+        await _context.SaveChangesAsync();
+    }
 }

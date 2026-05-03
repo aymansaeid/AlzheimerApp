@@ -6,4 +6,6 @@ namespace AlzheimerApp.Application.Interfaces.Services;
 public interface ISafeZoneService
 {
     Task<SafeZone> CreateSafeZoneAsync(CreateSafeZoneDto dto);
+    Task UpdateSafeZoneAsync(Guid id, UpdateSafeZoneRequest request);
+    Task DeleteSafeZoneAsync(Guid id);
 }
