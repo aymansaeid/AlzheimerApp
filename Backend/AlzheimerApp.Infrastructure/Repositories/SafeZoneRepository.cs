@@ -20,4 +20,10 @@ public class SafeZoneRepository : ISafeZoneRepository
             .Where(sz => sz.PatientId == patientId && sz.IsActive)
             .ToListAsync();
     }
+    public async Task<SafeZone> AddAsync(SafeZone safeZone)
+    {
+        await _context.SafeZones.AddAsync(safeZone);
+        await _context.SaveChangesAsync();
+        return safeZone;
+    }
 }

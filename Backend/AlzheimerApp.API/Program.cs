@@ -1,16 +1,46 @@
+using AlzheimerApp.API.Hubs; 
 using AlzheimerApp.Application;
 using AlzheimerApp.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using System.Text;
-using AlzheimerApp.API.Hubs; 
-var builder = WebApplication.CreateBuilder(args);
 
+
+var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSignalR();
-builder.Services.AddSwaggerGen();
+
+
+builder.Services.AddSwaggerGen(options =>
+{
+    const string schemeId = "bearer";
+
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "AlzheimerApp API",
+        Version = "v1"
+    });
+
+    options.AddSecurityDefinition(schemeId, new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste only the JWT token"
+    });
+
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference(schemeId, document)] = []
+    });
+});
+
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
