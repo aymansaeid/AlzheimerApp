@@ -10,8 +10,6 @@ class PatientHomeScreen extends StatelessWidget {
   final String dateString;
   final List<Map<String, dynamic>> medications;
   final List<Map<String, dynamic>> memories;
-  final int currentTabIndex;
-  final ValueChanged<int> onTabTapped;
   final VoidCallback onSosPressed;
   final ValueChanged<String> onMedicationTaken;
   final ValueChanged<String> onMemoryPersonTapped;
@@ -31,8 +29,6 @@ class PatientHomeScreen extends StatelessWidget {
       {'emoji': '👧', 'name': 'Zeynep', 'relation': 'Kızı', 'color': Color(0xFFFAECE7)},
       {'emoji': '👨', 'name': 'Ali', 'relation': 'Kardeşi', 'color': Color(0xFFFAEEDA)},
     ],
-    this.currentTabIndex = 0,
-    required this.onTabTapped,
     required this.onSosPressed,
     required this.onMedicationTaken,
     required this.onMemoryPersonTapped,
@@ -76,16 +72,6 @@ class PatientHomeScreen extends StatelessWidget {
             );
           }
         ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: currentTabIndex,
-        items: const [
-          AppNavItem(icon: Icons.home_rounded, label: 'Ana Sayfa'),
-          AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlar'),
-          AppNavItem(icon: Icons.photo_album_rounded, label: 'Anılar'),
-          AppNavItem(icon: Icons.call_rounded, label: 'Ara'),
-        ],
-        onTap: onTabTapped,
       ),
     );
   }

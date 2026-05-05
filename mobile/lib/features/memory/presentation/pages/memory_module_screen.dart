@@ -22,13 +22,11 @@ class MemoryPerson {
 
 class MemoryModuleScreen extends StatefulWidget {
   final List<MemoryPerson> people;
-  final int currentTabIndex;
-  final ValueChanged<int> onTabTapped;
+  final VoidCallback onAddMemory;
 
   const MemoryModuleScreen({
     super.key,
-    required this.onTabTapped,
-    this.currentTabIndex = 2,
+    required this.onAddMemory,
     this.people = const [
       MemoryPerson(
         name: 'Fatma Hanım',
@@ -82,16 +80,6 @@ class _MemoryModuleScreenState extends State<MemoryModuleScreen> {
             const SizedBox(height: 16),
           ],
         ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: widget.currentTabIndex,
-        items: const [
-          AppNavItem(icon: Icons.home_rounded, label: 'Ana Sayfa'),
-          AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlar'),
-          AppNavItem(icon: Icons.photo_album_rounded, label: 'Anılar'),
-          AppNavItem(icon: Icons.call_rounded, label: 'Ara'),
-        ],
-        onTap: widget.onTabTapped,
       ),
     );
   }

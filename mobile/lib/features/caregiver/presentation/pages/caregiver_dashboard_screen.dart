@@ -12,8 +12,6 @@ class CaregiverDashboardScreen extends StatelessWidget {
   final String lastSeen;
   final int medicationCompliance;
   final int alertsToday;
-  final int currentTabIndex;
-  final ValueChanged<int> onTabTapped;
   final VoidCallback onRefresh;
   final VoidCallback onOpenMap;
 
@@ -25,8 +23,6 @@ class CaregiverDashboardScreen extends StatelessWidget {
     this.lastSeen = '2 dakika önce',
     this.medicationCompliance = 5,
     this.alertsToday = 0,
-    this.currentTabIndex = 0,
-    required this.onTabTapped,
     required this.onRefresh,
     required this.onOpenMap,
   });
@@ -73,16 +69,6 @@ class CaregiverDashboardScreen extends StatelessWidget {
             }
           ),
         ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: currentTabIndex,
-        items: const [
-          AppNavItem(icon: Icons.dashboard_rounded, label: 'Panel'),
-          AppNavItem(icon: Icons.location_on_rounded, label: 'Konum'),
-          AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlar'),
-          AppNavItem(icon: Icons.folder_rounded, label: 'İçerik'),
-        ],
-        onTap: onTabTapped,
       ),
     );
   }

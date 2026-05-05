@@ -39,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         listener: (context, state) {
           if (state is AuthSuccess) {
             if (state.user.role == 'patient') {
-              context.goNamed('patient_dashboard');
+              context.goNamed('patient_home');
             } else {
               context.goNamed('caregiver_dashboard');
             }
