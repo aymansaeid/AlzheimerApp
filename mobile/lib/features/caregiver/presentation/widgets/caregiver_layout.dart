@@ -15,9 +15,10 @@ class CaregiverLayout extends StatelessWidget {
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: navigationShell.currentIndex,
         items: const [
-          // Panel, Konum, İlaçlar, İçerik
+          // Panel, Konum, İlaçlar, Anılar, Ağım (Bu yorumu düzelttim: Panel, Uyarılar, Ağım)
           AppNavItem(icon: Icons.dashboard_rounded, label: 'Panel'),
           AppNavItem(icon: Icons.warning_rounded, label: 'Uyarılar'),
+          AppNavItem(icon: Icons.people_rounded, label: 'Ağım'),
         ],
         onTap: (index) {
           // İlgili sekmeye (branch) geçiş yap

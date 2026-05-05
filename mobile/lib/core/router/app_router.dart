@@ -8,6 +8,7 @@ import 'package:mobile/features/geofence/presentation/pages/geofence_alert_scree
 import 'package:mobile/features/memory/presentation/pages/memory_module_screen.dart';
 import 'package:mobile/features/patient/presentation/pages/patient_home_screen.dart';
 import 'package:mobile/features/patient/presentation/widgets/patient_layout.dart';
+import 'package:mobile/features/care_network/presentation/pages/care_network_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -87,6 +88,15 @@ final appRouter = GoRouter(
                 onCallPatient: () {},
                 onOpenLiveMap: () {},
               ),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/caregiver/network',
+              name: 'caregiver_network',
+              builder: (context, state) => const CareNetworkScreen(),
             ),
           ],
         ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_card.dart';
-import '../../../../core/widgets/app_bottom_nav_bar.dart';
 
 class MemoryPerson {
   final String name;

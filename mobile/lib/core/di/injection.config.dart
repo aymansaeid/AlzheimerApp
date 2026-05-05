@@ -22,6 +22,14 @@ import '../../features/auth/domain/repositories/auth_repository.dart' as _i787;
 import '../../features/auth/domain/usecases/login_usecase.dart' as _i188;
 import '../../features/auth/domain/usecases/register_usecase.dart' as _i941;
 import '../../features/auth/presentation/bloc/auth_bloc.dart' as _i797;
+import '../../features/care_network/data/datasources/care_network_remote_data_source.dart'
+    as _i485;
+import '../../features/care_network/data/repositories/care_network_repository_impl.dart'
+    as _i517;
+import '../../features/care_network/domain/repositories/care_network_repository.dart'
+    as _i83;
+import '../../features/care_network/presentation/bloc/care_network_bloc.dart'
+    as _i100;
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
@@ -40,6 +48,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
     );
+    gh.lazySingleton<_i485.CareNetworkRemoteDataSource>(
+      () => _i485.CareNetworkRemoteDataSourceImpl(),
+    );
     gh.lazySingleton<_i107.AuthRemoteDataSource>(
       () => _i107.AuthRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
@@ -51,6 +62,14 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i107.AuthRemoteDataSource>(),
         gh<_i558.FlutterSecureStorage>(),
       ),
+    );
+    gh.lazySingleton<_i83.CareNetworkRepository>(
+      () => _i517.CareNetworkRepositoryImpl(
+        gh<_i485.CareNetworkRemoteDataSource>(),
+      ),
+    );
+    gh.factory<_i100.CareNetworkBloc>(
+      () => _i100.CareNetworkBloc(gh<_i83.CareNetworkRepository>()),
     );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),
