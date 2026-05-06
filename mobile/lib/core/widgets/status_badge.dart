@@ -18,25 +18,25 @@ class StatusBadge extends StatelessWidget {
   }) : type = BadgeType.custom;
 
   const StatusBadge.safe({super.key, this.showPulse = true})
-      : type = BadgeType.safe,
-        label = null,
-        backgroundColor = null,
-        textColor = null;
+    : type = BadgeType.safe,
+      label = null,
+      backgroundColor = null,
+      textColor = null;
 
   const StatusBadge.alert({super.key, this.showPulse = true})
-      : type = BadgeType.alert,
-        label = null,
-        backgroundColor = null,
-        textColor = null;
+    : type = BadgeType.alert,
+      label = null,
+      backgroundColor = null,
+      textColor = null;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     String finalLabel;
     Color finalBg;
     Color finalText;
-    
+
     switch (type) {
       case BadgeType.safe:
         finalLabel = 'Güvenli Alanda';
@@ -71,9 +71,7 @@ class StatusBadge extends StatelessWidget {
           Flexible(
             child: Text(
               finalLabel,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: finalText,
-              ),
+              style: theme.textTheme.labelLarge?.copyWith(color: finalText),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -91,7 +89,8 @@ class _PulseDot extends StatefulWidget {
   State<_PulseDot> createState() => _PulseDotState();
 }
 
-class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
 

@@ -25,7 +25,8 @@ class GeofenceAlertScreen extends StatefulWidget {
   State<GeofenceAlertScreen> createState() => _GeofenceAlertScreenState();
 }
 
-class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerProviderStateMixin {
+class _GeofenceAlertScreenState extends State<GeofenceAlertScreen>
+    with TickerProviderStateMixin {
   late AnimationController _pulseCtrl;
   late AnimationController _entranceCtrl;
   late Animation<double> _pulseAnim;
@@ -35,11 +36,25 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
-    _entranceCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))..forward();
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.12).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
-    _slideAnim = Tween<double>(begin: 60, end: 0).animate(CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOutCubic));
-    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOut));
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+    _pulseAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _slideAnim = Tween<double>(begin: 60, end: 0).animate(
+      CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOutCubic),
+    );
+    _fadeAnim = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOut));
   }
 
   @override
@@ -52,7 +67,7 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.colorScheme.errorContainer,
       body: SafeArea(
@@ -60,7 +75,10 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
           animation: _entranceCtrl,
           builder: (_, child) => Opacity(
             opacity: _fadeAnim.value,
-            child: Transform.translate(offset: Offset(0, _slideAnim.value), child: child),
+            child: Transform.translate(
+              offset: Offset(0, _slideAnim.value),
+              child: child,
+            ),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -86,7 +104,7 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
                   ),
                 ],
               );
-            }
+            },
           ),
         ),
       ),
@@ -100,12 +118,17 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: theme.colorScheme.error),
+            icon: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: theme.colorScheme.error,
+            ),
           ),
           Expanded(
             child: Text(
               'Güvenli Alan Uyarısı',
-              style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -120,7 +143,8 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
       children: [
         AnimatedBuilder(
           animation: _pulseCtrl,
-          builder: (_, child) => Transform.scale(scale: _pulseAnim.value, child: child),
+          builder: (_, child) =>
+              Transform.scale(scale: _pulseAnim.value, child: child),
           child: Container(
             width: 80,
             height: 80,
@@ -129,15 +153,24 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
               shape: BoxShape.circle,
               border: Border.all(color: theme.colorScheme.error, width: 3),
             ),
-            child: const Center(child: Text('📍', style: TextStyle(fontSize: 36))),
+            child: const Center(
+              child: Text('📍', style: TextStyle(fontSize: 36)),
+            ),
           ),
         ),
         const SizedBox(height: 16),
-        Text('Uyarı!', style: theme.textTheme.displayMedium?.copyWith(color: theme.colorScheme.error)),
+        Text(
+          'Uyarı!',
+          style: theme.textTheme.displayMedium?.copyWith(
+            color: theme.colorScheme.error,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           '${widget.patientName} güvenli alan dışına çıktı',
-          style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.error),
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.error,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -152,9 +185,18 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline_rounded, size: 16, color: theme.colorScheme.error),
+              Icon(
+                Icons.info_outline_rounded,
+                size: 16,
+                color: theme.colorScheme.error,
+              ),
               const SizedBox(width: 8),
-              Text('KONUM BİLGİSİ', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.error)),
+              Text(
+                'KONUM BİLGİSİ',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -162,15 +204,28 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
             children: [
               Icon(Icons.location_on_rounded, color: theme.colorScheme.error),
               const SizedBox(width: 8),
-              Expanded(child: Text(widget.locationAddress, style: theme.textTheme.bodyLarge)),
+              Expanded(
+                child: Text(
+                  widget.locationAddress,
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.social_distance_rounded, color: theme.colorScheme.error),
+              Icon(
+                Icons.social_distance_rounded,
+                color: theme.colorScheme.error,
+              ),
               const SizedBox(width: 8),
-              Expanded(child: Text('Güvenli alandan ${widget.distanceMeters.toInt()}m uzakta', style: theme.textTheme.bodyMedium)),
+              Expanded(
+                child: Text(
+                  'Güvenli alandan ${widget.distanceMeters.toInt()}m uzakta',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -178,7 +233,15 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
             children: [
               Icon(Icons.access_time_rounded, color: theme.colorScheme.error),
               const SizedBox(width: 8),
-              Expanded(child: Text(widget.timeOutside, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.bold))),
+              Expanded(
+                child: Text(
+                  widget.timeOutside,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
         ],
@@ -195,7 +258,11 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
         borderRadius: BorderRadius.circular(16),
       ),
       child: Center(
-        child: Icon(Icons.map_outlined, size: 48, color: theme.colorScheme.error.withOpacity(0.5)),
+        child: Icon(
+          Icons.map_outlined,
+          size: 48,
+          color: theme.colorScheme.error.withOpacity(0.5),
+        ),
       ),
     );
   }
@@ -207,7 +274,10 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: widget.onCallPatient,
-            style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.error, foregroundColor: theme.colorScheme.onError),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+            ),
             icon: const Icon(Icons.phone_rounded),
             label: const Text('Hemen Ara'),
           ),
@@ -228,7 +298,10 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen> with TickerPr
         const SizedBox(height: 16),
         TextButton(
           onPressed: widget.onDismissAlert,
-          child: Text('Uyarıyı Kapat', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+          child: Text(
+            'Uyarıyı Kapat',
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+          ),
         ),
       ],
     );

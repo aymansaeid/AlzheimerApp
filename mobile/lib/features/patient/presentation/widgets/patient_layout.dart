@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-// import 'package:flutter_bloc/flutter_bloc.dart'; // BLoC eklendiğinde kullanılacak
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mobile/features/medication/domain/usecases/get_medications_by_date.dart';
+import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
+import 'package:mobile/features/medication/presentation/bloc/medication_event.dart';
 import '../../../../core/widgets/app_bottom_nav_bar.dart';
+import 'package:go_router/go_router.dart';
 
 class PatientLayout extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -11,21 +14,25 @@ class PatientLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell, // IndexedStack otomatik olarak sağlanır
+      body:
+          navigationShell, // go_router arka planda IndexedStack'i kendi yönetir
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: navigationShell.currentIndex,
         items: const [
           AppNavItem(icon: Icons.home_rounded, label: 'Ana Sayfa'),
+          AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlarım'),
           AppNavItem(icon: Icons.photo_album_rounded, label: 'Anılarım'),
         ],
         onTap: (index) {
-          // İlgili sekmeye (branch) geçiş yap
-          // initialLocation: true ise aynı sekmeye tekrar tıklandığında o sekmenin ana rotasına döner
+          // Path'leri bilmemize gerek yok, go_router index'e göre Branch'e (dallanmaya) gider.
+          // initialLocation parametresi ile o sekmeye tıklandığında sekmenin ilk haline sıfırlanmasını tetikleriz.
           navigationShell.goBranch(
             index,
             initialLocation: index == navigationShell.currentIndex,
           );
-          
+          if (index == 1) {
+            context.read<MedicationBloc>().add(LoadMedications(DateTime.now()));
+          }
           /* BLoC Veri Tazeleme Örneği:
           if (index == 1) {
              // Anılar sekmesine geçildiğinde veriyi sessizce tazele

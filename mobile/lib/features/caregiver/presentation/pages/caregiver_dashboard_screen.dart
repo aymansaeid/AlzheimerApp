@@ -29,7 +29,7 @@ class CaregiverDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
@@ -65,7 +65,7 @@ class CaregiverDashboardScreen extends StatelessWidget {
                   ],
                 ),
               );
-            }
+            },
           ),
         ),
       ),
@@ -93,7 +93,10 @@ class CaregiverDashboardScreen extends StatelessWidget {
                 color: theme.colorScheme.surfaceVariant,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.notifications_outlined, color: theme.colorScheme.onSurfaceVariant),
+              child: Icon(
+                Icons.notifications_outlined,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             if (alertsToday > 0)
               Positioned(
@@ -107,7 +110,11 @@ class CaregiverDashboardScreen extends StatelessWidget {
                   ),
                   child: Text(
                     alertsToday.toString(),
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onError),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onError,
+                    ),
                   ),
                 ),
               ),
@@ -131,7 +138,9 @@ class CaregiverDashboardScreen extends StatelessWidget {
                   color: theme.colorScheme.primary,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(child: Text('👴', style: TextStyle(fontSize: 24))),
+                child: const Center(
+                  child: Text('👴', style: TextStyle(fontSize: 24)),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -140,7 +149,9 @@ class CaregiverDashboardScreen extends StatelessWidget {
                   children: [
                     Text(patientName, style: theme.textTheme.titleMedium),
                     const SizedBox(height: 4),
-                    isPatientSafe ? const StatusBadge.safe() : const StatusBadge.alert(),
+                    isPatientSafe
+                        ? const StatusBadge.safe()
+                        : const StatusBadge.alert(),
                   ],
                 ),
               ),
@@ -155,9 +166,19 @@ class CaregiverDashboardScreen extends StatelessWidget {
               Flexible(
                 child: Row(
                   children: [
-                    Icon(Icons.access_time_rounded, size: 16, color: theme.colorScheme.primary),
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
                     const SizedBox(width: 4),
-                    Flexible(child: Text(lastSeen, style: theme.textTheme.bodySmall, overflow: TextOverflow.ellipsis)),
+                    Flexible(
+                      child: Text(
+                        lastSeen,
+                        style: theme.textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -166,7 +187,10 @@ class CaregiverDashboardScreen extends StatelessWidget {
                 style: TextButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
                   foregroundColor: theme.colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
                 icon: const Icon(Icons.map_rounded, size: 16),
                 label: const Text('Haritayı Aç'),
@@ -187,7 +211,11 @@ class CaregiverDashboardScreen extends StatelessWidget {
         color: theme.colorScheme.surfaceVariant,
       ),
       child: Center(
-        child: Icon(Icons.map_outlined, size: 48, color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5)),
+        child: Icon(
+          Icons.map_outlined,
+          size: 48,
+          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+        ),
       ),
     );
   }
@@ -203,17 +231,11 @@ class CaregiverDashboardScreen extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: StatCard(
-            value: alertsToday.toString(),
-            label: 'Bugün Uyarı',
-          ),
+          child: StatCard(value: alertsToday.toString(), label: 'Bugün Uyarı'),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: StatCard(
-            value: '73%',
-            label: 'Rutin Uyumu',
-          ),
+          child: StatCard(value: '73%', label: 'Rutin Uyumu'),
         ),
       ],
     );
@@ -229,7 +251,9 @@ class CaregiverDashboardScreen extends StatelessWidget {
           Expanded(
             child: Text(
               'Dün akşam ilaç alınmadı',
-              style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
           ),
           Icon(Icons.chevron_right_rounded, color: theme.colorScheme.error),
@@ -270,9 +294,21 @@ class CaregiverDashboardScreen extends StatelessWidget {
 
   Widget _buildActivityFeed(ThemeData theme) {
     final activities = [
-      {'icon': '📍', 'text': 'Konum güncellendi — Kadıköy', 'time': '5 dk önce'},
-      {'icon': '💊', 'text': 'Sabah ilacı alındı — Donepezil', 'time': '2 saat önce'},
-      {'icon': '⚠', 'text': 'Akşam ilacı atlandı — Memantin', 'time': 'Dün 20:15'},
+      {
+        'icon': '📍',
+        'text': 'Konum güncellendi — Kadıköy',
+        'time': '5 dk önce',
+      },
+      {
+        'icon': '💊',
+        'text': 'Sabah ilacı alındı — Donepezil',
+        'time': '2 saat önce',
+      },
+      {
+        'icon': '⚠',
+        'text': 'Akşam ilacı atlandı — Memantin',
+        'time': 'Dün 20:15',
+      },
     ];
 
     return Column(
@@ -286,10 +322,7 @@ class CaregiverDashboardScreen extends StatelessWidget {
                 Text(a['icon']!, style: const TextStyle(fontSize: 20)),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    a['text']!,
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  child: Text(a['text']!, style: theme.textTheme.bodyMedium),
                 ),
                 Text(a['time']!, style: theme.textTheme.bodySmall),
               ],

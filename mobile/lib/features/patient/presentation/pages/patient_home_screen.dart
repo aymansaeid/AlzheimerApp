@@ -23,10 +23,30 @@ class PatientHomeScreen extends StatelessWidget {
       {'name': 'Memantin 20mg', 'time': 'Akşam 20:00', 'isTaken': false},
     ],
     this.memories = const [
-      {'emoji': '👩', 'name': 'Fatma', 'relation': 'Eşi', 'color': Color(0xFFE1F5EE)},
-      {'emoji': '👦', 'name': 'Mehmet', 'relation': 'Oğlu', 'color': Color(0xFFE6F1FB)},
-      {'emoji': '👧', 'name': 'Zeynep', 'relation': 'Kızı', 'color': Color(0xFFFAECE7)},
-      {'emoji': '👨', 'name': 'Ali', 'relation': 'Kardeşi', 'color': Color(0xFFFAEEDA)},
+      {
+        'emoji': '👩',
+        'name': 'Fatma',
+        'relation': 'Eşi',
+        'color': Color(0xFFE1F5EE),
+      },
+      {
+        'emoji': '👦',
+        'name': 'Mehmet',
+        'relation': 'Oğlu',
+        'color': Color(0xFFE6F1FB),
+      },
+      {
+        'emoji': '👧',
+        'name': 'Zeynep',
+        'relation': 'Kızı',
+        'color': Color(0xFFFAECE7),
+      },
+      {
+        'emoji': '👨',
+        'name': 'Ali',
+        'relation': 'Kardeşi',
+        'color': Color(0xFFFAEEDA),
+      },
     ],
     required this.onSosPressed,
     required this.onMedicationTaken,
@@ -36,7 +56,7 @@ class PatientHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -52,15 +72,17 @@ class PatientHomeScreen extends StatelessWidget {
                   _buildSOSButton(theme),
                   const SizedBox(height: 20),
                   const SectionTitle(text: 'Bugünkü İlaçlar'),
-                  ...medications.map((m) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _buildMedicationCard(
-                      theme,
-                      name: m['name'],
-                      time: m['time'],
-                      isTaken: m['isTaken'],
+                  ...medications.map(
+                    (m) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _buildMedicationCard(
+                        theme,
+                        name: m['name'],
+                        time: m['time'],
+                        isTaken: m['isTaken'],
+                      ),
                     ),
-                  )),
+                  ),
                   const SizedBox(height: 20),
                   const SectionTitle(text: 'Sevdiklerin'),
                   _buildMemoryGrid(theme, constraints),
@@ -69,7 +91,7 @@ class PatientHomeScreen extends StatelessWidget {
                 ],
               ),
             );
-          }
+          },
         ),
       ),
     );
@@ -112,7 +134,14 @@ class PatientHomeScreen extends StatelessWidget {
             border: Border.all(color: Colors.white70, width: 2),
           ),
           child: const Center(
-            child: Text('!', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white)),
+            child: Text(
+              '!',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
         label: const Text('Acil Durum'),
@@ -120,7 +149,12 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMedicationCard(ThemeData theme, {required String name, required String time, required bool isTaken}) {
+  Widget _buildMedicationCard(
+    ThemeData theme, {
+    required String name,
+    required String time,
+    required bool isTaken,
+  }) {
     return AppCard(
       color: theme.colorScheme.primaryContainer.withOpacity(0.4),
       child: Row(
@@ -132,14 +166,21 @@ class PatientHomeScreen extends StatelessWidget {
               color: theme.colorScheme.primary,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Center(child: Text('💊', style: TextStyle(fontSize: 20))),
+            child: const Center(
+              child: Text('💊', style: TextStyle(fontSize: 20)),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
+                Text(
+                  name,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(time, style: theme.textTheme.bodySmall),
               ],
@@ -147,7 +188,10 @@ class PatientHomeScreen extends StatelessWidget {
           ),
           isTaken
               ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary,
                     borderRadius: BorderRadius.circular(999),
@@ -155,16 +199,28 @@ class PatientHomeScreen extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check, size: 14, color: theme.colorScheme.onPrimary),
+                      Icon(
+                        Icons.check,
+                        size: 14,
+                        color: theme.colorScheme.onPrimary,
+                      ),
                       const SizedBox(width: 4),
-                      Text('Alındı', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onPrimary)),
+                      Text(
+                        'Alındı',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      ),
                     ],
                   ),
                 )
               : ElevatedButton(
                   onPressed: () => onMedicationTaken(name),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     minimumSize: Size.zero,
                   ),
                   child: const Text('Aldım'),
@@ -176,7 +232,7 @@ class PatientHomeScreen extends StatelessWidget {
 
   Widget _buildMemoryGrid(ThemeData theme, BoxConstraints constraints) {
     int crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
-    
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -198,7 +254,10 @@ class PatientHomeScreen extends StatelessWidget {
                 child: Container(
                   color: p['color'],
                   child: Center(
-                    child: Text(p['emoji'], style: const TextStyle(fontSize: 32)),
+                    child: Text(
+                      p['emoji'],
+                      style: const TextStyle(fontSize: 32),
+                    ),
                   ),
                 ),
               ),
@@ -236,9 +295,17 @@ class PatientHomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Bugün nasılsın?', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.secondary)),
+                Text(
+                  'Bugün nasılsın?',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text('Günlük ruh halini takipçilerinle paylaş', style: theme.textTheme.bodySmall),
+                Text(
+                  'Günlük ruh halini takipçilerinle paylaş',
+                  style: theme.textTheme.bodySmall,
+                ),
               ],
             ),
           ),

@@ -9,7 +9,9 @@ class AppTheme {
   static const _surfaceColor = Color(0xFFFFFFFF);
   static const _onPrimaryColor = Colors.white;
   static const _onSurfaceColor = Color(0xFF1A1A1A); // textPrimary
-  static const _onSurfaceVariantColor = Color(0xFF333333); // High contrast textSecondary
+  static const _onSurfaceVariantColor = Color(
+    0xFF333333,
+  ); // High contrast textSecondary
   static const _outlineVariantColor = Color(0xFFD3D1C7);
 
   static ThemeData get lightTheme {
@@ -29,17 +31,64 @@ class AppTheme {
       scaffoldBackgroundColor: _backgroundColor,
       // High contrast & large fonts for accessibility (elderly users)
       textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: _onSurfaceColor, height: 1.2),
-        displayMedium: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: _onSurfaceColor, height: 1.2),
-        displaySmall: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _onSurfaceColor, height: 1.2),
-        headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: _onSurfaceColor),
-        headlineMedium: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: _onSurfaceColor),
-        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: _onSurfaceColor),
-        titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: _onSurfaceColor),
-        bodyLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: _onSurfaceColor),
-        bodyMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _onSurfaceVariantColor),
-        bodySmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: _onSurfaceVariantColor),
-        labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _onSurfaceColor),
+        displayLarge: TextStyle(
+          fontSize: 34,
+          fontWeight: FontWeight.bold,
+          color: _onSurfaceColor,
+          height: 1.2,
+        ),
+        displayMedium: TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+          color: _onSurfaceColor,
+          height: 1.2,
+        ),
+        displaySmall: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.bold,
+          color: _onSurfaceColor,
+          height: 1.2,
+        ),
+        headlineLarge: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: _onSurfaceColor,
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: _onSurfaceColor,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: _onSurfaceColor,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: _onSurfaceColor,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w500,
+          color: _onSurfaceColor,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: _onSurfaceVariantColor,
+        ),
+        bodySmall: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: _onSurfaceVariantColor,
+        ),
+        labelLarge: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: _onSurfaceColor,
+        ),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: _surfaceColor,
@@ -47,7 +96,11 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _onSurfaceColor),
+        titleTextStyle: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: _onSurfaceColor,
+        ),
         iconTheme: IconThemeData(color: _onSurfaceColor, size: 28),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -55,7 +108,9 @@ class AppTheme {
           backgroundColor: _primaryColor,
           foregroundColor: _onPrimaryColor,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           minimumSize: const Size(64, 56), // Minimum touch target size
           elevation: 0,
@@ -66,7 +121,9 @@ class AppTheme {
           foregroundColor: _primaryColor,
           side: const BorderSide(color: _primaryColor, width: 2),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           minimumSize: const Size(64, 56),
         ),

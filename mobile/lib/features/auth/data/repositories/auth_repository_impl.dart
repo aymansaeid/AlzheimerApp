@@ -20,12 +20,15 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      final data = await remoteDataSource.login(email: email, password: password);
+      final data = await remoteDataSource.login(
+        email: email,
+        password: password,
+      );
       final user = UserModel.fromJson(data['user']);
       final token = data['token'] as String;
-      
+
       await secureStorage.write(key: 'jwt_token', value: token);
-      
+
       return Right(user);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -48,9 +51,9 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       final user = UserModel.fromJson(data['user']);
       final token = data['token'] as String;
-      
+
       await secureStorage.write(key: 'jwt_token', value: token);
-      
+
       return Right(user);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

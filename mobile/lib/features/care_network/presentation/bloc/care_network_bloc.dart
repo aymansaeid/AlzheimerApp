@@ -24,18 +24,12 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
 
     final result = await repository.getNetworkUsers();
 
-    result.fold(
-      (failure) => emit(CareNetworkError(failure.message)),
-      (users) {
-        final patients = users.where((u) => u.role == 'patient').toList();
-        final caregivers = users.where((u) => u.role == 'caregiver').toList();
-        
-        emit(CareNetworkLoaded(
-          patients: patients,
-          caregivers: caregivers,
-        ));
-      },
-    );
+    result.fold((failure) => emit(CareNetworkError(failure.message)), (users) {
+      final patients = users.where((u) => u.role == 'patient').toList();
+      final caregivers = users.where((u) => u.role == 'caregiver').toList();
+
+      emit(CareNetworkLoaded(patients: patients, caregivers: caregivers));
+    });
   }
 
   Future<void> _onGeneratePatientInviteLink(
@@ -45,11 +39,13 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     if (state is CareNetworkLoaded) {
       final currentState = state as CareNetworkLoaded;
       emit(currentState.copyWith(isGeneratingLink: true, clearLink: true));
-      
+
       final result = await repository.generatePatientInviteLink();
       result.fold(
         (failure) => emit(CareNetworkError(failure.message)),
-        (link) => emit(currentState.copyWith(isGeneratingLink: false, generatedLink: link)),
+        (link) => emit(
+          currentState.copyWith(isGeneratingLink: false, generatedLink: link),
+        ),
       );
     }
   }
@@ -61,11 +57,13 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     if (state is CareNetworkLoaded) {
       final currentState = state as CareNetworkLoaded;
       emit(currentState.copyWith(isGeneratingLink: true, clearLink: true));
-      
+
       final result = await repository.generateCaregiverInviteLink();
       result.fold(
         (failure) => emit(CareNetworkError(failure.message)),
-        (link) => emit(currentState.copyWith(isGeneratingLink: false, generatedLink: link)),
+        (link) => emit(
+          currentState.copyWith(isGeneratingLink: false, generatedLink: link),
+        ),
       );
     }
   }
@@ -86,17 +84,23 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
   ) async {
     if (state is CareNetworkLoaded) {
       final currentState = state as CareNetworkLoaded;
-      
+
       // Sahte bekleme
       await Future.delayed(const Duration(seconds: 1));
-      
-      final updatedPatients = currentState.patients.where((u) => u.id != event.userId).toList();
-      final updatedCaregivers = currentState.caregivers.where((u) => u.id != event.userId).toList();
-      
-      emit(currentState.copyWith(
-        patients: updatedPatients,
-        caregivers: updatedCaregivers,
-      ));
+
+      final updatedPatients = currentState.patients
+          .where((u) => u.id != event.userId)
+          .toList();
+      final updatedCaregivers = currentState.caregivers
+          .where((u) => u.id != event.userId)
+          .toList();
+
+      emit(
+        currentState.copyWith(
+          patients: updatedPatients,
+          caregivers: updatedCaregivers,
+        ),
+      );
     }
   }
 }

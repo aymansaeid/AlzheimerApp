@@ -16,7 +16,9 @@ class CareNetworkRepositoryImpl implements CareNetworkRepository {
   Future<Either<Failure, List<NetworkUser>>> getNetworkUsers() async {
     try {
       final data = await remoteDataSource.getNetworkUsers();
-      final users = data.map((json) => NetworkUserModel.fromJson(json)).toList();
+      final users = data
+          .map((json) => NetworkUserModel.fromJson(json))
+          .toList();
       return Right(users);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

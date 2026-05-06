@@ -21,7 +21,7 @@ class AppBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return NavigationBar(
       selectedIndex: currentIndex,
       onDestinationSelected: onTap,
@@ -30,7 +30,11 @@ class AppBottomNavBar extends StatelessWidget {
       destinations: items.map((item) {
         return NavigationDestination(
           icon: Icon(item.icon, size: 28),
-          selectedIcon: Icon(item.icon, size: 28, color: theme.colorScheme.onPrimaryContainer),
+          selectedIcon: Icon(
+            item.icon,
+            size: 28,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
           label: item.label,
         );
       }).toList(),

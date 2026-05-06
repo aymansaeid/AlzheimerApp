@@ -30,6 +30,23 @@ import '../../features/care_network/domain/repositories/care_network_repository.
     as _i83;
 import '../../features/care_network/presentation/bloc/care_network_bloc.dart'
     as _i100;
+import '../../features/medication/data/datasources/medication_remote_data_source.dart'
+    as _i484;
+import '../../features/medication/data/repositories/medication_repository_impl.dart'
+    as _i598;
+import '../../features/medication/domain/repositories/medication_repository.dart'
+    as _i1036;
+import '../../features/medication/domain/usecases/add_medication.dart' as _i107;
+import '../../features/medication/domain/usecases/delete_medication.dart'
+    as _i329;
+import '../../features/medication/domain/usecases/get_medications_by_date.dart'
+    as _i429;
+import '../../features/medication/domain/usecases/mark_medication_as_taken.dart'
+    as _i929;
+import '../../features/medication/domain/usecases/update_medication.dart'
+    as _i397;
+import '../../features/medication/presentation/bloc/medication_bloc.dart'
+    as _i501;
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
@@ -48,11 +65,34 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
     );
+    gh.lazySingleton<_i484.MedicationRemoteDataSource>(
+      () => _i484.MockMedicationRemoteDataSourceImpl(),
+    );
     gh.lazySingleton<_i485.CareNetworkRemoteDataSource>(
       () => _i485.CareNetworkRemoteDataSourceImpl(),
     );
+    gh.lazySingleton<_i1036.MedicationRepository>(
+      () => _i598.MedicationRepositoryImpl(
+        gh<_i484.MedicationRemoteDataSource>(),
+      ),
+    );
     gh.lazySingleton<_i107.AuthRemoteDataSource>(
       () => _i107.AuthRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i107.AddMedication>(
+      () => _i107.AddMedication(gh<_i1036.MedicationRepository>()),
+    );
+    gh.lazySingleton<_i329.DeleteMedication>(
+      () => _i329.DeleteMedication(gh<_i1036.MedicationRepository>()),
+    );
+    gh.lazySingleton<_i429.GetMedicationsByDate>(
+      () => _i429.GetMedicationsByDate(gh<_i1036.MedicationRepository>()),
+    );
+    gh.lazySingleton<_i929.MarkMedicationAsTaken>(
+      () => _i929.MarkMedicationAsTaken(gh<_i1036.MedicationRepository>()),
+    );
+    gh.lazySingleton<_i397.UpdateMedication>(
+      () => _i397.UpdateMedication(gh<_i1036.MedicationRepository>()),
     );
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
@@ -70,6 +110,15 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.factory<_i100.CareNetworkBloc>(
       () => _i100.CareNetworkBloc(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.factory<_i501.MedicationBloc>(
+      () => _i501.MedicationBloc(
+        getMedicationsByDate: gh<_i429.GetMedicationsByDate>(),
+        addMedication: gh<_i107.AddMedication>(),
+        updateMedication: gh<_i397.UpdateMedication>(),
+        deleteMedication: gh<_i329.DeleteMedication>(),
+        markMedicationAsTaken: gh<_i929.MarkMedicationAsTaken>(),
+      ),
     );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),

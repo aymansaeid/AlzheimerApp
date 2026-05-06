@@ -49,10 +49,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       createdAt: DateTime.now(),
     );
 
-    return {
-      'user': mockUserModel.toJson(),
-      'token': 'mock_jwt_token_123',
-    };
+    return {'user': mockUserModel.toJson(), 'token': 'mock_jwt_token_123'};
   }
 
   @override
@@ -86,9 +83,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       createdAt: DateTime.now(),
     );
 
-    return {
-      'user': mockUserModel.toJson(),
-      'token': 'mock_jwt_token_123',
-    };
+    return {'user': mockUserModel.toJson(), 'token': 'mock_jwt_token_123'};
   }
 }

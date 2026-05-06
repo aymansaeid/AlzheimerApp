@@ -19,7 +19,7 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Card(
       color: color ?? theme.colorScheme.surface,
       shape: RoundedRectangleBorder(

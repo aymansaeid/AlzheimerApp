@@ -41,7 +41,12 @@ class CareNetworkLoaded extends CareNetworkState {
   }
 
   @override
-  List<Object?> get props => [patients, caregivers, generatedLink, isGeneratingLink];
+  List<Object?> get props => [
+    patients,
+    caregivers,
+    generatedLink,
+    isGeneratingLink,
+  ];
 }
 
 class CareNetworkError extends CareNetworkState {

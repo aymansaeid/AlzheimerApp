@@ -56,7 +56,7 @@ class _MemoryModuleScreenState extends State<MemoryModuleScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sevdiklerin 💝'),
@@ -94,7 +94,9 @@ class _MemoryModuleScreenState extends State<MemoryModuleScreen> {
           width: i == _currentIndex ? 20 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: i == _currentIndex ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+            color: i == _currentIndex
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outlineVariant,
             borderRadius: BorderRadius.circular(999),
           ),
         ),
@@ -111,7 +113,8 @@ class _PersonCard extends StatefulWidget {
   State<_PersonCard> createState() => _PersonCardState();
 }
 
-class _PersonCardState extends State<_PersonCard> with SingleTickerProviderStateMixin {
+class _PersonCardState extends State<_PersonCard>
+    with SingleTickerProviderStateMixin {
   bool _isPlayingVoice = false;
   late AnimationController _voiceAnimCtrl;
 
@@ -133,7 +136,7 @@ class _PersonCardState extends State<_PersonCard> with SingleTickerProviderState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Column(
@@ -157,9 +160,7 @@ class _PersonCardState extends State<_PersonCard> with SingleTickerProviderState
   Widget _buildPhotoArea(ThemeData theme) {
     return Container(
       height: 220,
-      decoration: BoxDecoration(
-        color: widget.person.cardColor,
-      ),
+      decoration: BoxDecoration(color: widget.person.cardColor),
       child: Stack(
         children: [
           Center(
@@ -172,18 +173,22 @@ class _PersonCardState extends State<_PersonCard> with SingleTickerProviderState
             bottom: 12,
             right: 12,
             child: Row(
-              children: widget.person.photoEmojis.map((e) => Container(
-                width: 32,
-                height: 32,
-                margin: const EdgeInsets.only(left: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Text(e, style: const TextStyle(fontSize: 16)),
-                ),
-              )).toList(),
+              children: widget.person.photoEmojis
+                  .map(
+                    (e) => Container(
+                      width: 32,
+                      height: 32,
+                      margin: const EdgeInsets.only(left: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(e, style: const TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ],
@@ -225,12 +230,18 @@ class _PersonCardState extends State<_PersonCard> with SingleTickerProviderState
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: _isPlayingVoice ? theme.colorScheme.primary : theme.colorScheme.primaryContainer,
+                color: _isPlayingVoice
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                _isPlayingVoice ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                color: _isPlayingVoice ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
+                _isPlayingVoice
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+                color: _isPlayingVoice
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.primary,
                 size: 28,
               ),
             ),
@@ -241,7 +252,9 @@ class _PersonCardState extends State<_PersonCard> with SingleTickerProviderState
                 children: [
                   Text(
                     widget.person.voiceMessage,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   if (_isPlayingVoice)
@@ -249,7 +262,9 @@ class _PersonCardState extends State<_PersonCard> with SingleTickerProviderState
                   else
                     Text(
                       'Sesli mesajı oynat',
-                      style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                 ],
               ),
@@ -266,8 +281,14 @@ class _PersonCardState extends State<_PersonCard> with SingleTickerProviderState
         Expanded(
           child: ElevatedButton.icon(
             onPressed: _toggleVoice,
-            icon: Icon(_isPlayingVoice ? Icons.pause_rounded : Icons.volume_up_rounded, size: 20),
-            label: Text(_isPlayingVoice ? 'Durdur' : 'Sesli Mesaj', style: const TextStyle(fontSize: 16)),
+            icon: Icon(
+              _isPlayingVoice ? Icons.pause_rounded : Icons.volume_up_rounded,
+              size: 20,
+            ),
+            label: Text(
+              _isPlayingVoice ? 'Durdur' : 'Sesli Mesaj',
+              style: const TextStyle(fontSize: 16),
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -299,7 +320,8 @@ class _VoiceWaveform extends StatefulWidget {
   State<_VoiceWaveform> createState() => _VoiceWaveformState();
 }
 
-class _VoiceWaveformState extends State<_VoiceWaveform> with TickerProviderStateMixin {
+class _VoiceWaveformState extends State<_VoiceWaveform>
+    with TickerProviderStateMixin {
   late List<AnimationController> _controllers;
   final List<double> _heights = [6, 10, 14, 10, 8, 14, 6, 10, 12, 8];
 

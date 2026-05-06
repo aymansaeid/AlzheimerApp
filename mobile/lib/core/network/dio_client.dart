@@ -14,17 +14,17 @@ class DioClient {
     LoggingInterceptor loggingInterceptor,
   ) {
     _dio.options = BaseOptions(
-      baseUrl: const String.fromEnvironment('BASE_URL', defaultValue: 'https://api.alzheimerapp.com/api/v1'),
+      baseUrl: const String.fromEnvironment(
+        'BASE_URL',
+        defaultValue: 'https://api.alzheimerapp.com/api/v1',
+      ),
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
       contentType: 'application/json',
     );
 
-    _dio.interceptors.addAll([
-      authInterceptor,
-      loggingInterceptor,
-    ]);
+    _dio.interceptors.addAll([authInterceptor, loggingInterceptor]);
   }
 
   Dio get dio => _dio;
