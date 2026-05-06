@@ -83,4 +83,24 @@ public class MedicineLogService : IMedicineLogService
 
         await _logRepository.UpdateAsync(log);
     }
+
+    public async Task MarkOverdueLogsAsMissedAsync()
+    {
+        // We consider a medicine "Missed" if its scheduled date was strictly BEFORE today.
+        // (So yesterday's un-clicked medicines will be swept up).
+        var startOfToday = DateTime.UtcNow.Date;
+
+        var overdueLogs = await _logRepository.GetPendingLogsBeforeAsync(startOfToday);
+
+        if (!overdueLogs.Any()) return; // Nothing to update!
+
+        foreach (var log in overdueLogs)
+        {
+            log.Status = MedicineStatus.Missed;
+            log.Note = "System Auto-Update: Patient did not confirm taking this medication.";
+        }
+
+        // Save all changes to PostgreSQL in one massive transaction
+        await _logRepository.UpdateRangeAsync(overdueLogs);
+    }
 }

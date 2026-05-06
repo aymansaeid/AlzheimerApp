@@ -42,4 +42,17 @@ public class MedicineLogRepository : IMedicineLogRepository
         await _context.MedicineLogs.AddRangeAsync(logs);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<MedicineLog>> GetPendingLogsBeforeAsync(DateTime cutoffDate)
+    {
+        return await _context.MedicineLogs
+            .Where(ml => ml.Status == Domain.Enums.MedicineStatus.Pending && ml.ScheduledAt < cutoffDate)
+            .ToListAsync();
+    }
+
+    public async Task UpdateRangeAsync(IEnumerable<MedicineLog> logs)
+    {
+        _context.MedicineLogs.UpdateRange(logs);
+        await _context.SaveChangesAsync();
+    }
 }
