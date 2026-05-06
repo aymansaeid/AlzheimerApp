@@ -5,6 +5,7 @@ import '../../../../core/errors/failures.dart';
 import '../../domain/entities/medication.dart';
 import '../../domain/repositories/medication_repository.dart';
 import '../datasources/medication_remote_data_source.dart';
+import '../models/medication_model.dart';
 
 @LazySingleton(as: MedicationRepository)
 class MedicationRepositoryImpl implements MedicationRepository {
@@ -33,7 +34,8 @@ class MedicationRepositoryImpl implements MedicationRepository {
     Medication medication,
   ) async {
     try {
-      final newMedication = await remoteDataSource.addMedication(medication);
+      final model = MedicationModel.fromEntity(medication);
+      final newMedication = await remoteDataSource.addMedication(model);
       return Right(newMedication);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -45,9 +47,8 @@ class MedicationRepositoryImpl implements MedicationRepository {
     Medication medication,
   ) async {
     try {
-      final updatedMedication = await remoteDataSource.updateMedication(
-        medication,
-      );
+      final model = MedicationModel.fromEntity(medication);
+      final updatedMedication = await remoteDataSource.updateMedication(model);
       return Right(updatedMedication);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
