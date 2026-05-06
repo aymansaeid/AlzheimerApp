@@ -4,6 +4,6 @@ import '../entities/network_user.dart';
 
 abstract class CareNetworkRepository {
   Future<Either<Failure, List<NetworkUser>>> getNetworkUsers();
-  Future<Either<Failure, NetworkUser>> addPatient(String email);
-  Future<Either<Failure, NetworkUser>> addCaregiver(String email);
+  Future<Either<Failure, String>> generatePatientInviteLink();
+  Future<Either<Failure, String>> generateCaregiverInviteLink();
 }

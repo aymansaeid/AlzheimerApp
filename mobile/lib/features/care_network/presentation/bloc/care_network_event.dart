@@ -9,20 +9,8 @@ abstract class CareNetworkEvent extends Equatable {
 
 class FetchNetworkUsers extends CareNetworkEvent {}
 
-class AddPatient extends CareNetworkEvent {
-  final String email;
+class GeneratePatientInviteLink extends CareNetworkEvent {}
 
-  const AddPatient(this.email);
+class GenerateCaregiverInviteLink extends CareNetworkEvent {}
 
-  @override
-  List<Object?> get props => [email];
-}
-
-class AddCaregiver extends CareNetworkEvent {
-  final String email;
-
-  const AddCaregiver(this.email);
-
-  @override
-  List<Object?> get props => [email];
-}
+class ClearGeneratedLink extends CareNetworkEvent {}

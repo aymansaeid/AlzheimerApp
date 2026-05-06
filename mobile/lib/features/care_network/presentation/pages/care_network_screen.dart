@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/di/injection.dart';
 import '../bloc/care_network_bloc.dart';
@@ -14,9 +15,7 @@ class CareNetworkScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => getIt<CareNetworkBloc>()..add(FetchNetworkUsers()),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Bağlantılar Ağı'),
-        ),
+        appBar: AppBar(title: const Text('Bağlantılar Ağı')),
         body: BlocBuilder<CareNetworkBloc, CareNetworkState>(
           builder: (context, state) {
             if (state is CareNetworkLoading || state is CareNetworkInitial) {
@@ -37,7 +36,13 @@ class CareNetworkScreen extends StatelessWidget {
                       _buildSectionHeader(
                         context,
                         title: 'Takip Ettiğim Hastalar',
-                        onAddPressed: () {},
+                        onAddPressed: () {
+                          _showInviteDialog(
+                            context,
+                            'patient',
+                            context.read<CareNetworkBloc>(),
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                       _buildUserList(context, state.patients),
@@ -45,7 +50,13 @@ class CareNetworkScreen extends StatelessWidget {
                       _buildSectionHeader(
                         context,
                         title: 'Diğer Takipçiler',
-                        onAddPressed: () {},
+                        onAddPressed: () {
+                          _showInviteDialog(
+                            context,
+                            'caregiver',
+                            context.read<CareNetworkBloc>(),
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                       _buildUserList(context, state.caregivers),
@@ -61,7 +72,11 @@ class CareNetworkScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, {required String title, required VoidCallback onAddPressed}) {
+  Widget _buildSectionHeader(
+    BuildContext context, {
+    required String title,
+    required VoidCallback onAddPressed,
+  }) {
     final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -85,7 +100,10 @@ class CareNetworkScreen extends StatelessWidget {
     if (users.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Text('Henüz kimse eklenmemiş.', style: Theme.of(context).textTheme.bodyMedium),
+        child: Text(
+          'Henüz kimse eklenmemiş.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
       );
     }
 
@@ -99,19 +117,24 @@ class CareNetworkScreen extends StatelessWidget {
 
         return Card(
           elevation: 0,
-          color: user.isMe 
-              ? theme.colorScheme.primaryContainer.withOpacity(0.5) 
+          color: user.isMe
+              ? theme.colorScheme.primaryContainer.withOpacity(0.5)
               : theme.colorScheme.surfaceVariant,
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: user.isMe ? theme.colorScheme.primary.withOpacity(0.5) : Colors.transparent,
+              color: user.isMe
+                  ? theme.colorScheme.primary.withOpacity(0.5)
+                  : Colors.transparent,
               width: 1,
             ),
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
             leading: Container(
               width: 48,
               height: 48,
@@ -120,7 +143,10 @@ class CareNetworkScreen extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Text(user.avatarUrl, style: const TextStyle(fontSize: 24)),
+                child: Text(
+                  user.avatarUrl,
+                  style: const TextStyle(fontSize: 24),
+                ),
               ),
             ),
             title: Row(
@@ -135,7 +161,10 @@ class CareNetworkScreen extends StatelessWidget {
                 ),
                 if (user.isMe)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary,
                       borderRadius: BorderRadius.circular(12),
@@ -156,8 +185,158 @@ class CareNetworkScreen extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+            trailing: Icon(
+              Icons.chevron_right,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             onTap: () {},
+          ),
+        );
+      },
+    );
+  }
+
+  void _showInviteDialog(
+    BuildContext context,
+    String role,
+    CareNetworkBloc bloc,
+  ) {
+    bloc.add(ClearGeneratedLink());
+    if (role == 'patient') {
+      bloc.add(GeneratePatientInviteLink());
+    } else {
+      bloc.add(GenerateCaregiverInviteLink());
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return BlocProvider.value(
+          value: bloc,
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: BlocBuilder<CareNetworkBloc, CareNetworkState>(
+                builder: (context, state) {
+                  if (state is CareNetworkLoaded) {
+                    if (state.isGeneratingLink) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            role == 'patient'
+                                ? 'Hasta davet linki oluşturuluyor...'
+                                : 'Takipçi davet linki oluşturuluyor...',
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      );
+                    } else if (state.generatedLink != null) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            role == 'patient'
+                                ? 'Hasta Daveti'
+                                : 'Takipçi Daveti',
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Bu linki kopyalayıp davet etmek istediğiniz kişiyle paylaşın.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 24),
+                          Container(
+                            padding: const EdgeInsets.only(left: 12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceVariant,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outline.withOpacity(0.5),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    state.generatedLink!,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () {
+                                    // Clipboard entegrasyonu (flutter/services.dart gerektirir, şimdilik yorum satırı)
+                                    Clipboard.setData(
+                                      ClipboardData(text: state.generatedLink!),
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Link kopyalandı!'),
+                                      ),
+                                    );
+                                  },
+                                  icon: Icon(
+                                    Icons.copy,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Kapat'),
+                          ),
+                        ],
+                      );
+                    }
+                  } else if (state is CareNetworkError) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error, color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Hata oluştu: ${state.message}',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Kapat'),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return const SizedBox(
+                    height: 100,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                },
+              ),
+            ),
           ),
         );
       },

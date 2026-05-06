@@ -24,12 +24,22 @@ class CareNetworkRepositoryImpl implements CareNetworkRepository {
   }
 
   @override
-  Future<Either<Failure, NetworkUser>> addPatient(String email) async {
-    return Left(ServerFailure('Not implemented yet'));
+  Future<Either<Failure, String>> generatePatientInviteLink() async {
+    try {
+      final link = await remoteDataSource.generatePatientInviteLink();
+      return Right(link);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 
   @override
-  Future<Either<Failure, NetworkUser>> addCaregiver(String email) async {
-    return Left(ServerFailure('Not implemented yet'));
+  Future<Either<Failure, String>> generateCaregiverInviteLink() async {
+    try {
+      final link = await remoteDataSource.generateCaregiverInviteLink();
+      return Right(link);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }
