@@ -4,6 +4,9 @@ namespace AlzheimerApp.Application.Interfaces.Repositories;
 
 public interface IMemoryContentRepository
 {
-    Task<MemoryContent> AddAsync(MemoryContent content);
+    Task<MemoryContent?> GetByIdAsync(Guid id); 
     Task<List<MemoryContent>> GetActiveContentByPatientIdAsync(Guid patientId);
+    Task<MemoryContent> AddAsync(MemoryContent content);
+    Task UpdateAsync(MemoryContent content); 
+    Task DeleteAsync(MemoryContent content);
 }

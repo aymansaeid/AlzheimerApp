@@ -17,6 +17,8 @@ public class MemoryContentController : ControllerBase
         _contentService = contentService;
     }
 
+    // Only Followers/Admins can upload photos/voices
+    [Authorize(Roles = "Follower,Admin")]
     [HttpPost]
     public async Task<IActionResult> AddContent([FromBody] MemoryContentRequest request)
     {
@@ -31,6 +33,7 @@ public class MemoryContentController : ControllerBase
         }
     }
 
+    // Anyone (including the Patient) can fetch the memories to look at them
     [HttpGet("patient/{patientId}")]
     public async Task<IActionResult> GetPatientContent(Guid patientId)
     {
@@ -42,6 +45,38 @@ public class MemoryContentController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    // Only Followers/Admins can update
+    [Authorize(Roles = "Follower,Admin")]
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateContent(Guid id, [FromBody] UpdateMemoryContentRequest request)
+    {
+        try
+        {
+            await _contentService.UpdateContentAsync(id, request);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return NotFound(new { Error = ex.Message });
+        }
+    }
+
+    // Only Followers/Admins can delete
+    [Authorize(Roles = "Follower,Admin")]
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteContent(Guid id)
+    {
+        try
+        {
+            await _contentService.DeleteContentAsync(id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return NotFound(new { Error = ex.Message });
         }
     }
 }

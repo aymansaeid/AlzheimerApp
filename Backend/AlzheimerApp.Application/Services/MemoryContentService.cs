@@ -56,4 +56,28 @@ public class MemoryContentService : IMemoryContentService
             CreatedAt = content.CreatedAt
         };
     }
+
+    public async Task UpdateContentAsync(Guid id, UpdateMemoryContentRequest request)
+    {
+        var content = await _contentRepository.GetByIdAsync(id);
+        if (content == null) throw new Exception("Memory content not found.");
+
+        content.ContentType = request.ContentType;
+        content.Title = request.Title;
+        content.Description = request.Description;
+        content.FileUrl = request.FileUrl;
+        content.PersonName = request.PersonName;
+        content.Relationship = request.Relationship;
+        content.IsActive = request.IsActive;
+
+        await _contentRepository.UpdateAsync(content);
+    }
+
+    public async Task DeleteContentAsync(Guid id)
+    {
+        var content = await _contentRepository.GetByIdAsync(id);
+        if (content == null) throw new Exception("Memory content not found.");
+
+        await _contentRepository.DeleteAsync(content);
+    }
 }

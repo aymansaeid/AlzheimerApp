@@ -28,4 +28,21 @@ public class MemoryContentRepository : IMemoryContentRepository
             .OrderByDescending(mc => mc.CreatedAt) // Show newest memories first
             .ToListAsync();
     }
+
+    public async Task<MemoryContent?> GetByIdAsync(Guid id)
+    {
+        return await _context.MemoryContents.FindAsync(id);
+    }
+
+    public async Task UpdateAsync(MemoryContent content)
+    {
+        _context.MemoryContents.Update(content);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(MemoryContent content)
+    {
+        _context.MemoryContents.Remove(content);
+        await _context.SaveChangesAsync();
+    }
 }
