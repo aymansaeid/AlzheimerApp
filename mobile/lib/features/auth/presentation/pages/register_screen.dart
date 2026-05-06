@@ -33,8 +33,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return BlocProvider(
-      create: (context) => getIt<AuthBloc>(),
+    return BlocProvider.value(
+      value: getIt<AuthBloc>(),
       child: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthSuccess) {
@@ -46,7 +46,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message, style: TextStyle(color: theme.colorScheme.onError)),
+                content: Text(
+                  state.message,
+                  style: TextStyle(color: theme.colorScheme.onError),
+                ),
                 backgroundColor: theme.colorScheme.error,
               ),
             );
@@ -84,7 +87,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Bu alan boş bırakılamaz';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      ).hasMatch(value)) {
                         return 'Geçerli bir e-posta adresi giriniz';
                       }
                       return null;

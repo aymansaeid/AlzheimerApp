@@ -30,8 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return BlocProvider(
-      create: (context) => getIt<AuthBloc>(),
+    return BlocProvider.value(
+      value: getIt<AuthBloc>(),
       child: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthSuccess) {

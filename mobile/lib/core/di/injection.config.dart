@@ -84,7 +84,7 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i344.LoggingInterceptor>(),
       ),
     );
-    gh.factory<_i797.AuthBloc>(
+    gh.lazySingleton<_i797.AuthBloc>(
       () =>
           _i797.AuthBloc(gh<_i188.LoginUseCase>(), gh<_i941.RegisterUseCase>()),
     );
