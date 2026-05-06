@@ -9,6 +9,9 @@ import 'package:mobile/features/memory/presentation/pages/memory_module_screen.d
 import 'package:mobile/features/patient/presentation/pages/patient_home_screen.dart';
 import 'package:mobile/features/patient/presentation/widgets/patient_layout.dart';
 import 'package:mobile/features/care_network/presentation/pages/care_network_screen.dart';
+import 'package:mobile/features/care_network/presentation/pages/user_detail_screen.dart';
+import 'package:mobile/features/care_network/presentation/bloc/care_network_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -97,6 +100,20 @@ final appRouter = GoRouter(
               path: '/caregiver/network',
               name: 'caregiver_network',
               builder: (context, state) => const CareNetworkScreen(),
+              routes: [
+                GoRoute(
+                  path: 'user/:id',
+                  name: 'user_detail',
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    final bloc = state.extra as CareNetworkBloc;
+                    return BlocProvider.value(
+                      value: bloc,
+                      child: UserDetailScreen(userId: id),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),

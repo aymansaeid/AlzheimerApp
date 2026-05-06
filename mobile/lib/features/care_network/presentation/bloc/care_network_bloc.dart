@@ -13,6 +13,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     on<GeneratePatientInviteLink>(_onGeneratePatientInviteLink);
     on<GenerateCaregiverInviteLink>(_onGenerateCaregiverInviteLink);
     on<ClearGeneratedLink>(_onClearGeneratedLink);
+    on<RemoveUserEvent>(_onRemoveUserEvent);
   }
 
   Future<void> _onFetchNetworkUsers(
@@ -76,6 +77,26 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     if (state is CareNetworkLoaded) {
       final currentState = state as CareNetworkLoaded;
       emit(currentState.copyWith(clearLink: true, isGeneratingLink: false));
+    }
+  }
+
+  Future<void> _onRemoveUserEvent(
+    RemoveUserEvent event,
+    Emitter<CareNetworkState> emit,
+  ) async {
+    if (state is CareNetworkLoaded) {
+      final currentState = state as CareNetworkLoaded;
+      
+      // Sahte bekleme
+      await Future.delayed(const Duration(seconds: 1));
+      
+      final updatedPatients = currentState.patients.where((u) => u.id != event.userId).toList();
+      final updatedCaregivers = currentState.caregivers.where((u) => u.id != event.userId).toList();
+      
+      emit(currentState.copyWith(
+        patients: updatedPatients,
+        caregivers: updatedCaregivers,
+      ));
     }
   }
 }

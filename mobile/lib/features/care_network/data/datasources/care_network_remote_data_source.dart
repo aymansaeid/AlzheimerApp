@@ -15,6 +15,8 @@ class CareNetworkRemoteDataSourceImpl implements CareNetworkRemoteDataSource {
       'role': 'patient',
       'avatarUrl': '👴',
       'isMe': false,
+      'email': 'deneme00@gmail.com',
+      'phoneNumber': '5555555550',
     },
     {
       'id': 'patient_2',
@@ -22,6 +24,8 @@ class CareNetworkRemoteDataSourceImpl implements CareNetworkRemoteDataSource {
       'role': 'patient',
       'avatarUrl': '👵',
       'isMe': false,
+      'email': 'deneme0@gmail.com',
+      'phoneNumber': '5555555551',
     },
     {
       'id': 'caregiver_1',
@@ -29,6 +33,8 @@ class CareNetworkRemoteDataSourceImpl implements CareNetworkRemoteDataSource {
       'role': 'caregiver',
       'avatarUrl': '👩‍⚕️',
       'isMe': true,
+      'email': 'deneme1@gmail.com',
+      'phoneNumber': '5555555552',
     },
     {
       'id': 'caregiver_2',
@@ -36,6 +42,8 @@ class CareNetworkRemoteDataSourceImpl implements CareNetworkRemoteDataSource {
       'role': 'caregiver',
       'avatarUrl': '👨',
       'isMe': false,
+      'email': 'deneme2@gmail.com',
+      'phoneNumber': '5555555553',
     },
     {
       'id': 'caregiver_3',
@@ -43,6 +51,8 @@ class CareNetworkRemoteDataSourceImpl implements CareNetworkRemoteDataSource {
       'role': 'caregiver',
       'avatarUrl': '👩',
       'isMe': false,
+      'email': 'deneme3@gmail.com',
+      'phoneNumber': '5555555554',
     },
   ];
 
@@ -57,7 +67,7 @@ class CareNetworkRemoteDataSourceImpl implements CareNetworkRemoteDataSource {
     // Backend API call simülasyonu
     // final response = await dio.post('/api/invites/patient');
     // return response.data['invite_url'];
-    
+
     await Future.delayed(const Duration(seconds: 1));
     return 'https://alzheimerapp.com/invite/patient/${DateTime.now().millisecondsSinceEpoch}';
   }

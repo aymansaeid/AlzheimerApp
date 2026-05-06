@@ -7,6 +7,8 @@ class NetworkUserModel extends NetworkUser {
     required super.role,
     required super.avatarUrl,
     super.isMe,
+    required super.email,
+    required super.phoneNumber,
   });
 
   factory NetworkUserModel.fromJson(Map<String, dynamic> json) {
@@ -16,6 +18,8 @@ class NetworkUserModel extends NetworkUser {
       role: json['role'],
       avatarUrl: json['avatarUrl'],
       isMe: json['isMe'] ?? false,
+      email: json['email'],
+      phoneNumber: json['phoneNumber'],
     );
   }
 
@@ -26,6 +30,8 @@ class NetworkUserModel extends NetworkUser {
       'role': role,
       'avatarUrl': avatarUrl,
       'isMe': isMe,
+      'email': email,
+      'phoneNumber': phoneNumber,
     };
   }
 }

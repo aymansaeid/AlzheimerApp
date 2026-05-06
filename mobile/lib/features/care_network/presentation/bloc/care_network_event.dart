@@ -14,3 +14,12 @@ class GeneratePatientInviteLink extends CareNetworkEvent {}
 class GenerateCaregiverInviteLink extends CareNetworkEvent {}
 
 class ClearGeneratedLink extends CareNetworkEvent {}
+
+class RemoveUserEvent extends CareNetworkEvent {
+  final String userId;
+
+  const RemoveUserEvent(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
+}

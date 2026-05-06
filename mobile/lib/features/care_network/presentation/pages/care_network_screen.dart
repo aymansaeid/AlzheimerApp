@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/di/injection.dart';
 import '../bloc/care_network_bloc.dart';
 import '../bloc/care_network_event.dart';
@@ -189,7 +190,13 @@ class CareNetworkScreen extends StatelessWidget {
               Icons.chevron_right,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            onTap: () {},
+            onTap: () {
+              context.pushNamed(
+                'user_detail',
+                pathParameters: {'id': user.id},
+                extra: context.read<CareNetworkBloc>(),
+              );
+            },
           ),
         );
       },

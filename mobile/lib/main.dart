@@ -15,7 +15,7 @@ class AlzheimerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Alzheimer Takip',
+      title: 'AlzCare',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: appRouter,
