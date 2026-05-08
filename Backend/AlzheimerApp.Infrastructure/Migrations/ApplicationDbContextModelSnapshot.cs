@@ -247,6 +247,36 @@ namespace AlzheimerApp.Infrastructure.Migrations
                     b.ToTable("PatientFollowers");
                 });
 
+            modelBuilder.Entity("AlzheimerApp.Domain.Entities.PatientInvite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InviteCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPrimaryInvite")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PatientInvites");
+                });
+
             modelBuilder.Entity("AlzheimerApp.Domain.Entities.SafeZone", b =>
                 {
                     b.Property<Guid>("Id")
