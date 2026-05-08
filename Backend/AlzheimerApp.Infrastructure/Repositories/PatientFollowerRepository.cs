@@ -36,4 +36,20 @@ public class PatientFollowerRepository : IPatientFollowerRepository
         return await _context.PatientFollowers
             .AnyAsync(pf => pf.PatientId == patientId && pf.FollowerId == followerId);
     }
+    public async Task<bool> HasPrimaryFollowerAsync(Guid patientId)
+    {
+        return await _context.PatientFollowers
+            .AnyAsync(pf => pf.PatientId == patientId && pf.IsPrimary);
+    }
+    public async Task<PatientFollower?> GetRelationshipAsync(Guid patientId, Guid followerId)
+    {
+        return await _context.PatientFollowers
+            .FirstOrDefaultAsync(pf => pf.PatientId == patientId && pf.FollowerId == followerId);
+    }
+
+    public async Task UpdateAsync(PatientFollower relationship)
+    {
+        _context.PatientFollowers.Update(relationship);
+        await _context.SaveChangesAsync();
+    }
 }

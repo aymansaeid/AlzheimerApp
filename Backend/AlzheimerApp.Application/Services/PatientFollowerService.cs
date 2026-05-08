@@ -113,4 +113,29 @@ public class PatientFollowerService : IPatientFollowerService
             CreatedAt = savedEntity.CreatedAt
         };
     }
+    public async Task TransferAdminRightsAsync(Guid patientId, Guid currentAdminId, Guid newAdminId)
+    {
+        // 1. Get both relationships
+        var currentAdminRel = await _followerRepository.GetRelationshipAsync(patientId, currentAdminId);
+        var newAdminRel = await _followerRepository.GetRelationshipAsync(patientId, newAdminId);
+
+        if (currentAdminRel == null || newAdminRel == null)
+            throw new Exception("One or both users are not linked to this patient.");
+
+        // 2. Security Check: Ensure the person trying to transfer is actually the primary!
+        if (!currentAdminRel.IsPrimary)
+            throw new Exception("Only the current Primary Follower can transfer admin rights.");
+
+        // 3. The Swap
+        currentAdminRel.IsPrimary = false;
+        newAdminRel.IsPrimary = true;
+
+        // 4. Save to Database
+        await _followerRepository.UpdateAsync(currentAdminRel);
+        await _followerRepository.UpdateAsync(newAdminRel);
+    }
+    public async Task<bool> CheckHasAdminAsync(Guid patientId)
+    {
+        return await _followerRepository.HasPrimaryFollowerAsync(patientId);
+    }
 }

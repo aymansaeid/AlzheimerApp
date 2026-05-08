@@ -66,4 +66,39 @@ public class FollowerController : ControllerBase
             return BadRequest(new { Error = ex.Message });
         }
     }
+
+    [HttpGet("patient/{patientId}/has-admin")]
+    public async Task<IActionResult> CheckIfPatientHasAdmin(Guid patientId)
+    {
+        try
+        {
+            // We bypass the service for a simple boolean read to keep it fast
+            bool hasAdmin = await _followerService.CheckHasAdminAsync(patientId);
+            return Ok(new { HasAdmin = hasAdmin });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpPut("patient/{patientId}/transfer-admin/{newAdminId}")]
+    public async Task<IActionResult> TransferAdminRights(Guid patientId, Guid newAdminId)
+    {
+        try
+        {
+            var currentAdminIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(currentAdminIdString, out Guid currentAdminId))
+            {
+                return Unauthorized();
+            }
+
+            await _followerService.TransferAdminRightsAsync(patientId, currentAdminId, newAdminId);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
 }

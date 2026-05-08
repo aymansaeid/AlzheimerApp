@@ -9,4 +9,8 @@ public interface IPatientFollowerRepository
 
     Task<PatientFollower> AddAsync(PatientFollower patientFollower);
     Task<bool> RelationshipExistsAsync(Guid patientId, Guid followerId);
+    Task<bool> HasPrimaryFollowerAsync(Guid patientId);
+
+    Task<PatientFollower?> GetRelationshipAsync(Guid patientId, Guid followerId);
+    Task UpdateAsync(PatientFollower relationship);
 }
