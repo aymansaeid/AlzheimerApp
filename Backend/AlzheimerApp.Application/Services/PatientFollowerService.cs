@@ -1,7 +1,10 @@
-﻿using AlzheimerApp.Application.DTOs.Followers;
+﻿using AlzheimerApp.Application.DTOs.Alerts;
+using AlzheimerApp.Application.DTOs.Followers;
+using AlzheimerApp.Application.DTOs.MedicineLogs;
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
+using AlzheimerApp.Domain.Enums;
 
 namespace AlzheimerApp.Application.Services;
 
@@ -9,12 +12,25 @@ public class PatientFollowerService : IPatientFollowerService
 {
     private readonly IPatientFollowerRepository _followerRepository;
     private readonly IPatientInviteRepository _inviteRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly ILocationLogRepository _locationRepository;
+    private readonly IAlertHistoryRepository _alertRepository;
+    private readonly IMedicineLogService _medicineLogService;
 
-
-    public PatientFollowerService(IPatientFollowerRepository followerRepository , IPatientInviteRepository inviteRepository)
+    public PatientFollowerService(
+            IPatientFollowerRepository followerRepository,
+            IPatientInviteRepository inviteRepository,
+            IUserRepository userRepository,
+            ILocationLogRepository locationRepository,
+            IAlertHistoryRepository alertRepository,
+            IMedicineLogService medicineLogService)
     {
         _followerRepository = followerRepository;
         _inviteRepository = inviteRepository;
+        _userRepository = userRepository;
+        _locationRepository = locationRepository;
+        _alertRepository = alertRepository;
+        _medicineLogService = medicineLogService;
     }
 
     public async Task<FollowerResponse> AddFollowerAsync(FollowerRequest request)
@@ -137,5 +153,42 @@ public class PatientFollowerService : IPatientFollowerService
     public async Task<bool> CheckHasAdminAsync(Guid patientId)
     {
         return await _followerRepository.HasPrimaryFollowerAsync(patientId);
+    }
+    public async Task<FollowerDashboardResponse> GetDashboardDataAsync(Guid patientId)
+    {
+        var patient = await _userRepository.GetByIdAsync(patientId);
+        if (patient == null) throw new Exception("Patient not found.");
+
+        // 1. Get Location Data
+        var lastLocation = await _locationRepository.GetLatestLocationAsync(patientId);
+
+        // 2. Get Alert Data
+        var alerts = await _alertRepository.GetPatientAlertsAsync(patientId);
+        var unreadCount = alerts.Count(a => !a.IsRead);
+        var latestAlert = alerts.OrderByDescending(a => a.SentAt).FirstOrDefault();
+
+        // 3. Get Medicine Data for Today
+        var todayLogs = await _medicineLogService.GetDailyLogsAsync(patientId, DateTime.UtcNow);
+
+        return new FollowerDashboardResponse
+        {
+            PatientId = patient.Id,
+            PatientName = patient.FullName,
+            LastLatitude = lastLocation?.Latitude,
+            LastLongitude = lastLocation?.Longitude,
+            IsCurrentlyOutside = lastLocation?.IsOutsideZone ?? false,
+            LastSeenAt = lastLocation?.RecordedAt,
+            UnreadAlertCount = unreadCount,
+            LatestAlert = latestAlert != null ? new AlertResponse
+            {
+                Id = latestAlert.Id,
+                Message = latestAlert.Message,
+                SentAt = latestAlert.SentAt,
+                IsRead = latestAlert.IsRead
+            } : null,
+            TotalMedsToday = todayLogs.Count,
+            MedsTakenToday = todayLogs.Count(l => l.Status == MedicineStatus.Taken),
+            UpcomingMeds = todayLogs.Where(l => l.Status == MedicineStatus.Pending).ToList()
+        };
     }
 }

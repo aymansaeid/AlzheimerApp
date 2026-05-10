@@ -101,4 +101,18 @@ public class FollowerController : ControllerBase
             return BadRequest(new { Error = ex.Message });
         }
     }
+
+    [HttpGet("patient/{patientId}/dashboard")]
+    public async Task<IActionResult> GetDashboard(Guid patientId)
+    {
+        try
+        {
+            var response = await _followerService.GetDashboardDataAsync(patientId);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
 }

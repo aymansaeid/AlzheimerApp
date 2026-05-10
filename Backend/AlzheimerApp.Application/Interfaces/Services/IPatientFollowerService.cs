@@ -8,5 +8,6 @@ public interface IPatientFollowerService
     Task<InviteResponse> GenerateInviteAsync(GenerateInviteRequest request);
     Task<FollowerResponse> AcceptInviteAsync(Guid newFollowerId, AcceptInviteRequest request);
     Task TransferAdminRightsAsync(Guid patientId, Guid currentAdminId, Guid newAdminId);
-    Task<bool> CheckHasAdminAsync(Guid patientId); 
+    Task<bool> CheckHasAdminAsync(Guid patientId);
+    Task<FollowerDashboardResponse> GetDashboardDataAsync(Guid patientId);
 }

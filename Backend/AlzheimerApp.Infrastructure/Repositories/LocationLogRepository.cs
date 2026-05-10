@@ -28,4 +28,11 @@ public class LocationLogRepository : ILocationLogRepository
             .OrderByDescending(l => l.RecordedAt)
             .ToListAsync();
     }
+    public async Task<LocationLog?> GetLatestLocationAsync(Guid patientId)
+    {
+        return await _context.LocationLogs
+            .Where(l => l.PatientId == patientId)
+            .OrderByDescending(l => l.RecordedAt)
+            .FirstOrDefaultAsync();
+    }
 }
