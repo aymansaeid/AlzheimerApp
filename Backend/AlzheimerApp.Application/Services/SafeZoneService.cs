@@ -14,7 +14,7 @@ public class SafeZoneService : ISafeZoneService
         _safeZoneRepository = safeZoneRepository;
     }
 
-    public async Task<SafeZone> CreateSafeZoneAsync(CreateSafeZoneDto dto)
+    public async Task<SafeZoneResponse> CreateSafeZoneAsync(CreateSafeZoneDto dto)
     {
         var safeZone = new SafeZone
         {
@@ -27,7 +27,20 @@ public class SafeZoneService : ISafeZoneService
             CreatedAt = DateTime.UtcNow
         };
 
-        return await _safeZoneRepository.AddAsync(safeZone);
+        // Save it to the database
+        var savedEntity = await _safeZoneRepository.AddAsync(safeZone);
+
+        return new SafeZoneResponse
+        {
+            Id = savedEntity.Id,
+            PatientId = savedEntity.PatientId,
+            Name = savedEntity.Name,
+            CenterLat = savedEntity.CenterLat,
+            CenterLng = savedEntity.CenterLng,
+            RadiusMeters = savedEntity.RadiusMeters,
+            IsActive = savedEntity.IsActive,
+            CreatedAt = savedEntity.CreatedAt
+        };
     }
 
     public async Task UpdateSafeZoneAsync(Guid id, UpdateSafeZoneRequest request)

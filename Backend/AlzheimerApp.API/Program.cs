@@ -6,6 +6,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 using AlzheimerApp.API.BackgroundJobs;
+using System.Reflection;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
@@ -21,7 +23,17 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "AlzheimerApp API",
-        Version = "v1"
+        Version = "v1",
+        Description = "The central backend for the Alzheimer's Tracking & Caregiver Application. \n\n" +
+                      "**Frontend Developer Guide:**\n" +
+                      "- Ensure you attach the `Bearer Token` to all secured requests.\n" +
+                      "- All Dates are in UTC ISO 8601 format.\n" +
+                      "- See schemas below for required JSON payloads.",
+        Contact = new OpenApiContact
+        {
+            Name = "Backend Architecture Team",
+            Email = "aemon.saeid@gmail.com"
+        }
     });
 
     options.AddSecurityDefinition(schemeId, new OpenApiSecurityScheme
@@ -38,6 +50,9 @@ builder.Services.AddSwaggerGen(options =>
     {
         [new OpenApiSecuritySchemeReference(schemeId, document)] = []
     });
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath);
 });
 
 

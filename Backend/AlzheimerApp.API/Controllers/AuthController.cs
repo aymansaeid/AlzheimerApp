@@ -21,8 +21,30 @@ public class AuthController : ControllerBase
         _authService = authService;
         _configuration = configuration;
     }
-
+    /// <summary>
+    /// Registers a new user (Patient or Follower) into the system.
+    /// </summary>
+    /// <remarks>
+    /// **Role Mapping:**
+    /// * 0 = Patient
+    /// * 1 = Follower
+    /// * 2 = Admin
+    /// 
+    /// Sample request:
+    /// 
+    ///     POST /api/auth/register
+    ///     {
+    ///        "email": "ekrem@example.com",
+    ///        "password": "StrongPassword123!",
+    ///        "fullName": "Ekrem (Son)",
+    ///        "role": 1
+    ///     }
+    /// </remarks>
+    /// <response code="200">Returns the new user's ID and details.</response>
+    /// <response code="400">If the email is already taken or validation fails.</response>
     [HttpPost("register")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
         try
@@ -36,7 +58,23 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Logs in an existing user and returns a JWT token.
+    /// </summary>
+    /// <remarks>
+    /// Sample request:
+    /// 
+    ///     POST /api/auth/login
+    ///     {
+    ///        "email": "ekrem@example.com",
+    ///        "password": "StrongPassword123!"
+    ///     }
+    /// </remarks>
+    /// <response code="200">Returns the JWT token and user details.</response>
+    /// <response code="401">If the email or password is incorrect.</response>
     [HttpPost("login")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         try
