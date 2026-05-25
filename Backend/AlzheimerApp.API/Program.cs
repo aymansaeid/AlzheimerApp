@@ -10,6 +10,21 @@ using System.Reflection;
 using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.StartsWith("postgres"))
+{
+    // Parse the postgres:// URL from Render
+    var databaseUri = new Uri(rawConnectionString);
+    var userInfo = databaseUri.UserInfo.Split(':');
+
+    // Rebuild it into standard Key-Value pair format that .NET loves
+    rawConnectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Database={databaseUri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=True;";
+
+    // Force .NET to use the fixed string in memory
+    builder.Configuration["ConnectionStrings:DefaultConnection"] = rawConnectionString;
+}
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -85,11 +100,12 @@ builder.Services.AddAuthentication(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "AlzheimerApp API v1");
+    options.RoutePrefix = "swagger"; // Serves Swagger at /swagger
+});
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
