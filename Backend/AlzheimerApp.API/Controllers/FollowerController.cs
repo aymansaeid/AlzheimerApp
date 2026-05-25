@@ -178,7 +178,7 @@ public class FollowerController : ControllerBase
     /// <response code="200">Returns the fully aggregated dashboard data.</response>
     /// <response code="400">If the patient is not found.</response>
     [HttpGet("patient/{patientId}/dashboard")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FollowerDashboardResponse),StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetDashboard(Guid patientId)
     {

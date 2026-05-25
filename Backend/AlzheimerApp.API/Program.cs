@@ -98,4 +98,20 @@ app.MapControllers();
 
 app.MapHub<LocationHub>("/hubs/location");
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AlzheimerApp.Infrastructure.Persistence.ApplicationDbContext>();
+        // This automatically executes 'dotnet ef database update' on the cloud server upon boot
+        await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.MigrateAsync(context.Database);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating the PostgreSQL database.");
+    }
+}
+
 app.Run();
