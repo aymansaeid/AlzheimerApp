@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/features/medication/domain/entities/medication.dart';
 import '../../../care_network/domain/entities/network_user.dart';
 import '../models/dashboard_summary_model.dart';
@@ -12,8 +13,9 @@ abstract class DashboardRemoteDataSource {
 @LazySingleton(as: DashboardRemoteDataSource)
 class MockDashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   final Dio dio;
+  final FlutterSecureStorage secureStorage;
 
-  MockDashboardRemoteDataSourceImpl(this.dio);
+  MockDashboardRemoteDataSourceImpl(this.dio, this.secureStorage);
 
   @override
   Future<DashboardSummaryModel> getPatientDashboardSummary(
@@ -131,23 +133,21 @@ class MockDashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
     // Backend'i simüle etmek için 1 saniye bekle
     await Future.delayed(const Duration(seconds: 1));
 
+    // Check if the caregiver has accepted an invite using local secure storage key
+    final hasInvite = await secureStorage.read(key: 'has_accepted_invite');
+    if (hasInvite != 'true') {
+      return const []; // Return empty so caregiver setup onboarding triggers
+    }
+
     // Takipçinin takip ettiği hastalar listesi (Test amaçlı burası boşaltılabilir)
     return const [
       NetworkUser(
-        id: '1',
-        fullName: 'Ahmet Bey',
+        id: '019e64f5-4474-7170-b7eb-08e7ec670197',
+        fullName: 'Hasta 1',
         role: 'patient',
         avatarUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Ahmet',
-        email: 'ahmet@example.com',
+        email: 'hasta1@gmail.com',
         phoneNumber: '+905551234567',
-      ),
-      NetworkUser(
-        id: '2',
-        fullName: 'Ayşe Hanım',
-        role: 'patient',
-        avatarUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Ayse',
-        email: 'ayse@example.com',
-        phoneNumber: '+905557654321',
       ),
     ];
   }

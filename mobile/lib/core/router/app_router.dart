@@ -16,6 +16,8 @@ import 'package:mobile/features/medication/presentation/pages/medication_detail_
 import 'package:mobile/features/medication/presentation/pages/medication_form_screen.dart';
 import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
 import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
+import 'package:mobile/features/onboarding/presentation/pages/patient_setup_screen.dart';
+import 'package:mobile/features/onboarding/presentation/pages/caregiver_setup_screen.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -36,6 +38,16 @@ final appRouter = GoRouter(
       path: '/register',
       name: 'register',
       builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/patient_setup',
+      name: 'patient_setup',
+      builder: (context, state) => const PatientSetupScreen(),
+    ),
+    GoRoute(
+      path: '/caregiver_setup',
+      name: 'caregiver_setup',
+      builder: (context, state) => const CaregiverSetupScreen(),
     ),
     GoRoute(
       path: '/medication/detail/:id',
