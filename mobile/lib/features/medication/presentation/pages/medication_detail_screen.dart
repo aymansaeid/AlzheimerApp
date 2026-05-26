@@ -12,8 +12,7 @@ import '../bloc/medication_state.dart';
 class MedicationDetailScreen extends StatelessWidget {
   final String medicationId;
 
-  const MedicationDetailScreen({Key? key, required this.medicationId})
-    : super(key: key);
+  const MedicationDetailScreen({super.key, required this.medicationId});
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +70,7 @@ class MedicationDetailScreen extends StatelessWidget {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: Colors.black.withValues(alpha: 0.05),
                                   blurRadius: 15,
                                   spreadRadius: 5,
                                 ),
@@ -194,7 +193,7 @@ class MedicationDetailScreen extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.05),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

@@ -29,13 +29,17 @@ class PatientSelector extends StatelessWidget {
           // HASTA SEÇİLDİĞİNDE YEŞİL YAPMA KURALI
           final cardColor = isSelected
               ? Colors.green.shade600
-              : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5);
+              : theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                );
           final textColor = isSelected
               ? Colors.white
               : theme.colorScheme.onSurface;
           final borderSide = isSelected
               ? BorderSide.none
-              : BorderSide(color: theme.colorScheme.outline.withOpacity(0.1));
+              : BorderSide(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.1),
+                );
 
           return Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -60,8 +64,10 @@ class PatientSelector extends StatelessWidget {
                         height: 40,
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Colors.white.withOpacity(0.2)
-                              : theme.colorScheme.primary.withOpacity(0.1),
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : theme.colorScheme.primary.withValues(
+                                  alpha: 0.1,
+                                ),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -91,7 +97,7 @@ class PatientSelector extends StatelessWidget {
                             'Hasta',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: isSelected
-                                  ? Colors.white.withOpacity(0.8)
+                                  ? Colors.white.withValues(alpha: 0.8)
                                   : theme.colorScheme.onSurfaceVariant,
                               fontSize: 11,
                             ),

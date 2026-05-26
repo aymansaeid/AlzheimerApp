@@ -254,14 +254,14 @@ class _GeofenceAlertScreenState extends State<GeofenceAlertScreen>
       height: 140,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Center(
         child: Icon(
           Icons.map_outlined,
           size: 48,
-          color: theme.colorScheme.error.withOpacity(0.5),
+          color: theme.colorScheme.error.withValues(alpha: 0.5),
         ),
       ),
     );

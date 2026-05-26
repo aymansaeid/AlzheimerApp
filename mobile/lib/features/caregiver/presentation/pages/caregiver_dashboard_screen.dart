@@ -201,7 +201,9 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.1)),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.1),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
@@ -212,7 +214,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

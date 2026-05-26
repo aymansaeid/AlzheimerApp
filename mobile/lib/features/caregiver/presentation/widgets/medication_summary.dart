@@ -18,7 +18,9 @@ class MedicationSummary extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.1)),
+          side: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.1),
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
@@ -28,7 +30,9 @@ class MedicationSummary extends StatelessWidget {
                 Icon(
                   Icons.medication_outlined,
                   size: 48,
-                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.4,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -75,8 +79,8 @@ class MedicationSummary extends StatelessWidget {
                     height: 46,
                     decoration: BoxDecoration(
                       color: med.isTaken
-                          ? Colors.green.withOpacity(0.1)
-                          : theme.primaryColor.withOpacity(0.1),
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : theme.primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(

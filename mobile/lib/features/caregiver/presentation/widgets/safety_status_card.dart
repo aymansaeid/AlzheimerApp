@@ -53,7 +53,7 @@ class SafetyStatusCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: contentColor.withOpacity(0.1),
+                  color: contentColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: contentColor, size: 30),
@@ -74,7 +74,7 @@ class SafetyStatusCard extends StatelessWidget {
                     Text(
                       detailsText,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: contentColor.withOpacity(0.85),
+                        color: contentColor.withValues(alpha: 0.85),
                         height: 1.3,
                       ),
                     ),

@@ -1,5 +1,4 @@
 import '../../domain/entities/dashboard_summary.dart';
-import '../../../medication/domain/entities/medication.dart';
 
 class DashboardSummaryModel extends DashboardSummary {
   const DashboardSummaryModel({
