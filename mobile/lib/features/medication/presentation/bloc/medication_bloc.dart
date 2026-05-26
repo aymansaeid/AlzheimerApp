@@ -1,5 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/core/di/injection.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
+import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../domain/usecases/add_medication.dart';
@@ -34,6 +38,8 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
     on<MarkAsTakenEvent>(_onMarkAsTaken);
   }
 
+  String? _currentPatientId;
+
   Future<void> _onLoadMedications(
     LoadMedications event,
     Emitter<MedicationState> emit,
@@ -41,8 +47,25 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
     emit(MedicationLoading());
     _currentSelectedDate = event.date;
 
-    // TODO: Get real patientId from AuthBloc or secure storage
-    final String patientId = 'patient_1';
+    String patientId = event.patientId ?? _currentPatientId ?? '';
+
+    if (patientId.isEmpty) {
+      // Fallback 1: If logged-in user is a patient, use their own ID
+      final authState = getIt<AuthBloc>().state;
+      if (authState is AuthAuthenticated && authState.user.role == 'patient') {
+        patientId = authState.user.id;
+      }
+    }
+
+    if (patientId.isEmpty) {
+      // Cannot resolve patient — emit error and exit
+      emit(MedicationError(
+        'Hasta bilgisi henüz yüklenemedi. Lütfen tekrar deneyin.',
+      ));
+      return;
+    }
+
+    _currentPatientId = patientId;
 
     final result = await getMedicationsByDate(patientId, event.date);
 
@@ -143,8 +166,8 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
         ); // Rollback optimistic update
       },
       (_) {
-        // Optimistic update already happened, we could optionally reload or just leave it
-        // add(LoadMedications(_currentSelectedDate));
+        // Optimistic update already happened, reload list in background to align maps
+        add(LoadMedications(_currentSelectedDate));
       },
     );
   }

@@ -24,17 +24,16 @@ class PatientSetupBloc extends Bloc<PatientSetupEvent, PatientSetupState> {
     emit(PatientSetupLoading());
     final result = await _checkHasAdminUseCase(event.patientId);
 
-    await result.fold(
-      (failure) async => emit(PatientSetupError(failure.message)),
-      (hasAdmin) async {
-        if (hasAdmin) {
-          emit(PatientSetupHasAdmin());
-        } else {
-          // If no admin caregiver connected yet, automatically trigger invite code generation
-          add(GenerateInviteCode(event.patientId));
-        }
-      },
-    );
+    result.fold((failure) => emit(PatientSetupError(failure.message)), (
+      hasAdmin,
+    ) {
+      if (hasAdmin) {
+        emit(const PatientSetupHasAdminInitial());
+      } else {
+        // If no admin caregiver connected yet, automatically trigger invite code generation
+        add(GenerateInviteCode(event.patientId));
+      }
+    });
   }
 
   Future<void> _onGenerateInviteCode(
@@ -68,7 +67,7 @@ class PatientSetupBloc extends Bloc<PatientSetupEvent, PatientSetupState> {
       hasAdmin,
     ) {
       if (hasAdmin) {
-        emit(PatientSetupHasAdmin());
+        emit(const PatientSetupHasAdminRefreshed());
       } else {
         // If still no admin connected, re-emit the PatientSetupNoAdmin state
         if (savedInvite != null) {

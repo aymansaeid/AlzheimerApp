@@ -106,7 +106,7 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i237.FollowerRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i484.MedicationRemoteDataSource>(
-      () => _i484.MockMedicationRemoteDataSourceImpl(gh<_i361.Dio>()),
+      () => _i484.MedicationRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i107.AuthRemoteDataSource>(
       () => _i107.AuthRemoteDataSourceImpl(gh<_i361.Dio>()),

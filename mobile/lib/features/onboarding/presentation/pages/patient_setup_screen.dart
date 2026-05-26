@@ -36,7 +36,9 @@ class PatientSetupScreen extends StatelessWidget {
             getIt<PatientSetupBloc>()..add(CheckAdminStatus(patientId)),
         child: BlocConsumer<PatientSetupBloc, PatientSetupState>(
           listener: (context, state) {
-            if (state is PatientSetupHasAdmin) {
+            if (state is PatientSetupHasAdminInitial) {
+              context.goNamed('patient_home');
+            } else if (state is PatientSetupHasAdminRefreshed) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(

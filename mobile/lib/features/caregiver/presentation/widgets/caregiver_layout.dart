@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
 import 'package:mobile/features/medication/presentation/bloc/medication_event.dart';
+import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
 import '../../../../core/widgets/app_bottom_nav_bar.dart';
 import 'package:go_router/go_router.dart';
 
@@ -29,7 +30,14 @@ class CaregiverLayout extends StatelessWidget {
           );
 
           if (index == 1) {
-            context.read<MedicationBloc>().add(LoadMedications(DateTime.now()));
+            String? patientId;
+            final dashboardState = context.read<DashboardBloc>().state;
+            if (dashboardState is DashboardLoaded) {
+              patientId = dashboardState.summary.patientId;
+            }
+            context.read<MedicationBloc>().add(
+              LoadMedications(DateTime.now(), patientId: patientId),
+            );
           }
         },
       ),

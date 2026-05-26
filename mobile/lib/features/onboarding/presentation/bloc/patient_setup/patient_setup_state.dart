@@ -12,7 +12,13 @@ class PatientSetupInitial extends PatientSetupState {}
 
 class PatientSetupLoading extends PatientSetupState {}
 
-class PatientSetupHasAdmin extends PatientSetupState {}
+class PatientSetupHasAdminInitial extends PatientSetupState {
+  const PatientSetupHasAdminInitial();
+}
+
+class PatientSetupHasAdminRefreshed extends PatientSetupState {
+  const PatientSetupHasAdminRefreshed();
+}
 
 class PatientSetupNoAdmin extends PatientSetupState {
   final InviteResponse inviteResponse;
