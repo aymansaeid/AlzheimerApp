@@ -59,9 +59,11 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
 
     if (patientId.isEmpty) {
       // Cannot resolve patient — emit error and exit
-      emit(MedicationError(
-        'Hasta bilgisi henüz yüklenemedi. Lütfen tekrar deneyin.',
-      ));
+      emit(
+        MedicationError(
+          'Hasta bilgisi henüz yüklenemedi. Lütfen tekrar deneyin.',
+        ),
+      );
       return;
     }
 
@@ -75,6 +77,7 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
         MedicationLoaded(
           medications: medications,
           selectedDate: _currentSelectedDate,
+          patientId: _currentPatientId,
         ),
       ),
     );

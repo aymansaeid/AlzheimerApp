@@ -15,14 +15,16 @@ class MedicationLoading extends MedicationState {}
 class MedicationLoaded extends MedicationState {
   final List<Medication> medications;
   final DateTime selectedDate;
+  final String? patientId;
 
   const MedicationLoaded({
     required this.medications,
     required this.selectedDate,
+    this.patientId,
   });
 
   @override
-  List<Object?> get props => [medications, selectedDate];
+  List<Object?> get props => [medications, selectedDate, patientId];
 }
 
 class MedicationError extends MedicationState {
