@@ -104,7 +104,7 @@ class MockMedicationRemoteDataSourceImpl implements MedicationRemoteDataSource {
           final dateStr =
               '${queryDate.year}-${queryDate.month}-${queryDate.day}';
           final isTaken = _takenDates[m.id]?.contains(dateStr) ?? false;
-          return m.copyWith(isTaken: isTaken) as MedicationModel;
+          return m.copyWith(isTaken: isTaken);
         })
         .toList();
   }
@@ -119,11 +119,9 @@ class MockMedicationRemoteDataSourceImpl implements MedicationRemoteDataSource {
     // }
 
     await Future.delayed(const Duration(seconds: 1));
-    final newMedication =
-        medication.copyWith(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-            )
-            as MedicationModel;
+    final newMedication = medication.copyWith(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
     _mockMedications.add(newMedication);
     return newMedication;
   }

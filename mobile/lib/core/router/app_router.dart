@@ -15,6 +15,7 @@ import 'package:mobile/features/medication/presentation/pages/medication_list_sc
 import 'package:mobile/features/medication/presentation/pages/medication_detail_screen.dart';
 import 'package:mobile/features/medication/presentation/pages/medication_form_screen.dart';
 import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
+import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -104,7 +105,13 @@ final appRouter = GoRouter(
     // Caregiver StatefulShellRoute
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MultiBlocProvider(
-        providers: [BlocProvider(create: (_) => getIt<MedicationBloc>())],
+        providers: [
+          BlocProvider(create: (_) => getIt<MedicationBloc>()),
+          BlocProvider(
+            create: (_) =>
+                getIt<DashboardBloc>()..add(const LoadDashboard(null)),
+          ),
+        ],
         child: CaregiverLayout(navigationShell: navigationShell),
       ),
       branches: [
@@ -113,8 +120,7 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/caregiver/dashboard',
               name: 'caregiver_dashboard',
-              builder: (context, state) =>
-                  CaregiverDashboardScreen(onRefresh: () {}, onOpenMap: () {}),
+              builder: (context, state) => CaregiverDashboardScreen(),
             ),
           ],
         ),
