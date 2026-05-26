@@ -155,10 +155,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i344.LoggingInterceptor>(),
       ),
     );
-    gh.lazySingleton<_i797.AuthBloc>(
-      () =>
-          _i797.AuthBloc(gh<_i188.LoginUseCase>(), gh<_i941.RegisterUseCase>()),
-    );
     gh.factory<_i501.MedicationBloc>(
       () => _i501.MedicationBloc(
         getMedicationsByDate: gh<_i429.GetMedicationsByDate>(),
@@ -166,6 +162,13 @@ extension GetItInjectableX on _i174.GetIt {
         updateMedication: gh<_i397.UpdateMedication>(),
         deleteMedication: gh<_i329.DeleteMedication>(),
         markMedicationAsTaken: gh<_i929.MarkMedicationAsTaken>(),
+      ),
+    );
+    gh.lazySingleton<_i797.AuthBloc>(
+      () => _i797.AuthBloc(
+        gh<_i188.LoginUseCase>(),
+        gh<_i941.RegisterUseCase>(),
+        gh<_i558.FlutterSecureStorage>(),
       ),
     );
     return this;

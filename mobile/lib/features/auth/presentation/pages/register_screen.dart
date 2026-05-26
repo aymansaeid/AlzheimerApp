@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       value: getIt<AuthBloc>(),
       child: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthSuccess) {
+          if (state is AuthAuthenticated) {
             if (state.user.role == 'patient') {
               context.goNamed('patient_home');
             } else {
@@ -121,11 +121,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         : () {
                             if (_formKey.currentState!.validate()) {
                               context.read<AuthBloc>().add(
-                                RegisterRequested(
+                                AuthRegisterRequested(
                                   fullName: _fullNameController.text,
                                   email: _emailController.text,
                                   password: _passwordController.text,
-                                  role: _selectedRole,
+                                  role: _selectedRole == 'patient' ? 0 : 1,
                                 ),
                               );
                             }

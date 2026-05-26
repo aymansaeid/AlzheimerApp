@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
       value: getIt<AuthBloc>(),
       child: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthSuccess) {
+          if (state is AuthAuthenticated) {
             if (state.user.role == 'patient') {
               context.goNamed('patient_home');
             } else {
@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         : () {
                             if (_formKey.currentState!.validate()) {
                               context.read<AuthBloc>().add(
-                                LoginRequested(
+                                AuthLoginRequested(
                                   email: _emailController.text,
                                   password: _passwordController.text,
                                 ),

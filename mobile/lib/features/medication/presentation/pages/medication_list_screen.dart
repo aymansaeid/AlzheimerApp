@@ -53,7 +53,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     // Determine user role
     final authState = getIt<AuthBloc>().state;
     bool isCaregiver = false;
-    if (authState is AuthSuccess) {
+    if (authState is AuthAuthenticated) {
       isCaregiver = authState.user.role == 'caregiver';
     }
 

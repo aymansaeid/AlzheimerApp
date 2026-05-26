@@ -13,10 +13,15 @@ class AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final token = await _secureStorage.read(key: 'access_token');
+    final path = options.path.toLowerCase();
+    final isAuthPath =
+        path.contains('/api/auth/login') || path.contains('/api/auth/register');
 
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
+    if (!isAuthPath) {
+      final token = await _secureStorage.read(key: 'jwt_token');
+      if (token != null && token.isNotEmpty) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
     }
 
     return handler.next(options);

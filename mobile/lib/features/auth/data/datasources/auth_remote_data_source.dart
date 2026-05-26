@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
-import '../models/user_model.dart';
+import 'package:mobile/core/errors/exceptions.dart';
+import '../models/login_dto.dart';
+import '../models/register_dto.dart';
 
 abstract class AuthRemoteDataSource {
   Future<Map<String, dynamic>> login({
@@ -12,7 +15,8 @@ abstract class AuthRemoteDataSource {
     required String fullName,
     required String email,
     required String password,
-    required String role,
+    required int role,
+    String? phone,
   });
 }
 
@@ -27,29 +31,25 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
     required String password,
   }) async {
-    // try {
-    //   final response = await dio.post('/api/auth/login', data: {
-    //     'email': email,
-    //     'password': password,
-    //   });
-    //   return response.data;
-    // } catch (e) {
-    //   throw ServerException();
-    // }
-
-    // Backend'i simüle etmek için 2 saniye bekle
-    await Future.delayed(const Duration(seconds: 2));
-
-    final mockUserModel = UserModel(
-      id: 'mock_id_123',
-      email: email,
-      role: 'patient',
-      fullName: 'Ahmet Bey',
-      isActive: true,
-      createdAt: DateTime.now(),
-    );
-
-    return {'user': mockUserModel.toJson(), 'token': 'mock_jwt_token_123'};
+    try {
+      final loginDto = LoginDto(email: email, password: password);
+      final response = await dio.post(
+        '/api/Auth/login',
+        data: loginDto.toJson(),
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      throw ServerException(message: 'Sunucudan geçersiz bir yanıt alındı.');
+    } on DioException catch (e) {
+      final parsedMsg = _parseProblemDetails(e);
+      debugPrint('AuthRemoteDataSource [Login] DioException: $parsedMsg');
+      debugPrint('Response: ${e.response?.statusCode} - ${e.response?.data}');
+      throw ServerException(message: parsedMsg);
+    } catch (e, stack) {
+      debugPrint('AuthRemoteDataSource [Login] Generic Exception: $e\n$stack');
+      throw ServerException(message: e.toString());
+    }
   }
 
   @override
@@ -57,32 +57,66 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String fullName,
     required String email,
     required String password,
-    required String role,
+    required int role,
+    String? phone,
   }) async {
-    // try {
-    //   final response = await dio.post('/api/auth/register', data: {
-    //     'full_name': fullName,
-    //     'email': email,
-    //     'password': password,
-    //     'role': role,
-    //   });
-    //   return response.data;
-    // } catch (e) {
-    //   throw ServerException();
-    // }
+    try {
+      final registerDto = RegisterDto(
+        email: email,
+        password: password,
+        fullName: fullName,
+        phone: phone,
+        role: role,
+      );
+      final response = await dio.post(
+        '/api/Auth/register',
+        data: registerDto.toJson(),
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      throw ServerException(message: 'Sunucudan geçersiz bir yanıt alındı.');
+    } on DioException catch (e) {
+      final parsedMsg = _parseProblemDetails(e);
+      debugPrint('AuthRemoteDataSource [Register] DioException: $parsedMsg');
+      debugPrint('Response: ${e.response?.statusCode} - ${e.response?.data}');
+      throw ServerException(message: parsedMsg);
+    } catch (e, stack) {
+      debugPrint(
+        'AuthRemoteDataSource [Register] Generic Exception: $e\n$stack',
+      );
+      throw ServerException(message: e.toString());
+    }
+  }
 
-    // Backend'i simüle etmek için 2 saniye bekle
-    await Future.delayed(const Duration(seconds: 2));
-
-    final mockUserModel = UserModel(
-      id: 'mock_id_999',
-      email: email,
-      role: role,
-      fullName: fullName,
-      isActive: true,
-      createdAt: DateTime.now(),
-    );
-
-    return {'user': mockUserModel.toJson(), 'token': 'mock_jwt_token_123'};
+  String _parseProblemDetails(DioException e) {
+    if (e.response?.data is Map<String, dynamic>) {
+      final data = e.response!.data as Map<String, dynamic>;
+      if (data.containsKey('detail') &&
+          data['detail'] != null &&
+          data['detail'].toString().isNotEmpty) {
+        return data['detail'].toString();
+      }
+      if (data.containsKey('title') &&
+          data['title'] != null &&
+          data['title'].toString().isNotEmpty) {
+        return data['title'].toString();
+      }
+      if (data.containsKey('errors') && data['errors'] is Map) {
+        final errors = data['errors'] as Map;
+        final messages = <String>[];
+        errors.forEach((key, value) {
+          if (value is List) {
+            messages.add(value.join(', '));
+          } else if (value is String) {
+            messages.add(value);
+          }
+        });
+        if (messages.isNotEmpty) {
+          return messages.join('\n');
+        }
+      }
+    }
+    return e.message ?? 'Bilinmeyen bir sunucu hatası oluştu.';
   }
 }

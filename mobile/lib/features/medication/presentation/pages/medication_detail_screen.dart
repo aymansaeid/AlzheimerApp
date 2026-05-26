@@ -19,7 +19,7 @@ class MedicationDetailScreen extends StatelessWidget {
     // Determine role
     final authState = getIt<AuthBloc>().state;
     bool isPatient = false;
-    if (authState is AuthSuccess) {
+    if (authState is AuthAuthenticated) {
       isPatient = authState.user.role == 'patient';
     }
 
