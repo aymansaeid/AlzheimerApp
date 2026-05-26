@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 class Medication extends Equatable {
   final String id;
   final String patientId;
-  final String createdBy; // ID of the user who created it
+  final String creatorId; // ID of the user who created it
   final String name;
   final String dosage;
   final String instructions;
@@ -18,7 +18,7 @@ class Medication extends Equatable {
   const Medication({
     required this.id,
     required this.patientId,
-    required this.createdBy,
+    required this.creatorId,
     required this.name,
     required this.dosage,
     required this.instructions,
@@ -33,7 +33,7 @@ class Medication extends Equatable {
   Medication copyWith({
     String? id,
     String? patientId,
-    String? createdBy,
+    String? creatorId,
     String? name,
     String? dosage,
     String? instructions,
@@ -47,7 +47,7 @@ class Medication extends Equatable {
     return Medication(
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
-      createdBy: createdBy ?? this.createdBy,
+      creatorId: creatorId ?? this.creatorId,
       name: name ?? this.name,
       dosage: dosage ?? this.dosage,
       instructions: instructions ?? this.instructions,
@@ -64,7 +64,7 @@ class Medication extends Equatable {
   List<Object?> get props => [
     id,
     patientId,
-    createdBy,
+    creatorId,
     name,
     dosage,
     instructions,

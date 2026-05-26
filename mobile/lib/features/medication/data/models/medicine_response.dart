@@ -3,7 +3,7 @@ import 'medication_model.dart';
 class MedicineResponse {
   final String id;
   final String patientId;
-  final String createdBy;
+  final String creatorId;
   final String name;
   final String dosage;
   final String instructions;
@@ -16,7 +16,7 @@ class MedicineResponse {
   MedicineResponse({
     required this.id,
     required this.patientId,
-    required this.createdBy,
+    required this.creatorId,
     required this.name,
     required this.dosage,
     required this.instructions,
@@ -49,7 +49,7 @@ class MedicineResponse {
     return MedicineResponse(
       id: (json['id'] ?? '').toString(),
       patientId: (json['patientId'] ?? json['patient_id'] ?? '').toString(),
-      createdBy: (json['createdBy'] ?? json['created_by'] ?? '').toString(),
+      creatorId: (json['creatorId'] ?? json['creator_id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
       dosage: (json['dosage'] ?? '').toString(),
       instructions: (json['instructions'] ?? '').toString(),
@@ -81,7 +81,7 @@ class MedicineResponse {
     return MedicationModel(
       id: id,
       patientId: patientId,
-      createdBy: createdBy,
+      creatorId: creatorId,
       name: name,
       dosage: dosage,
       instructions: instructions,

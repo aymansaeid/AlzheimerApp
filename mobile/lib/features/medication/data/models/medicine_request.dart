@@ -3,7 +3,7 @@ import 'medication_model.dart';
 class MedicineRequest {
   final String? id; // for updates
   final String patientId;
-  final String createdBy;
+  final String creatorId;
   final String name;
   final String dosage;
   final String instructions;
@@ -16,7 +16,7 @@ class MedicineRequest {
   MedicineRequest({
     this.id,
     required this.patientId,
-    required this.createdBy,
+    required this.creatorId,
     required this.name,
     required this.dosage,
     required this.instructions,
@@ -45,7 +45,7 @@ class MedicineRequest {
           ? null
           : domain.id,
       patientId: domain.patientId,
-      createdBy: domain.createdBy,
+      creatorId: domain.creatorId,
       name: domain.name,
       dosage: domain.dosage,
       instructions: domain.instructions,
@@ -61,7 +61,7 @@ class MedicineRequest {
     return {
       if (id != null) 'id': id,
       'patientId': patientId,
-      'createdBy': createdBy,
+      'creatorId': creatorId,
       'name': name,
       'dosage': dosage,
       'instructions': instructions,

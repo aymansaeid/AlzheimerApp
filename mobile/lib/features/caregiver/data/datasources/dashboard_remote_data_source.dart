@@ -32,88 +32,10 @@ class MockDashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
     // }
     // -------------------------------------------------------------
 
-    // Backend'i simüle etmek için 2 saniye bekle
-    await Future.delayed(const Duration(seconds: 2));
-
-    // ID '1' veya 'patient_1' ise safe (güvenli), '2' veya 'patient_2' ise unsafe (güvenli değil)
-    final bool isSafe = patientId == '1' || patientId == 'patient_1';
-
-    // Mock medications returned per patient
-    final List<Medication> mockMeds = isSafe
-        ? [
-            Medication(
-              id: 'med_1',
-              patientId: patientId,
-              createdBy: 'caregiver_1',
-              name: 'Donepezil',
-              dosage: '10 mg',
-              instructions: 'Tok karnına, akşam yatmadan önce.',
-              scheduleTime: '22:00',
-              daysOfWeek: const [1, 2, 3, 4, 5, 6, 7],
-              startDate: DateTime.now(),
-              isActive: true,
-              isTaken: true,
-            ),
-            Medication(
-              id: 'med_2',
-              patientId: patientId,
-              createdBy: 'caregiver_1',
-              name: 'Memantin',
-              dosage: '20 mg',
-              instructions: 'Sabah tok karnına yarım bardak su ile.',
-              scheduleTime: '09:00',
-              daysOfWeek: const [1, 2, 3, 4, 5, 6, 7],
-              startDate: DateTime.now(),
-              isActive: true,
-              isTaken: false,
-            ),
-            Medication(
-              id: 'med_3',
-              patientId: patientId,
-              createdBy: 'caregiver_1',
-              name: 'B12 Vitamini',
-              dosage: '1000 mcg',
-              instructions: 'Öğle yemeğinden sonra dil altı.',
-              scheduleTime: '13:00',
-              daysOfWeek: const [1, 2, 3, 4, 5, 6, 7],
-              startDate: DateTime.now(),
-              isActive: true,
-              isTaken: true,
-            ),
-          ]
-        : [
-            Medication(
-              id: 'med_4',
-              patientId: patientId,
-              createdBy: 'caregiver_1',
-              name: 'Aspirin',
-              dosage: '100 mg',
-              instructions: 'Öğle yemeğiyle birlikte.',
-              scheduleTime: '12:30',
-              daysOfWeek: const [1, 2, 3, 4, 5, 6, 7],
-              startDate: DateTime.now(),
-              isActive: true,
-              isTaken: false,
-            ),
-            Medication(
-              id: 'med_5',
-              patientId: patientId,
-              createdBy: 'caregiver_1',
-              name: 'Coraspin',
-              dosage: '300 mg',
-              instructions: 'Akşam yemeğinden hemen sonra.',
-              scheduleTime: '19:00',
-              daysOfWeek: const [1, 2, 3, 4, 5, 6, 7],
-              startDate: DateTime.now(),
-              isActive: true,
-              isTaken: true,
-            ),
-          ];
-
     return DashboardSummaryModel(
       patientId: patientId,
-      isPatientSafe: isSafe,
-      todayMedications: mockMeds,
+      isPatientSafe: true,
+      todayMedications: [],
     );
   }
 

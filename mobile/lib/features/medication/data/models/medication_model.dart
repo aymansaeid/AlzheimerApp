@@ -4,7 +4,7 @@ class MedicationModel extends Medication {
   const MedicationModel({
     required super.id,
     required super.patientId,
-    required super.createdBy,
+    required super.creatorId,
     required super.name,
     required super.dosage,
     required super.instructions,
@@ -20,7 +20,7 @@ class MedicationModel extends Medication {
     return MedicationModel(
       id: entity.id,
       patientId: entity.patientId,
-      createdBy: entity.createdBy,
+      creatorId: entity.creatorId,
       name: entity.name,
       dosage: entity.dosage,
       instructions: entity.instructions,
@@ -37,7 +37,7 @@ class MedicationModel extends Medication {
     return MedicationModel(
       id: json['id'],
       patientId: json['patientId'],
-      createdBy: json['createdBy'],
+      creatorId: json['creatorId'],
       name: json['name'],
       dosage: json['dosage'],
       instructions: json['instructions'],
@@ -54,7 +54,7 @@ class MedicationModel extends Medication {
     return {
       'id': id,
       'patientId': patientId,
-      'createdBy': createdBy,
+      'creatorId': creatorId,
       'name': name,
       'dosage': dosage,
       'instructions': instructions,
@@ -71,7 +71,7 @@ class MedicationModel extends Medication {
   MedicationModel copyWith({
     String? id,
     String? patientId,
-    String? createdBy,
+    String? creatorId,
     String? name,
     String? dosage,
     String? instructions,
@@ -85,7 +85,7 @@ class MedicationModel extends Medication {
     return MedicationModel(
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
-      createdBy: createdBy ?? this.createdBy,
+      creatorId: creatorId ?? this.creatorId,
       name: name ?? this.name,
       dosage: dosage ?? this.dosage,
       instructions: instructions ?? this.instructions,

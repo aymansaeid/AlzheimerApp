@@ -66,10 +66,11 @@ final appRouter = GoRouter(
       name: 'medication_form',
       builder: (context, state) {
         final id = state.uri.queryParameters['id'];
+        final patientId = state.uri.queryParameters['patientId'];
         final bloc = state.extra as MedicationBloc;
         return BlocProvider.value(
           value: bloc,
-          child: MedicationFormScreen(medicationId: id),
+          child: MedicationFormScreen(medicationId: id, patientId: patientId),
         );
       },
     ),
