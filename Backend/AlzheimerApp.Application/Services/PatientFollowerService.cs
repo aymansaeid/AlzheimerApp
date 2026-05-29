@@ -191,4 +191,107 @@ public class PatientFollowerService : IPatientFollowerService
             UpcomingMeds = todayLogs.Where(l => l.Status == MedicineStatus.Pending).ToList()
         };
     }
+
+    // Paste these new/updated methods right into your existing service class:
+
+public async Task<InviteResponse> GenerateInviteAsync(Guid requesterId, GenerateInviteRequest request)
+{
+    bool hasAdmin = await _followerRepository.HasPrimaryFollowerAsync(request.PatientId);
+
+    if (hasAdmin)
+    {
+        // 🚨 SECURITY VALIDATION: If the group has an admin, only THAT admin can generate new invites!
+        var currentRelationship = await _followerRepository.GetRelationshipAsync(request.PatientId, requesterId);
+        if (currentRelationship == null || !currentRelationship.IsPrimary)
+        {
+            throw new Exception("Unauthorized. Only the Primary Caregiver can invite other family members.");
+        }
+        
+        // Force the invite type to be standard secondary if an admin already occupies the slot
+        request.IsPrimaryInvite = false;
+    }
+    else
+    {
+        // If there is no admin yet, this is the master genesis invite
+        request.IsPrimaryInvite = true;
+    }
+
+    // Generate a clean, 6-character alphanumeric code
+    string randomCode = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
+
+    var invite = new PatientInvite
+    {
+        PatientId = request.PatientId,
+        InviteCode = randomCode,
+        IsPrimaryInvite = request.IsPrimaryInvite,
+        ExpiresAt = DateTime.UtcNow.AddDays(2), // Reduced to 2 days for tight medical security
+        IsActive = true
+    };
+
+    await _inviteRepository.AddAsync(invite);
+
+    return new InviteResponse
+    {
+        InviteCode = invite.InviteCode,
+        DeepLinkUrl = $"alzheimerapp://invite?code={invite.InviteCode}",
+        ExpiresAt = invite.ExpiresAt
+    };
+}
+
+public async Task<List<CareTeamMemberResponse>> GetCareTeamAsync(Guid patientId)
+{
+    var relationships = await _followerRepository.GetFollowersByPatientIdAsync(patientId);
+    
+    return relationships.Select(r => new CareTeamMemberResponse
+    {
+        FollowerId = r.FollowerId,
+        FullName = r.Follower?.FullName ?? "Unknown Member",
+        Phone = r.Follower?.Phone ?? "No Phone Linked",
+        RelationshipType = r.Relationship,
+        IsPrimary = r.IsPrimary,
+        JoinedAt = r.CreatedAt
+    }).ToList();
+}
+
+public async Task RemoveFollowerAsync(Guid patientId, Guid adminId, Guid followerId)
+{
+    // 1. Verify the person eviction-testing is the group administrator
+    var adminRel = await _followerRepository.GetRelationshipAsync(patientId, adminId);
+    if (adminRel == null || !adminRel.IsPrimary)
+    {
+        throw new Exception("Action denied. Only the Primary Caregiver can manage team membership.");
+    }
+
+    if (adminId == followerId)
+    {
+        throw new Exception("You cannot remove yourself as Primary Admin. Transfer ownership first.");
+    }
+
+    // 2. Fetch target relation and execute eviction
+    var targetRel = await _followerRepository.GetRelationshipAsync(patientId, followerId);
+    if (targetRel == null)
+    {
+        throw new Exception("The specified member is not linked to this patient's care team.");
+    }
+
+    await _followerRepository.RemoveAsync(targetRel);
+}
+    public async Task LeavePatientAsync(Guid patientId, Guid followerId)
+    {
+        // Find the relationship record
+        var relationship = await _followerRepository.GetRelationshipAsync(patientId, followerId);
+        if (relationship == null)
+        {
+            throw new Exception("You are not linked to this patient.");
+        }
+
+        // If they are the primary admin, block them from leaving blindly!
+        if (relationship.IsPrimary)
+        {
+            throw new Exception("Action Denied: As the Primary Caregiver, you cannot leave the care team until you transfer Admin rights to another family member.");
+        }
+
+        // If they are a standard follower, let them leave cleanly
+        await _followerRepository.RemoveAsync(relationship);
+    }
 }

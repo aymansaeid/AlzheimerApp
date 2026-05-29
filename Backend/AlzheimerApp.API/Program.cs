@@ -14,14 +14,11 @@ var builder = WebApplication.CreateBuilder(args);
 var rawConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.StartsWith("postgres"))
 {
-    // Parse the postgres:// URL from Render
     var databaseUri = new Uri(rawConnectionString);
     var userInfo = databaseUri.UserInfo.Split(':');
 
-    // Rebuild it into standard Key-Value pair format that .NET loves
     rawConnectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Database={databaseUri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=True;";
 
-    // Force .NET to use the fixed string in memory
     builder.Configuration["ConnectionStrings:DefaultConnection"] = rawConnectionString;
 }
 

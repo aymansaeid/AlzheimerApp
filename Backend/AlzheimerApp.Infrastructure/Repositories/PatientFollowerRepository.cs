@@ -14,13 +14,12 @@ public class PatientFollowerRepository : IPatientFollowerRepository
         _context = context;
     }
 
-    public async Task<List<User>> GetFollowersByPatientIdAsync(Guid patientId)
+    public async Task<List<PatientFollower>> GetFollowersByPatientIdAsync(Guid patientId)
     {
-        // This joins the tables and returns the actual User accounts of the followers!
+        // This joins the tables and returns the full relationship entity with user profiles attached!
         return await _context.PatientFollowers
             .Where(pf => pf.PatientId == patientId)
             .Include(pf => pf.Follower)
-            .Select(pf => pf.Follower!)
             .ToListAsync();
     }
 
@@ -52,4 +51,11 @@ public class PatientFollowerRepository : IPatientFollowerRepository
         _context.PatientFollowers.Update(relationship);
         await _context.SaveChangesAsync();
     }
+
+    public async Task RemoveAsync(PatientFollower relationship)
+    {
+        _context.PatientFollowers.Remove(relationship);
+        await _context.SaveChangesAsync();
+    }
+
 }

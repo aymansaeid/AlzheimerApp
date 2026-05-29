@@ -52,6 +52,7 @@ public class FollowerController : ControllerBase
     /// **Scenario:** The Patient's app hits this to generate an Admin QR code, OR an existing Admin hits this to invite a standard viewer.
     /// 
     /// * Set `isPrimaryInvite: true` to generate a Master Admin invite.
+    /// 
     /// * Set `isPrimaryInvite: false` to generate a standard viewer invite.
     /// </remarks>
     /// <response code="200">Returns the code and the Flutter Deep Link URL (`alzheimerapp://invite?code=...`).</response>
@@ -63,7 +64,10 @@ public class FollowerController : ControllerBase
     {
         try
         {
-            var response = await _followerService.GenerateInviteAsync(request);
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Guid.TryParse(userIdString, out Guid requesterId);
+
+            var response = await _followerService.GenerateInviteAsync(requesterId, request);
             return Ok(response);
         }
         catch (Exception ex)
@@ -192,4 +196,90 @@ public class FollowerController : ControllerBase
             return BadRequest(new { Error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Lists all family members following this patient.
+    /// </summary>
+    /// <param name="patientId">The unique Guid of the Patient.</param>
+    /// <response code="200">Returns a list of matching care team profiles.</response>
+    [HttpGet("patient/{patientId}/team")]
+    [ProducesResponseType(typeof(List<CareTeamMemberResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetCareTeam(Guid patientId)
+    {
+        try
+        {
+            var response = await _followerService.GetCareTeamAsync(patientId);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Allows the Primary Caregiver to evict a family member from the care team.
+    /// </summary>
+    /// <param name="patientId">The unique Guid of the Patient.</param>
+    /// <param name="followerId">The unique Guid of the targeted family member.</param>
+    /// <response code="204">Successfully evicted. No content returned.</response>
+    [HttpDelete("patient/{patientId}/remove/{followerId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> RemoveFamilyMember(Guid patientId, Guid followerId)
+    {
+        try
+        {
+            var adminIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(adminIdString, out Guid adminId))
+            {
+                return Unauthorized();
+            }
+
+            await _followerService.RemoveFollowerAsync(patientId, adminId, followerId);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Allows the logged-in follower to disconnect or leave a patient's care team.
+    /// </summary>
+    /// <remarks>
+    /// **Security Rule:** If the authenticated user is the Primary Admin, the request will fail with a 400 error. 
+    /// They must first transfer admin rights using the `transfer-admin` endpoint.
+    /// </remarks>
+    /// <param name="patientId">The unique Guid of the Patient to leave.</param>
+    /// <response code="204">Successfully left the care team. No content returned.</response>
+    /// <response code="400">If the user is the primary admin or not linked to the patient.</response>
+    /// <response code="401">If the JWT token is missing or invalid.</response>
+    [HttpDelete("patient/{patientId}/leave")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> LeaveCareTeam(Guid patientId)
+    {
+        try
+        {
+            // Get the follower's ID straight from the secure JWT Token
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid followerId))
+            {
+                return Unauthorized(new { Error = "Invalid token claims." });
+            }
+
+            await _followerService.LeavePatientAsync(patientId, followerId);
+            return NoContent(); // 204 success
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
 }
