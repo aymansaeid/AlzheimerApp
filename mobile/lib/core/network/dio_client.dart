@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:injectable/injectable.dart';
 
 import 'interceptors/auth_interceptor.dart';
@@ -14,13 +15,10 @@ class DioClient {
     LoggingInterceptor loggingInterceptor,
   ) {
     _dio.options = BaseOptions(
-      baseUrl: const String.fromEnvironment(
-        'BASE_URL',
-        defaultValue: 'https://api.alzheimerapp.com/api/v1',
-      ),
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      sendTimeout: const Duration(seconds: 30),
+      baseUrl: dotenv.env['BASE_URL'] ?? '',
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      sendTimeout: const Duration(seconds: 15),
       contentType: 'application/json',
     );
 

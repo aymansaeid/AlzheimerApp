@@ -5,6 +5,7 @@ import '../../../../core/di/injection.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../../../caregiver/domain/usecases/get_followed_patients.dart';
 import '../widgets/auth_layout.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -37,11 +38,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
       value: getIt<AuthBloc>(),
       child: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthSuccess) {
+          if (state is AuthAuthenticated) {
             if (state.user.role == 'patient') {
-              context.goNamed('patient_home');
+              context.goNamed('patient_setup');
             } else {
-              context.goNamed('caregiver_dashboard');
+              // For caregiver, check if they already have followed patients
+              final checkFollowed = getIt<GetFollowedPatients>();
+              checkFollowed().then((result) {
+                if (context.mounted) {
+                  result.fold((failure) => context.goNamed('caregiver_setup'), (
+                    patients,
+                  ) {
+                    if (patients.isEmpty) {
+                      context.goNamed('caregiver_setup');
+                    } else {
+                      context.goNamed('caregiver_dashboard');
+                    }
+                  });
+                }
+              });
             }
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -121,11 +136,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         : () {
                             if (_formKey.currentState!.validate()) {
                               context.read<AuthBloc>().add(
-                                RegisterRequested(
+                                AuthRegisterRequested(
                                   fullName: _fullNameController.text,
                                   email: _emailController.text,
                                   password: _passwordController.text,
-                                  role: _selectedRole,
+                                  role: _selectedRole == 'patient' ? 0 : 1,
                                 ),
                               );
                             }

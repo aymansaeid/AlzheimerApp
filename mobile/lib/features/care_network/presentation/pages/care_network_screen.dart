@@ -119,14 +119,14 @@ class CareNetworkScreen extends StatelessWidget {
         return Card(
           elevation: 0,
           color: user.isMe
-              ? theme.colorScheme.primaryContainer.withOpacity(0.5)
-              : theme.colorScheme.surfaceVariant,
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+              : theme.colorScheme.surfaceContainerHighest,
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
               color: user.isMe
-                  ? theme.colorScheme.primary.withOpacity(0.5)
+                  ? theme.colorScheme.primary.withValues(alpha: 0.5)
                   : Colors.transparent,
               width: 1,
             ),
@@ -269,12 +269,12 @@ class CareNetworkScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Theme.of(
                                 context,
-                              ).colorScheme.surfaceVariant,
+                              ).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.outline.withOpacity(0.5),
+                                ).colorScheme.outline.withValues(alpha: 0.5),
                               ),
                             ),
                             child: Row(

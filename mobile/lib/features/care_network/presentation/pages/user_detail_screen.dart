@@ -54,7 +54,7 @@ class UserDetailScreen extends StatelessWidget {
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceVariant,
+                        color: theme.colorScheme.surfaceContainerHighest,
                         shape: BoxShape.circle,
                       ),
                       child: Center(

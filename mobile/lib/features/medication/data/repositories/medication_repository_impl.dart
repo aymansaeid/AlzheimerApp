@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/medication.dart';
 import '../../domain/repositories/medication_repository.dart';
@@ -24,6 +25,8 @@ class MedicationRepositoryImpl implements MedicationRepository {
         date,
       );
       return Right(medications);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -37,6 +40,8 @@ class MedicationRepositoryImpl implements MedicationRepository {
       final model = MedicationModel.fromEntity(medication);
       final newMedication = await remoteDataSource.addMedication(model);
       return Right(newMedication);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -50,6 +55,8 @@ class MedicationRepositoryImpl implements MedicationRepository {
       final model = MedicationModel.fromEntity(medication);
       final updatedMedication = await remoteDataSource.updateMedication(model);
       return Right(updatedMedication);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -60,6 +67,8 @@ class MedicationRepositoryImpl implements MedicationRepository {
     try {
       await remoteDataSource.deleteMedication(id);
       return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -70,6 +79,8 @@ class MedicationRepositoryImpl implements MedicationRepository {
     try {
       await remoteDataSource.markAsTaken(id, date);
       return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

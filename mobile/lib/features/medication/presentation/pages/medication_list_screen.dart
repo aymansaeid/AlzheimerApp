@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile/core/di/injection.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../../caregiver/presentation/bloc/dashboard_bloc.dart';
 import '../bloc/medication_bloc.dart';
 import '../bloc/medication_event.dart';
 import '../bloc/medication_state.dart';
 import '../widgets/medication_card.dart';
 
 class MedicationListScreen extends StatefulWidget {
-  const MedicationListScreen({Key? key}) : super(key: key);
+  const MedicationListScreen({super.key});
 
   @override
   State<MedicationListScreen> createState() => _MedicationListScreenState();
@@ -24,8 +25,30 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
-    // Load medications for today initially
-    context.read<MedicationBloc>().add(LoadMedications(_selectedDate));
+
+    final authState = getIt<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      if (authState.user.role == 'patient') {
+        // Patient — always have their own ID, load immediately
+        context.read<MedicationBloc>().add(
+          LoadMedications(_selectedDate, patientId: authState.user.id),
+        );
+      } else if (authState.user.role == 'caregiver') {
+        // Caregiver — only load if dashboard is already ready,
+        // otherwise BlocListener in build() will handle it
+        try {
+          final dashboardState = context.read<DashboardBloc>().state;
+          if (dashboardState is DashboardLoaded) {
+            context.read<MedicationBloc>().add(
+              LoadMedications(
+                _selectedDate,
+                patientId: dashboardState.summary.patientId,
+              ),
+            );
+          }
+        } catch (_) {}
+      }
+    }
 
     // Jump to center roughly
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -33,6 +56,27 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
         _scrollController.jumpTo(15 * 60.0); // Rough center of 30 days
       }
     });
+  }
+
+  /// Resolves the patientId from available state and dispatches LoadMedications.
+  void _loadMedicationsForDate(DateTime date) {
+    String? patientId;
+    final authState = getIt<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      if (authState.user.role == 'patient') {
+        patientId = authState.user.id;
+      } else if (authState.user.role == 'caregiver') {
+        try {
+          final dashboardState = context.read<DashboardBloc>().state;
+          if (dashboardState is DashboardLoaded) {
+            patientId = dashboardState.summary.patientId;
+          }
+        } catch (_) {}
+      }
+    }
+    context.read<MedicationBloc>().add(
+      LoadMedications(date, patientId: patientId),
+    );
   }
 
   @override
@@ -45,7 +89,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     setState(() {
       _selectedDate = date;
     });
-    context.read<MedicationBloc>().add(LoadMedications(date));
+    _loadMedicationsForDate(date);
   }
 
   @override
@@ -53,11 +97,11 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     // Determine user role
     final authState = getIt<AuthBloc>().state;
     bool isCaregiver = false;
-    if (authState is AuthSuccess) {
+    if (authState is AuthAuthenticated) {
       isCaregiver = authState.user.role == 'caregiver';
     }
 
-    return Scaffold(
+    Widget scaffold = Scaffold(
       appBar: AppBar(
         title: const Text('İlaçlarım'),
         backgroundColor: Colors.transparent,
@@ -141,18 +185,49 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
         ],
       ),
       floatingActionButton: isCaregiver
-          ? FloatingActionButton(
-              onPressed: () {
-                context.push(
-                  '/medication/form',
-                  extra: context.read<MedicationBloc>(),
+          ? BlocBuilder<MedicationBloc, MedicationState>(
+              builder: (context, medicationState) {
+                return FloatingActionButton(
+                  onPressed: () {
+                    String? currentPatientId;
+
+                    if (medicationState is MedicationLoaded) {
+                      currentPatientId = medicationState.patientId;
+                    }
+
+                    context.push(
+                      '/medication/form?patientId=$currentPatientId',
+                      extra: context
+                          .read<MedicationBloc>(), // Temiz ve tek bir nesne!
+                    );
+                  },
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: const Icon(Icons.add, color: Colors.white),
                 );
               },
-              backgroundColor: Theme.of(context).primaryColor,
-              child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
     );
+
+    // For caregivers, wrap with BlocListener to auto-load medications
+    // once the DashboardBloc finishes loading the selected patient
+    if (isCaregiver) {
+      return BlocListener<DashboardBloc, DashboardState>(
+        listener: (context, state) {
+          if (state is DashboardLoaded) {
+            context.read<MedicationBloc>().add(
+              LoadMedications(
+                _selectedDate,
+                patientId: state.summary.patientId,
+              ),
+            );
+          }
+        },
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   Widget _buildDateScroller() {

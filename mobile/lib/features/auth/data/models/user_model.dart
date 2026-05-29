@@ -1,24 +1,72 @@
-import 'package:json_annotation/json_annotation.dart';
 import '../../domain/entities/user.dart';
 
-part 'user_model.g.dart';
-
-@JsonSerializable()
 class UserModel extends User {
   const UserModel({
     required super.id,
     required super.email,
     required super.role,
-    @JsonKey(name: 'full_name') required super.fullName,
+    required super.fullName,
     super.phone,
-    @JsonKey(name: 'avatar_url') super.avatarUrl,
-    @JsonKey(name: 'fcm_token') super.fcmToken,
-    @JsonKey(name: 'is_active', defaultValue: true) required super.isActive,
-    @JsonKey(name: 'created_at') required super.createdAt,
+    super.avatarUrl,
+    super.fcmToken,
+    required super.isActive,
+    required super.createdAt,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) =>
-      _$UserModelFromJson(json);
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    String mappedRole = 'patient';
+    final roleRaw = json['role'];
+    if (roleRaw != null) {
+      if (roleRaw == 0 ||
+          roleRaw == '0' ||
+          roleRaw.toString().toLowerCase() == 'patient') {
+        mappedRole = 'patient';
+      } else if (roleRaw == 1 ||
+          roleRaw == '1' ||
+          roleRaw.toString().toLowerCase() == 'follower' ||
+          roleRaw.toString().toLowerCase() == 'caregiver') {
+        mappedRole = 'caregiver';
+      } else if (roleRaw == 2 ||
+          roleRaw == '2' ||
+          roleRaw.toString().toLowerCase() == 'admin') {
+        mappedRole = 'admin';
+      } else {
+        mappedRole = roleRaw.toString().toLowerCase();
+      }
+    }
 
-  Map<String, dynamic> toJson() => _$UserModelToJson(this);
+    DateTime parsedDate = DateTime.now();
+    final createdAtRaw = json['createdAt'] ?? json['created_at'];
+    if (createdAtRaw != null) {
+      try {
+        parsedDate = DateTime.parse(createdAtRaw.toString());
+      } catch (_) {}
+    }
+
+    return UserModel(
+      id: (json['id'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
+      role: mappedRole,
+      fullName: (json['fullName'] ?? json['full_name'] ?? '').toString(),
+      phone: json['phone'] ?? json['phoneNumber'] ?? json['phone_number'],
+      avatarUrl: json['avatarUrl'] ?? json['avatar_url'],
+      fcmToken: json['fcmToken'] ?? json['fcm_token'],
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      createdAt: parsedDate,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'role': role == 'patient' ? 0 : (role == 'caregiver' ? 1 : 2),
+      'fullName': fullName,
+      'phone': phone,
+      'avatarUrl': avatarUrl,
+      'fcmToken': fcmToken,
+      'isActive': isActive,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
 }

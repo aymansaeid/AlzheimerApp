@@ -1,30 +1,23 @@
 import 'package:flutter/material.dart';
-import '../../../../core/widgets/app_card.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/widgets/section_title.dart';
-import '../../../../core/widgets/stat_card.dart';
-import '../../../../core/widgets/status_badge.dart';
+import '../../../care_network/domain/entities/network_user.dart';
+import '../bloc/dashboard_bloc.dart';
+import '../widgets/medication_summary.dart';
+import '../widgets/patient_selector.dart';
+import '../widgets/safety_status_card.dart';
 
-class CaregiverDashboardScreen extends StatelessWidget {
-  final String caregiverName;
-  final String patientName;
-  final bool isPatientSafe;
-  final String lastSeen;
-  final int medicationCompliance;
-  final int alertsToday;
-  final VoidCallback onRefresh;
-  final VoidCallback onOpenMap;
+class CaregiverDashboardScreen extends StatefulWidget {
+  const CaregiverDashboardScreen({super.key});
 
-  const CaregiverDashboardScreen({
-    super.key,
-    this.caregiverName = 'Fatma Hanım',
-    this.patientName = 'Ahmet Bey',
-    this.isPatientSafe = true,
-    this.lastSeen = '2 dakika önce',
-    this.medicationCompliance = 5,
-    this.alertsToday = 0,
-    required this.onRefresh,
-    required this.onOpenMap,
-  });
+  @override
+  State<CaregiverDashboardScreen> createState() =>
+      _CaregiverDashboardScreenState();
+}
+
+class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
+  String? _selectedPatientId;
 
   @override
   Widget build(BuildContext context) {
@@ -32,47 +25,126 @@ class CaregiverDashboardScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async => onRefresh(),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
+        child: BlocConsumer<DashboardBloc, DashboardState>(
+          listener: (context, state) {
+            if (state is DashboardLoaded) {
+              setState(() {
+                _selectedPatientId = state.summary.patientId;
+              });
+            }
+          },
+          builder: (context, state) {
+            // Extract patients and select active patient ID dynamically
+            List<NetworkUser>? patients;
+            String? activePatientId = _selectedPatientId;
+
+            if (state is DashboardLoaded) {
+              patients = state.patients;
+              activePatientId = _selectedPatientId ?? state.summary.patientId;
+            } else if (state is DashboardLoading) {
+              patients = state.patients;
+              if (state.loadingPatientId != null) {
+                activePatientId = state.loadingPatientId;
+              }
+            } else if (state is DashboardError) {
+              patients = state.patients;
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<DashboardBloc>().add(
+                  LoadDashboard(_selectedPatientId),
+                );
+              },
+              child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
-                    _buildHeader(theme),
+                    // Header greetings
+                    _buildHeader(theme, state),
                     const SizedBox(height: 20),
-                    _buildPatientStatusCard(theme),
-                    const SizedBox(height: 16),
-                    _buildStatsRow(theme, constraints),
-                    const SizedBox(height: 16),
-                    if (alertsToday > 0) _buildAlertBanner(theme),
-                    if (alertsToday > 0) const SizedBox(height: 20),
-                    const SectionTitle(text: 'Hızlı Erişim'),
-                    _buildQuickActions(theme),
-                    const SizedBox(height: 20),
-                    SectionTitle(
-                      text: 'Son Aktiviteler',
-                      trailing: TextButton(
-                        onPressed: () {},
-                        child: const Text('Tümü'),
+
+                    // Render dynamic Horizontal Patient Selector if list is available
+                    if (patients != null && patients.isNotEmpty) ...[
+                      PatientSelector(
+                        patients: patients,
+                        selectedPatientId: activePatientId ?? patients.first.id,
+                        onPatientSelected: (patientId) {
+                          // Tap-guard: Ignore selection click if already active or currently loading this patient ID
+                          final String currentActive =
+                              activePatientId ?? patients!.first.id;
+                          if (currentActive == patientId) return;
+
+                          setState(() {
+                            _selectedPatientId = patientId;
+                          });
+                          context.read<DashboardBloc>().add(
+                            SelectPatient(patientId),
+                          );
+                        },
                       ),
-                    ),
-                    _buildActivityFeed(theme),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // Render conditional dashboard details below patient selector
+                    if (state is DashboardLoading) ...[
+                      if (patients == null)
+                        // Show central spinner only on very first load
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 120.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else
+                        // Show a smaller loading indicator under selector when switching patients
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 80.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                    ] else if (state is DashboardNoPatients)
+                      _buildNoPatientsFallback(theme)
+                    else if (state is DashboardLoaded) ...[
+                      // ADIM 4: Safety Status Widget
+                      SafetyStatusCard(
+                        isPatientSafe: state.summary.isPatientSafe,
+                        patientName: state.patients
+                            .firstWhere(
+                              (p) =>
+                                  p.id ==
+                                  (activePatientId ?? state.summary.patientId),
+                              orElse: () => state.patients.first,
+                            )
+                            .fullName,
+                      ),
+                      const SizedBox(height: 24),
+                      // ADIM 4: Bugünkü İlaçlar başlığı
+                      const SectionTitle(text: 'Bugünkü İlaçlar'),
+                      const SizedBox(height: 12),
+                      // ADIM 4: Günlük İlaçlar Özeti (Medication Summary List)
+                      MedicationSummary(
+                        medications: state.summary.todayMedications,
+                      ),
+                    ] else if (state is DashboardError)
+                      _buildErrorView(theme, state.message),
                   ],
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
+  Widget _buildHeader(ThemeData theme, DashboardState state) {
+    const String caregiverName = 'Fatma Hanım';
+
+    // Dynamically show notification badge if patient is unsafe
+    final bool hasAlerts =
+        state is DashboardLoaded && !state.summary.isPatientSafe;
+
     return Row(
       children: [
         Expanded(
@@ -90,7 +162,7 @@ class CaregiverDashboardScreen extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant,
+                color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -98,7 +170,7 @@ class CaregiverDashboardScreen extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            if (alertsToday > 0)
+            if (hasAlerts)
               Positioned(
                 top: 0,
                 right: 0,
@@ -109,7 +181,7 @@ class CaregiverDashboardScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Text(
-                    alertsToday.toString(),
+                    '1',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -124,212 +196,105 @@ class CaregiverDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPatientStatusCard(ThemeData theme) {
-    return AppCard(
-      color: theme.colorScheme.primaryContainer.withOpacity(0.3),
-      child: Column(
-        children: [
-          Row(
+  Widget _buildNoPatientsFallback(ThemeData theme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 50,
-                height: 50,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.supervised_user_circle_rounded,
+                  size: 56,
                   color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Text('👴', style: TextStyle(fontSize: 24)),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(patientName, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    isPatientSafe
-                        ? const StatusBadge.safe()
-                        : const StatusBadge.alert(),
-                  ],
+              const SizedBox(height: 20),
+              Text(
+                'Takip Edilen Hasta Bulunmuyor',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildMapMock(theme),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 16,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        lastSeen,
-                        style: theme.textTheme.bodySmall,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              Text(
+                'Hastanızın güvenlik durumunu ve bugünkü ilaç uyumunu takip edebilmek için lütfen önce takip ettiğiniz hastalar arasına ekleme yapın.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.4,
                 ),
+                textAlign: TextAlign.center,
               ),
-              TextButton.icon(
-                onPressed: onOpenMap,
-                style: TextButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // context.pushNamed('add_patient');
+                },
+                style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                icon: const Icon(Icons.map_rounded, size: 16),
-                label: const Text('Haritayı Aç'),
+                icon: const Icon(Icons.person_add_rounded),
+                label: const Text('Hasta İlişkisi Ekle'),
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildMapMock(ThemeData theme) {
-    return Container(
-      width: double.infinity,
-      height: 120,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: theme.colorScheme.surfaceVariant,
-      ),
+  Widget _buildErrorView(ThemeData theme, String errorMessage) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 60.0),
       child: Center(
-        child: Icon(
-          Icons.map_outlined,
-          size: 48,
-          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsRow(ThemeData theme, BoxConstraints constraints) {
-    return Row(
-      children: [
-        Expanded(
-          child: StatCard(
-            value: '$medicationCompliance/7',
-            label: 'İlaç Uyumu',
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: StatCard(value: alertsToday.toString(), label: 'Bugün Uyarı'),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: StatCard(value: '73%', label: 'Rutin Uyumu'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAlertBanner(ThemeData theme) {
-    return AppCard(
-      color: theme.colorScheme.errorContainer,
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Dün akşam ilaç alınmadı',
-              style: theme.textTheme.titleSmall?.copyWith(
+        child: Column(
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: theme.colorScheme.error,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              errorMessage,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.error,
               ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: theme.colorScheme.error),
-        ],
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                context.read<DashboardBloc>().add(
+                  LoadDashboard(_selectedPatientId),
+                );
+              },
+              child: const Text('Tekrar Dene'),
+            ),
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildQuickActions(ThemeData theme) {
-    final actions = [
-      {'emoji': '🗓', 'label': 'İlaç Takvimi'},
-      {'emoji': '📊', 'label': 'Haftalık Rapor'},
-      {'emoji': '📍', 'label': 'Güvenli Alan'},
-      {'emoji': '💝', 'label': 'İçerik Ekle'},
-    ];
-
-    return Row(
-      children: actions.map((a) {
-        return Expanded(
-          child: AppCard(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
-            child: Column(
-              children: [
-                Text(a['emoji']!, style: const TextStyle(fontSize: 24)),
-                const SizedBox(height: 8),
-                Text(
-                  a['label']!,
-                  style: theme.textTheme.labelSmall,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildActivityFeed(ThemeData theme) {
-    final activities = [
-      {
-        'icon': '📍',
-        'text': 'Konum güncellendi — Kadıköy',
-        'time': '5 dk önce',
-      },
-      {
-        'icon': '💊',
-        'text': 'Sabah ilacı alındı — Donepezil',
-        'time': '2 saat önce',
-      },
-      {
-        'icon': '⚠',
-        'text': 'Akşam ilacı atlandı — Memantin',
-        'time': 'Dün 20:15',
-      },
-    ];
-
-    return Column(
-      children: activities.map((a) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: AppCard(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Text(a['icon']!, style: const TextStyle(fontSize: 20)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(a['text']!, style: theme.textTheme.bodyMedium),
-                ),
-                Text(a['time']!, style: theme.textTheme.bodySmall),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }
