@@ -54,6 +54,8 @@ public class FollowerController : ControllerBase
     /// * Set `isPrimaryInvite: true` to generate a Master Admin invite.
     /// 
     /// * Set `isPrimaryInvite: false` to generate a standard viewer invite.
+    /// 
+    /// the backend will automatically check if the patient already has a Primary Admin. If they do, it will reject any new primary invites and only allow standard viewer invites.
     /// </remarks>
     /// <response code="200">Returns the code and the Flutter Deep Link URL (`alzheimerapp://invite?code=...`).</response>
     /// <response code="400">If the generation fails.</response>
@@ -182,13 +184,20 @@ public class FollowerController : ControllerBase
     /// <response code="200">Returns the fully aggregated dashboard data.</response>
     /// <response code="400">If the patient is not found.</response>
     [HttpGet("patient/{patientId}/dashboard")]
-    [ProducesResponseType(typeof(FollowerDashboardResponse),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FollowerDashboardResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetDashboard(Guid patientId)
     {
         try
         {
-            var response = await _followerService.GetDashboardDataAsync(patientId);
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdString, out Guid followerId))
+            {
+                return Unauthorized();
+            }
+
+            var response = await _followerService.GetDashboardDataAsync(patientId, followerId);
             return Ok(response);
         }
         catch (Exception ex)
@@ -280,6 +289,28 @@ public class FollowerController : ControllerBase
         {
             return BadRequest(new { Error = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Retrieves all patients tracked by the logged-in Follower.
+    /// </summary>
+    /// <remarks>
+    /// **Flutter UX Implementation:** Use this endpoint to populate the horizontal scrollbar menu at the top of the home layout.
+    /// </remarks>
+    /// <response code="200">Returns the array of patients linked to this account.</response>
+    [HttpGet("my-patients")]
+    [ProducesResponseType(typeof(List<TrackedPatientResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMyPatients()
+    {
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out Guid followerId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _followerService.GetTrackedPatientsAsync(followerId);
+        return Ok(response);
     }
 
 }

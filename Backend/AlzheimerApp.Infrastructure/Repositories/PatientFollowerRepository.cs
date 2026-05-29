@@ -58,4 +58,12 @@ public class PatientFollowerRepository : IPatientFollowerRepository
         await _context.SaveChangesAsync();
     }
 
+    public async Task<List<PatientFollower>> GetRelationshipsByFollowerIdAsync(Guid followerId)
+    {
+        return await _context.PatientFollowers
+            .Where(pf => pf.FollowerId == followerId)
+            .Include(pf => pf.Patient) 
+            .ToListAsync();
+    }
+
 }

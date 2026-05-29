@@ -154,26 +154,32 @@ public class PatientFollowerService : IPatientFollowerService
     {
         return await _followerRepository.HasPrimaryFollowerAsync(patientId);
     }
-    public async Task<FollowerDashboardResponse> GetDashboardDataAsync(Guid patientId)
+    public async Task<FollowerDashboardResponse> GetDashboardDataAsync(Guid patientId, Guid followerId)
     {
+        // Verify the follower actually has a security clearance to view this patient
+        var relationship = await _followerRepository.GetRelationshipAsync(patientId, followerId);
+        if (relationship == null)
+        {
+            throw new Exception("Access Denied. You are not authorized to view this patient's dashboard.");
+        }
+
         var patient = await _userRepository.GetByIdAsync(patientId);
         if (patient == null) throw new Exception("Patient not found.");
 
-        // 1. Get Location Data
         var lastLocation = await _locationRepository.GetLatestLocationAsync(patientId);
-
-        // 2. Get Alert Data
         var alerts = await _alertRepository.GetPatientAlertsAsync(patientId);
         var unreadCount = alerts.Count(a => !a.IsRead);
         var latestAlert = alerts.OrderByDescending(a => a.SentAt).FirstOrDefault();
-
-        // 3. Get Medicine Data for Today
         var todayLogs = await _medicineLogService.GetDailyLogsAsync(patientId, DateTime.UtcNow);
 
         return new FollowerDashboardResponse
         {
             PatientId = patient.Id,
             PatientName = patient.FullName,
+
+            // Pass the specific permissions flag back down
+            CurrentUserIsAdmin = relationship.IsPrimary,
+
             LastLatitude = lastLocation?.Latitude,
             LastLongitude = lastLocation?.Longitude,
             IsCurrentlyOutside = lastLocation?.IsOutsideZone ?? false,
@@ -293,5 +299,18 @@ public async Task RemoveFollowerAsync(Guid patientId, Guid adminId, Guid followe
 
         // If they are a standard follower, let them leave cleanly
         await _followerRepository.RemoveAsync(relationship);
+    }
+
+    public async Task<List<TrackedPatientResponse>> GetTrackedPatientsAsync(Guid followerId)
+    {
+        var links = await _followerRepository.GetRelationshipsByFollowerIdAsync(followerId);
+
+        return links.Select(l => new TrackedPatientResponse
+        {
+            PatientId = l.PatientId,
+            FullName = l.Patient?.FullName ?? "Unknown Patient",
+            IsPrimaryAdmin = l.IsPrimary,
+            JoinedAt = l.CreatedAt
+        }).ToList();
     }
 }

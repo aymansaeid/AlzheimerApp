@@ -13,4 +13,5 @@ public interface IPatientFollowerRepository
     Task<PatientFollower?> GetRelationshipAsync(Guid patientId, Guid followerId);
     Task UpdateAsync(PatientFollower relationship);
     Task RemoveAsync(PatientFollower relationship);
+    Task<List<PatientFollower>> GetRelationshipsByFollowerIdAsync(Guid followerId);
 }
