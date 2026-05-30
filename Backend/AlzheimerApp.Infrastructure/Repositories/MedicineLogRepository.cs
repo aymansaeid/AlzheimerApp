@@ -55,4 +55,11 @@ public class MedicineLogRepository : IMedicineLogRepository
         _context.MedicineLogs.UpdateRange(logs);
         await _context.SaveChangesAsync();
     }
+    public async Task<List<MedicineLog>> GetAllLogsByDateAsync(DateTime date)
+    {
+        var targetDate = date.Date;
+        return await _context.MedicineLogs
+            .Where(ml => ml.ScheduledAt.Date == targetDate)
+            .ToListAsync();
+    }
 }

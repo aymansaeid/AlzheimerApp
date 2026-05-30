@@ -72,6 +72,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHostedService<MedicineStatusSweeperWorker>();
+builder.Services.AddHostedService<MedicineDailyGeneratorWorker>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"]!);

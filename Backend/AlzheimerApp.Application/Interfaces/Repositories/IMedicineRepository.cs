@@ -9,4 +9,5 @@ public interface IMedicineRepository
     Task<Medicine> AddAsync(Medicine medicine);
     Task UpdateAsync(Medicine medicine);
     Task DeleteAsync(Medicine medicine);
+    Task<List<Medicine>> GetAllActiveMedicinesAsync(); 
 }
