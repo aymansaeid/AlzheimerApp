@@ -16,4 +16,5 @@ public class MedicineLog
     public DateTime ScheduledAt { get; set; }
     public DateTime? TakenAt { get; set; }
     public string? Note { get; set; }
+    public bool IsAlarmSent { get; set; } = false; 
 }
