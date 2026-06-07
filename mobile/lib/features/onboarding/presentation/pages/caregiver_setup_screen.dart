@@ -61,9 +61,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
               state is CaregiverSetupInitial) {
             return Scaffold(
               backgroundColor: theme.colorScheme.surface,
-              body: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              body: const Center(child: CircularProgressIndicator()),
             );
           }
 
@@ -159,7 +157,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                     ),
                     const SizedBox(height: 24),
                     DropdownButtonFormField<String>(
-                      value: _selectedRelationship,
+                      initialValue: _selectedRelationship,
                       items: _relationships.map((relation) {
                         return DropdownMenuItem<String>(
                           value: relation,

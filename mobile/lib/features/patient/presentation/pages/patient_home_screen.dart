@@ -156,7 +156,7 @@ class PatientHomeScreen extends StatelessWidget {
     required bool isTaken,
   }) {
     return AppCard(
-      color: theme.colorScheme.primaryContainer.withOpacity(0.4),
+      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
       child: Row(
         children: [
           Container(
@@ -286,7 +286,7 @@ class PatientHomeScreen extends StatelessWidget {
 
   Widget _buildDailyStatus(ThemeData theme) {
     return AppCard(
-      color: theme.colorScheme.secondary.withOpacity(0.1),
+      color: theme.colorScheme.secondary.withValues(alpha: 0.1),
       child: Row(
         children: [
           const Text('☀', style: TextStyle(fontSize: 24)),

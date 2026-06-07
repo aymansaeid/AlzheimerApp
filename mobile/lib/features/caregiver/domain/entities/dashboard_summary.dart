@@ -1,17 +1,38 @@
 import 'package:equatable/equatable.dart';
-import '../../../medication/domain/entities/medication.dart';
 
 class DashboardSummary extends Equatable {
   final String patientId;
-  final bool isPatientSafe;
-  final List<Medication> todayMedications;
+  final String? patientName;
+  final int medsTakenToday;
+  final int totalMedsToday;
+  final int unreadAlertCount;
+  final double? lastLatitude;
+  final double? lastLongitude;
+  final bool? isCurrentlyOutside;
 
   const DashboardSummary({
     required this.patientId,
-    required this.isPatientSafe,
-    required this.todayMedications,
+    this.patientName,
+    required this.medsTakenToday,
+    required this.totalMedsToday,
+    required this.unreadAlertCount,
+    this.lastLatitude,
+    this.lastLongitude,
+    this.isCurrentlyOutside,
   });
 
+  bool get isPatientSafe => !(isCurrentlyOutside ?? false);
+
   @override
-  List<Object?> get props => [patientId, isPatientSafe, todayMedications];
+  List<Object?> get props => [
+        patientId,
+        patientName,
+        medsTakenToday,
+        totalMedsToday,
+        unreadAlertCount,
+        lastLatitude,
+        lastLongitude,
+        isCurrentlyOutside,
+      ];
 }
+

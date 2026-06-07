@@ -72,7 +72,8 @@ class PatientSelector extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            patient.patientId == '1' || patient.patientId == 'patient_1'
+                            patient.patientId == '1' ||
+                                    patient.patientId == 'patient_1'
                                 ? '👴'
                                 : '👵',
                             style: const TextStyle(fontSize: 20),
@@ -90,16 +91,6 @@ class PatientSelector extends StatelessWidget {
                               color: textColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Hasta',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isSelected
-                                  ? Colors.white.withValues(alpha: 0.8)
-                                  : theme.colorScheme.onSurfaceVariant,
-                              fontSize: 11,
                             ),
                           ),
                         ],

@@ -84,17 +84,39 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, User>> checkAuthStatus() async {
+    String? token;
     try {
-      final token = await secureStorage.read(key: 'jwt_token');
+      token = await secureStorage.read(key: 'jwt_token');
       debugPrint('CheckAuthStatus: Stored Token: ${token != null ? "FOUND (Length: ${token.length})" : "NULL"}');
-      if (token == null || JwtDecoder.isExpired(token)) {
-        if (token != null) {
-          debugPrint('CheckAuthStatus: Token found but is EXPIRED. Deleting...');
-          await secureStorage.delete(key: 'jwt_token');
-        }
-        return Left(ServerFailure('Oturum süresi doldu veya oturum bulunamadı.'));
-      }
+    } catch (e) {
+      debugPrint('CheckAuthStatus: Exception while reading secure storage: $e');
+      return Left(ServerFailure('Oturum okunamadı: ${e.toString()}'));
+    }
 
+    if (token == null) {
+      return Left(ServerFailure('Oturum bulunamadı.'));
+    }
+
+    bool isExpired = true;
+    try {
+      isExpired = JwtDecoder.isExpired(token);
+    } catch (e) {
+      debugPrint('CheckAuthStatus: Exception during expiry check: $e');
+      try {
+        await secureStorage.delete(key: 'jwt_token');
+      } catch (_) {}
+      return Left(ServerFailure('Geçersiz token formatı.'));
+    }
+
+    if (isExpired) {
+      debugPrint('CheckAuthStatus: Token is expired. Deleting...');
+      try {
+        await secureStorage.delete(key: 'jwt_token');
+      } catch (_) {}
+      return Left(ServerFailure('Oturum süresi doldu.'));
+    }
+
+    try {
       final payload = JwtDecoder.decode(token);
       debugPrint('CheckAuthStatus: Decoded payload: $payload');
       final id = payload['sub'] ?? payload['nameid'] ?? payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ?? '';
@@ -136,11 +158,11 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Right(user);
     } catch (e) {
-      debugPrint('CheckAuthStatus: Exception during check: $e');
+      debugPrint('CheckAuthStatus: Exception during token payload decoding: $e');
       try {
         await secureStorage.delete(key: 'jwt_token');
       } catch (_) {}
-      return Left(ServerFailure('Oturum doğrulanamadı: ${e.toString()}'));
+      return Left(ServerFailure('Oturum çözümlenemedi.'));
     }
   }
 

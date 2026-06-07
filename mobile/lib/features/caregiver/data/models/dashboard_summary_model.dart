@@ -3,22 +3,39 @@ import '../../domain/entities/dashboard_summary.dart';
 class DashboardSummaryModel extends DashboardSummary {
   const DashboardSummaryModel({
     required super.patientId,
-    required super.isPatientSafe,
-    required super.todayMedications,
+    super.patientName,
+    required super.medsTakenToday,
+    required super.totalMedsToday,
+    required super.unreadAlertCount,
+    super.lastLatitude,
+    super.lastLongitude,
+    super.isCurrentlyOutside,
   });
 
   factory DashboardSummaryModel.fromJson(Map<String, dynamic> json) {
-    final dynamic isOutside = json['isCurrentlyOutside'] ?? json['is_currently_outside'];
-    final bool isSafe = isOutside is bool ? !isOutside : (json['isPatientSafe'] ?? json['is_patient_safe'] ?? true);
-
     return DashboardSummaryModel(
       patientId: (json['patientId'] ?? json['patient_id'] ?? '').toString(),
-      isPatientSafe: isSafe,
-      todayMedications: const [],
+      patientName: json['patientName'] ?? json['patient_name'],
+      medsTakenToday: json['medsTakenToday'] ?? json['meds_taken_today'] ?? 0,
+      totalMedsToday: json['totalMedsToday'] ?? json['total_meds_today'] ?? 0,
+      unreadAlertCount: json['unreadAlertCount'] ?? json['unread_alert_count'] ?? 0,
+      lastLatitude: json['lastLatitude'] != null ? (json['lastLatitude'] as num).toDouble() : null,
+      lastLongitude: json['lastLongitude'] != null ? (json['lastLongitude'] as num).toDouble() : null,
+      isCurrentlyOutside: json['isCurrentlyOutside'] ?? json['is_currently_outside'],
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'patientId': patientId, 'isPatientSafe': isPatientSafe};
+    return {
+      'patientId': patientId,
+      'patientName': patientName,
+      'medsTakenToday': medsTakenToday,
+      'totalMedsToday': totalMedsToday,
+      'unreadAlertCount': unreadAlertCount,
+      'lastLatitude': lastLatitude,
+      'lastLongitude': lastLongitude,
+      'isCurrentlyOutside': isCurrentlyOutside,
+    };
   }
 }
+

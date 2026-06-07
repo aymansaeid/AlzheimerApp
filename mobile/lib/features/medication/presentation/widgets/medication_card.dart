@@ -41,10 +41,10 @@ class MedicationCard extends StatelessWidget {
                     height: 50,
                     decoration: BoxDecoration(
                       color: isTaken
-                          ? Colors.green.withOpacity(0.1)
+                          ? Colors.green.withValues(alpha: 0.1)
                           : isMissed
-                              ? Colors.red.withOpacity(0.1)
-                              : Theme.of(context).primaryColor.withOpacity(0.1),
+                              ? Colors.red.withValues(alpha: 0.1)
+                              : Theme.of(context).primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -128,8 +128,8 @@ class MedicationCard extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        border: Border.all(color: Colors.green.withOpacity(0.5)),
+                        color: Colors.green.withValues(alpha: 0.1),
+                        border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Row(
@@ -155,8 +155,8 @@ class MedicationCard extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        border: Border.all(color: Colors.red.withOpacity(0.5)),
+                        color: Colors.red.withValues(alpha: 0.1),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Row(

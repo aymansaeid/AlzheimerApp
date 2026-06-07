@@ -180,7 +180,7 @@ class _PersonCardState extends State<_PersonCard>
                       height: 32,
                       margin: const EdgeInsets.only(left: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
@@ -220,7 +220,7 @@ class _PersonCardState extends State<_PersonCard>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceVariant,
+          color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -355,7 +355,7 @@ class _VoiceWaveformState extends State<_VoiceWaveform>
           _heights.length,
           (i) => AnimatedBuilder(
             animation: _controllers[i],
-            builder: (_, __) => Container(
+            builder: (_, _) => Container(
               width: 3,
               height: 4 + (_heights[i] * _controllers[i].value),
               margin: const EdgeInsets.symmetric(horizontal: 1),
