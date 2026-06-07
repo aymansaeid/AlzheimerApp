@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../bloc/care_network_bloc.dart';
 import '../bloc/care_network_event.dart';
 import '../bloc/care_network_state.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
+import '../widgets/user_detail_card.dart';
 
 class UserDetailScreen extends StatelessWidget {
   final String userId;
@@ -17,8 +20,8 @@ class UserDetailScreen extends StatelessWidget {
       body: BlocBuilder<CareNetworkBloc, CareNetworkState>(
         builder: (context, state) {
           if (state is CareNetworkLoaded) {
-            // Find user safely
-            final allUsers = [...state.patients, ...state.caregivers];
+            // Find user safely across all teams
+            final allUsers = state.patientTeams.values.expand((team) => team).toList();
             final userIndex = allUsers.indexWhere((u) => u.id == userId);
 
             if (userIndex == -1) {
@@ -44,105 +47,80 @@ class UserDetailScreen extends StatelessWidget {
             final user = allUsers[userIndex];
             final theme = Theme.of(context);
 
+            // Find patient ID for this user
+            String? patientId;
+            for (final entry in state.patientTeams.entries) {
+              if (entry.value.any((u) => u.id == userId)) {
+                patientId = entry.key;
+                break;
+              }
+            }
+            final bool isCurrentUserAdmin = patientId != null && (state.isAdminForPatient[patientId] ?? false);
+
+            // Resolve isMe dynamically
+            final authState = context.read<AuthBloc>().state;
+            final bool isMe = authState is AuthAuthenticated && authState.user.id == user.id;
+
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 32),
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          user.avatarUrl,
-                          style: const TextStyle(fontSize: 64),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      user.fullName,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "E-posta: ${user.email}",
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Telefon: ${user.phoneNumber}",
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      user.role == 'patient' ? 'Hasta' : 'Takipçi',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    if (user.isMe)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+              child: SizedBox(
+                width: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      UserDetailCard(user: user, isMe: isMe),
+                      const Spacer(),
+                      if (!isMe && isCurrentUserAdmin) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              'Bu sizin profiliniz',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: theme.colorScheme.onPrimary,
+                            onPressed: () =>
+                                _showTransferAdminConfirmDialog(context, patientId!, user.fullName),
+                            icon: const Icon(Icons.admin_panel_settings),
+                            label: const Text(
+                              'Yönetici Yap',
+                              style: TextStyle(
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    const Spacer(),
-                    if (!user.isMe)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.errorContainer,
-                            foregroundColor: theme.colorScheme.onErrorContainer,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.colorScheme.error,
+                              side: BorderSide(color: theme.colorScheme.error),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
-                          ),
-                          onPressed: () =>
-                              _showRemoveDialog(context, user.fullName),
-                          child: const Text(
-                            'Bağlantıyı Kes',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                            onPressed: () =>
+                                _showRemoveDialog(context, patientId!, user.fullName),
+                            child: const Text(
+                              'Bağlantıyı Kes',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                      ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -153,7 +131,7 @@ class UserDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showRemoveDialog(BuildContext context, String fullName) {
+  void _showRemoveDialog(BuildContext context, String patientId, String fullName) {
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -173,7 +151,10 @@ class UserDetailScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext); // Close dialog
-                context.read<CareNetworkBloc>().add(RemoveUserEvent(userId));
+                context.read<CareNetworkBloc>().add(RemoveMemberClicked(
+                      patientId: patientId,
+                      followerId: userId,
+                    ));
                 context.pop(); // Go back to network list
               },
               child: Text(
@@ -183,6 +164,43 @@ class UserDetailScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTransferAdminConfirmDialog(
+    BuildContext context,
+    String patientId,
+    String newAdminName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Emin misiniz?'),
+          content: const Text(
+            'Yöneticilik yetkilerini devrederseniz, bu hastanın ayarlarını bir daha değiştiremezsiniz ve kimseyi takımdan çıkaramazsınız.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext); // Close dialog
+                context.read<CareNetworkBloc>().add(
+                      TransferAdminClicked(
+                        patientId: patientId,
+                        newAdminId: userId,
+                      ),
+                    );
+                context.pop(); // Go back to network list
+              },
+              child: const Text('Onayla'),
             ),
           ],
         );

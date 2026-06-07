@@ -3,12 +3,10 @@ import 'package:injectable/injectable.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
-import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
-
 import '../../../../core/errors/failures.dart';
 import '../../domain/usecases/add_medication.dart';
 import '../../domain/usecases/delete_medication.dart';
-import '../../domain/usecases/get_medications_by_date.dart';
+import '../../domain/usecases/get_daily_logs_usecase.dart';
 import '../../domain/usecases/mark_medication_as_taken.dart';
 import '../../domain/usecases/update_medication.dart';
 import 'medication_event.dart';
@@ -16,41 +14,52 @@ import 'medication_state.dart';
 
 @injectable
 class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
-  final GetMedicationsByDate getMedicationsByDate;
+  final GetDailyLogsUseCase getDailyLogsUseCase;
   final AddMedication addMedication;
   final UpdateMedication updateMedication;
   final DeleteMedication deleteMedication;
   final MarkMedicationAsTaken markMedicationAsTaken;
 
   DateTime _currentSelectedDate = DateTime.now();
+  String? _currentPatientId;
 
   MedicationBloc({
-    required this.getMedicationsByDate,
+    required this.getDailyLogsUseCase,
     required this.addMedication,
     required this.updateMedication,
     required this.deleteMedication,
     required this.markMedicationAsTaken,
   }) : super(MedicationInitial()) {
-    on<LoadMedications>(_onLoadMedications);
+    on<LoadDailyMedications>(_onLoadDailyMedications);
     on<AddMedicationEvent>(_onAddMedication);
     on<UpdateMedicationEvent>(_onUpdateMedication);
     on<DeleteMedicationEvent>(_onDeleteMedication);
     on<MarkAsTakenEvent>(_onMarkAsTaken);
+    on<ResetMedications>(_onResetMedications);
   }
 
-  String? _currentPatientId;
+  void _onResetMedications(
+    ResetMedications event,
+    Emitter<MedicationState> emit,
+  ) {
+    _currentPatientId = null;
+    emit(MedicationInitial());
+  }
 
-  Future<void> _onLoadMedications(
-    LoadMedications event,
+  Future<void> _onLoadDailyMedications(
+    LoadDailyMedications event,
     Emitter<MedicationState> emit,
   ) async {
     emit(MedicationLoading());
-    _currentSelectedDate = event.date;
+    _currentSelectedDate = event.selectedDate;
 
-    String patientId = event.patientId ?? _currentPatientId ?? '';
+    String patientId = event.patientId;
+    if (patientId.isEmpty) {
+      patientId = _currentPatientId ?? '';
+    }
 
     if (patientId.isEmpty) {
-      // Fallback 1: If logged-in user is a patient, use their own ID
+      // Fallback: If logged-in user is a patient, use their own ID
       final authState = getIt<AuthBloc>().state;
       if (authState is AuthAuthenticated && authState.user.role == 'patient') {
         patientId = authState.user.id;
@@ -58,7 +67,6 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
     }
 
     if (patientId.isEmpty) {
-      // Cannot resolve patient — emit error and exit
       emit(
         MedicationError(
           'Hasta bilgisi henüz yüklenemedi. Lütfen tekrar deneyin.',
@@ -69,13 +77,13 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
 
     _currentPatientId = patientId;
 
-    final result = await getMedicationsByDate(patientId, event.date);
+    final result = await getDailyLogsUseCase(patientId, event.selectedDate);
 
     result.fold(
       (failure) => emit(MedicationError(_mapFailureToMessage(failure))),
-      (medications) => emit(
+      (logs) => emit(
         MedicationLoaded(
-          medications: medications,
+          medications: logs,
           selectedDate: _currentSelectedDate,
           patientId: _currentPatientId,
         ),
@@ -95,7 +103,11 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
       (failure) => emit(MedicationError(_mapFailureToMessage(failure))),
       (_) {
         emit(const MedicationOperationSuccess("Medication added successfully"));
-        add(LoadMedications(_currentSelectedDate)); // Reload list
+        if (_currentPatientId != null) {
+          add(LoadDailyMedications(_currentPatientId!, _currentSelectedDate));
+        } else {
+          emit(MedicationInitial());
+        }
       },
     );
   }
@@ -114,7 +126,11 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
         emit(
           const MedicationOperationSuccess("Medication updated successfully"),
         );
-        add(LoadMedications(_currentSelectedDate)); // Reload list
+        if (_currentPatientId != null) {
+          add(LoadDailyMedications(_currentPatientId!, _currentSelectedDate));
+        } else {
+          emit(MedicationInitial());
+        }
       },
     );
   }
@@ -133,7 +149,11 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
         emit(
           const MedicationOperationSuccess("Medication deleted successfully"),
         );
-        add(LoadMedications(_currentSelectedDate)); // Reload list
+        if (_currentPatientId != null) {
+          add(LoadDailyMedications(_currentPatientId!, _currentSelectedDate));
+        } else {
+          emit(MedicationInitial());
+        }
       },
     );
   }
@@ -144,10 +164,10 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
   ) async {
     final currentState = state;
     if (currentState is MedicationLoaded) {
-      // Optimistic UI update
+      // Optimistic UI update: status = 1 (Taken)
       final updatedList = currentState.medications.map((m) {
         if (m.id == event.id) {
-          return m.copyWith(isTaken: true);
+          return m.copyWith(status: 1, takenAt: DateTime.now());
         }
         return m;
       }).toList();
@@ -155,6 +175,7 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
         MedicationLoaded(
           medications: updatedList,
           selectedDate: currentState.selectedDate,
+          patientId: currentState.patientId,
         ),
       );
     }
@@ -164,13 +185,14 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
     result.fold(
       (failure) {
         emit(MedicationError(_mapFailureToMessage(failure)));
-        add(
-          LoadMedications(_currentSelectedDate),
-        ); // Rollback optimistic update
+        if (_currentPatientId != null) {
+          add(LoadDailyMedications(_currentPatientId!, _currentSelectedDate));
+        }
       },
       (_) {
-        // Optimistic update already happened, reload list in background to align maps
-        add(LoadMedications(_currentSelectedDate));
+        if (_currentPatientId != null) {
+          add(LoadDailyMedications(_currentPatientId!, _currentSelectedDate));
+        }
       },
     );
   }

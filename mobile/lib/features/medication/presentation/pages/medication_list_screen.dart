@@ -31,7 +31,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
       if (authState.user.role == 'patient') {
         // Patient — always have their own ID, load immediately
         context.read<MedicationBloc>().add(
-          LoadMedications(_selectedDate, patientId: authState.user.id),
+          LoadDailyMedications(authState.user.id, _selectedDate),
         );
       } else if (authState.user.role == 'caregiver') {
         // Caregiver — only load if dashboard is already ready,
@@ -40,9 +40,9 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
           final dashboardState = context.read<DashboardBloc>().state;
           if (dashboardState is DashboardLoaded) {
             context.read<MedicationBloc>().add(
-              LoadMedications(
+              LoadDailyMedications(
+                dashboardState.summary.patientId,
                 _selectedDate,
-                patientId: dashboardState.summary.patientId,
               ),
             );
           }
@@ -58,7 +58,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     });
   }
 
-  /// Resolves the patientId from available state and dispatches LoadMedications.
+  /// Resolves the patientId from available state and dispatches LoadDailyMedications.
   void _loadMedicationsForDate(DateTime date) {
     String? patientId;
     final authState = getIt<AuthBloc>().state;
@@ -75,7 +75,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
       }
     }
     context.read<MedicationBloc>().add(
-      LoadMedications(date, patientId: patientId),
+      LoadDailyMedications(patientId ?? '', date),
     );
   }
 
@@ -174,8 +174,31 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                             extra: context.read<MedicationBloc>(),
                           );
                         },
+                        onMarkAsTaken: () {
+                          context.read<MedicationBloc>().add(
+                            MarkAsTakenEvent(
+                              id: medication.id,
+                              date: _selectedDate,
+                            ),
+                          );
+                        },
                       );
                     },
+                  );
+                } else if (state is MedicationError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Text(
+                        state.message,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   );
                 }
                 return const Center(child: Text('Bir hata oluştu.'));
@@ -216,9 +239,9 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
         listener: (context, state) {
           if (state is DashboardLoaded) {
             context.read<MedicationBloc>().add(
-              LoadMedications(
+              LoadDailyMedications(
+                state.summary.patientId,
                 _selectedDate,
-                patientId: state.summary.patientId,
               ),
             );
           }
@@ -272,7 +295,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                         BoxShadow(
                           color: Theme.of(
                             context,
-                          ).primaryColor.withOpacity(0.3),
+                          ).primaryColor.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -316,8 +339,9 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
           Icon(Icons.medication_outlined, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'Seçili günde alınacak ilaç yok.',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            'Bu tarihe ait bir ilaç planlaması bulunmamaktadır.',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

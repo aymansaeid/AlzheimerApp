@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/section_title.dart';
-import '../../../care_network/domain/entities/network_user.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../domain/entities/dashboard_summary.dart';
+import '../../domain/entities/followed_patient.dart';
 import '../bloc/dashboard_bloc.dart';
-import '../widgets/medication_summary.dart';
 import '../widgets/patient_selector.dart';
 import '../widgets/safety_status_card.dart';
 
@@ -31,11 +33,13 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
               setState(() {
                 _selectedPatientId = state.summary.patientId;
               });
+            } else if (state is DashboardEmptyPatients) {
+              context.go('/caregiver_setup');
             }
           },
           builder: (context, state) {
             // Extract patients and select active patient ID dynamically
-            List<NetworkUser>? patients;
+            List<FollowedPatient>? patients;
             String? activePatientId = _selectedPatientId;
 
             if (state is DashboardLoaded) {
@@ -64,18 +68,19 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                   children: [
                     const SizedBox(height: 8),
                     // Header greetings
-                    _buildHeader(theme, state),
+                    _buildHeader(context, theme, state),
                     const SizedBox(height: 20),
 
                     // Render dynamic Horizontal Patient Selector if list is available
                     if (patients != null && patients.isNotEmpty) ...[
                       PatientSelector(
                         patients: patients,
-                        selectedPatientId: activePatientId ?? patients.first.id,
+                        selectedPatientId:
+                            activePatientId ?? patients.first.patientId,
                         onPatientSelected: (patientId) {
                           // Tap-guard: Ignore selection click if already active or currently loading this patient ID
                           final String currentActive =
-                              activePatientId ?? patients!.first.id;
+                              activePatientId ?? patients!.first.patientId;
                           if (currentActive == patientId) return;
 
                           setState(() {
@@ -103,29 +108,26 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                           padding: EdgeInsets.symmetric(vertical: 80.0),
                           child: Center(child: CircularProgressIndicator()),
                         ),
-                    ] else if (state is DashboardNoPatients)
+                    ] else if (state is DashboardNoPatients ||
+                        state is DashboardEmptyPatients)
                       _buildNoPatientsFallback(theme)
                     else if (state is DashboardLoaded) ...[
-                      // ADIM 4: Safety Status Widget
+                      // Safety Status Widget
                       SafetyStatusCard(
-                        isPatientSafe: state.summary.isPatientSafe,
-                        patientName: state.patients
-                            .firstWhere(
-                              (p) =>
-                                  p.id ==
-                                  (activePatientId ?? state.summary.patientId),
-                              orElse: () => state.patients.first,
-                            )
-                            .fullName,
+                        patientName: () {
+                          final targetId = activePatientId ?? state.summary.patientId;
+                          for (final p in state.patients) {
+                            if (p.patientId == targetId) return p.fullName;
+                          }
+                          return state.patients.isNotEmpty ? state.patients.first.fullName : '';
+                        }(),
                       ),
                       const SizedBox(height: 24),
-                      // ADIM 4: Bugünkü İlaçlar başlığı
-                      const SectionTitle(text: 'Bugünkü İlaçlar'),
+                      // Bugünkü İlaçlar başlığı
+                      const SectionTitle(text: 'Günlük İlaç Uyumu'),
                       const SizedBox(height: 12),
-                      // ADIM 4: Günlük İlaçlar Özeti (Medication Summary List)
-                      MedicationSummary(
-                        medications: state.summary.todayMedications,
-                      ),
+                      // Günlük İlaçlar Özeti (Medication Compliance Card)
+                      _buildMedicationComplianceCard(context, theme, state.summary),
                     ] else if (state is DashboardError)
                       _buildErrorView(theme, state.message),
                   ],
@@ -138,22 +140,30 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
     );
   }
 
-  Widget _buildHeader(ThemeData theme, DashboardState state) {
-    const String caregiverName = 'Fatma Hanım';
-
-    // Dynamically show notification badge if patient is unsafe
+  Widget _buildHeader(BuildContext context, ThemeData theme, DashboardState state) {
+    // Dynamically show notification badge if patient has unread alerts
     final bool hasAlerts =
-        state is DashboardLoaded && !state.summary.isPatientSafe;
+        state is DashboardLoaded && state.summary.unreadAlertCount > 0;
+    final int alertCount =
+        state is DashboardLoaded ? state.summary.unreadAlertCount : 0;
 
     return Row(
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Merhaba,', style: theme.textTheme.bodyMedium),
-              Text('$caregiverName 👋', style: theme.textTheme.headlineLarge),
-            ],
+          child: BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, authState) {
+              String caregiverName = 'Bakıcı';
+              if (authState is AuthAuthenticated) {
+                caregiverName = authState.user.fullName;
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Merhaba,', style: theme.textTheme.bodyMedium),
+                  Text('$caregiverName 👋', style: theme.textTheme.headlineLarge),
+                ],
+              );
+            },
           ),
         ),
         Stack(
@@ -181,7 +191,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Text(
-                    '1',
+                    '$alertCount',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -193,6 +203,161 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildMedicationComplianceCard(
+    BuildContext context,
+    ThemeData theme,
+    DashboardSummary summary,
+  ) {
+    final int taken = summary.medsTakenToday;
+    final int total = summary.totalMedsToday;
+    final double progress = total > 0 ? taken / total : 0.0;
+
+    if (total == 0) {
+      return Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.medication_outlined,
+                  size: 48,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Bugün için planlanmış ilaç yok',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.medication_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'İlaç Takip Durumu',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Bugün alınması gereken tüm ilaçlar',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$taken / $total',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Bugünkü İlaç Uyumu',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '%${(progress * 100).toInt()}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 12,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  progress == 1.0 ? Colors.green : theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (progress == 1.0)
+              Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: Colors.green,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Harika! Bugünkü tüm ilaçlar alındı.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.green,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -243,7 +408,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () {
-                  // context.pushNamed('add_patient');
+                  context.go('/caregiver_setup');
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(

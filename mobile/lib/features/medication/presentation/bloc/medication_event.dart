@@ -8,14 +8,14 @@ abstract class MedicationEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadMedications extends MedicationEvent {
-  final DateTime date;
-  final String? patientId;
+class LoadDailyMedications extends MedicationEvent {
+  final String patientId;
+  final DateTime selectedDate;
 
-  const LoadMedications(this.date, {this.patientId});
+  const LoadDailyMedications(this.patientId, this.selectedDate);
 
   @override
-  List<Object?> get props => [date, patientId];
+  List<Object?> get props => [patientId, selectedDate];
 }
 
 class AddMedicationEvent extends MedicationEvent {
@@ -54,3 +54,6 @@ class MarkAsTakenEvent extends MedicationEvent {
   @override
   List<Object?> get props => [id, date];
 }
+
+class ResetMedications extends MedicationEvent {}
+

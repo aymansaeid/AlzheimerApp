@@ -1,22 +1,53 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:injectable/injectable.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
+import '../../domain/usecases/logout_usecase.dart';
+import '../../domain/repositories/auth_repository.dart';
+import 'package:mobile/features/caregiver/domain/usecases/get_followed_patients.dart';
+import 'package:mobile/features/onboarding/domain/usecases/check_has_admin_usecase.dart';
+import '../../domain/entities/user.dart';
 
 @lazySingleton
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase _loginUseCase;
   final RegisterUseCase _registerUseCase;
-  final FlutterSecureStorage _secureStorage;
+  final LogoutUseCase _logoutUseCase;
+  final AuthRepository _authRepository;
+  final GetFollowedPatients _getFollowedPatients;
+  final CheckHasAdminUseCase _checkHasAdminUseCase;
 
-  AuthBloc(this._loginUseCase, this._registerUseCase, this._secureStorage)
-    : super(AuthInitial()) {
+  AuthBloc(
+    this._loginUseCase,
+    this._registerUseCase,
+    this._logoutUseCase,
+    this._authRepository,
+    this._getFollowedPatients,
+    this._checkHasAdminUseCase,
+  ) : super(AuthInitial()) {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
+    on<AuthCheckRequested>(_onCheckAuthStatus);
+  }
+
+  Future<bool> _checkSetupComplete(User user) async {
+    if (user.role == 'patient') {
+      final result = await _checkHasAdminUseCase(user.id);
+      return result.fold(
+        (_) => false,
+        (hasAdmin) => hasAdmin,
+      );
+    } else if (user.role == 'caregiver') {
+      final result = await _getFollowedPatients();
+      return result.fold(
+        (_) => false,
+        (patients) => patients.isNotEmpty,
+      );
+    }
+    return true;
   }
 
   Future<void> _onLoginRequested(
@@ -26,9 +57,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     final result = await _loginUseCase(event.email, event.password);
 
-    result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+    await result.fold(
+      (failure) async => emit(AuthError(failure.message)),
+      (user) async {
+        final isSetup = await _checkSetupComplete(user);
+        emit(AuthAuthenticated(user, isSetupComplete: isSetup));
+      },
     );
   }
 
@@ -47,7 +81,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+      (user) => emit(AuthAuthenticated(user, isSetupComplete: false)),
     );
   }
 
@@ -56,9 +90,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    try {
-      await _secureStorage.delete(key: 'jwt_token');
-    } catch (_) {}
-    emit(AuthInitial());
+    await _logoutUseCase();
+    emit(AuthUnauthenticated());
+  }
+
+  Future<void> _onCheckAuthStatus(
+    AuthCheckRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final result = await _authRepository.checkAuthStatus();
+    await result.fold(
+      (failure) async => emit(AuthUnauthenticated()),
+      (user) async {
+        final isSetup = await _checkSetupComplete(user);
+        emit(AuthAuthenticated(user, isSetupComplete: isSetup));
+      },
+    );
   }
 }

@@ -10,15 +10,18 @@ abstract class AuthState extends Equatable {
 
 class AuthInitial extends AuthState {}
 
+class AuthUnauthenticated extends AuthState {}
+
 class AuthLoading extends AuthState {}
 
 class AuthAuthenticated extends AuthState {
   final User user;
+  final bool isSetupComplete;
 
-  const AuthAuthenticated(this.user);
+  const AuthAuthenticated(this.user, {required this.isSetupComplete});
 
   @override
-  List<Object?> get props => [user];
+  List<Object?> get props => [user, isSetupComplete];
 }
 
 class AuthError extends AuthState {

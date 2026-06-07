@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../care_network/domain/entities/network_user.dart';
+import '../../domain/entities/followed_patient.dart';
 
 class PatientSelector extends StatelessWidget {
-  final List<NetworkUser> patients;
+  final List<FollowedPatient> patients;
   final String selectedPatientId;
   final ValueChanged<String> onPatientSelected;
 
@@ -24,7 +24,7 @@ class PatientSelector extends StatelessWidget {
         itemCount: patients.length,
         itemBuilder: (context, index) {
           final patient = patients[index];
-          final isSelected = patient.id == selectedPatientId;
+          final isSelected = patient.patientId == selectedPatientId;
 
           // HASTA SEÇİLDİĞİNDE YEŞİL YAPMA KURALI
           final cardColor = isSelected
@@ -50,7 +50,7 @@ class PatientSelector extends StatelessWidget {
                 side: borderSide,
               ),
               child: InkWell(
-                onTap: () => onPatientSelected(patient.id),
+                onTap: () => onPatientSelected(patient.patientId),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -72,7 +72,8 @@ class PatientSelector extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            patient.id == '1' || patient.id == 'patient_1'
+                            patient.patientId == '1' ||
+                                    patient.patientId == 'patient_1'
                                 ? '👴'
                                 : '👵',
                             style: const TextStyle(fontSize: 20),
@@ -90,16 +91,6 @@ class PatientSelector extends StatelessWidget {
                               color: textColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Hasta',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isSelected
-                                  ? Colors.white.withValues(alpha: 0.8)
-                                  : theme.colorScheme.onSurfaceVariant,
-                              fontSize: 11,
                             ),
                           ),
                         ],

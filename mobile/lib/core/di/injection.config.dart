@@ -20,6 +20,7 @@ import '../../features/auth/data/repositories/auth_repository_impl.dart'
     as _i153;
 import '../../features/auth/domain/repositories/auth_repository.dart' as _i787;
 import '../../features/auth/domain/usecases/login_usecase.dart' as _i188;
+import '../../features/auth/domain/usecases/logout_usecase.dart' as _i48;
 import '../../features/auth/domain/usecases/register_usecase.dart' as _i941;
 import '../../features/auth/presentation/bloc/auth_bloc.dart' as _i797;
 import '../../features/care_network/data/datasources/care_network_remote_data_source.dart'
@@ -28,6 +29,16 @@ import '../../features/care_network/data/repositories/care_network_repository_im
     as _i517;
 import '../../features/care_network/domain/repositories/care_network_repository.dart'
     as _i83;
+import '../../features/care_network/domain/usecases/generate_invite_usecase.dart'
+    as _i417;
+import '../../features/care_network/domain/usecases/get_care_team_usecase.dart'
+    as _i240;
+import '../../features/care_network/domain/usecases/leave_team_usecase.dart'
+    as _i1027;
+import '../../features/care_network/domain/usecases/remove_team_member_usecase.dart'
+    as _i477;
+import '../../features/care_network/domain/usecases/transfer_admin_usecase.dart'
+    as _i754;
 import '../../features/care_network/presentation/bloc/care_network_bloc.dart'
     as _i100;
 import '../../features/caregiver/data/datasources/dashboard_remote_data_source.dart'
@@ -44,13 +55,21 @@ import '../../features/caregiver/presentation/bloc/dashboard_bloc.dart'
     as _i844;
 import '../../features/medication/data/datasources/medication_remote_data_source.dart'
     as _i484;
+import '../../features/medication/data/datasources/medicine_log_remote_data_source.dart'
+    as _i640;
 import '../../features/medication/data/repositories/medication_repository_impl.dart'
     as _i598;
+import '../../features/medication/data/repositories/medicine_log_repository_impl.dart'
+    as _i370;
 import '../../features/medication/domain/repositories/medication_repository.dart'
     as _i1036;
+import '../../features/medication/domain/repositories/medicine_log_repository.dart'
+    as _i1048;
 import '../../features/medication/domain/usecases/add_medication.dart' as _i107;
 import '../../features/medication/domain/usecases/delete_medication.dart'
     as _i329;
+import '../../features/medication/domain/usecases/get_daily_logs_usecase.dart'
+    as _i787;
 import '../../features/medication/domain/usecases/get_medications_by_date.dart'
     as _i429;
 import '../../features/medication/domain/usecases/mark_medication_as_taken.dart'
@@ -94,22 +113,22 @@ extension GetItInjectableX on _i174.GetIt {
       () => registerModule.secureStorage,
     );
     gh.lazySingleton<_i368.DashboardRemoteDataSource>(
-      () => _i368.MockDashboardRemoteDataSourceImpl(
-        gh<_i361.Dio>(),
-        gh<_i558.FlutterSecureStorage>(),
-      ),
-    );
-    gh.lazySingleton<_i485.CareNetworkRemoteDataSource>(
-      () => _i485.CareNetworkRemoteDataSourceImpl(),
+      () => _i368.DashboardRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i237.FollowerRemoteDataSource>(
       () => _i237.FollowerRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i485.CareNetworkRemoteDataSource>(
+      () => _i485.CareNetworkRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i484.MedicationRemoteDataSource>(
       () => _i484.MedicationRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i107.AuthRemoteDataSource>(
       () => _i107.AuthRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i640.MedicineLogRemoteDataSource>(
+      () => _i640.MedicineLogRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
@@ -135,14 +154,31 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i485.CareNetworkRemoteDataSource>(),
       ),
     );
+    gh.lazySingleton<_i1048.MedicineLogRepository>(
+      () => _i370.MedicineLogRepositoryImpl(
+        gh<_i640.MedicineLogRemoteDataSource>(),
+      ),
+    );
     gh.lazySingleton<_i1019.FollowerRepository>(
       () => _i813.FollowerRepositoryImpl(
         gh<_i237.FollowerRemoteDataSource>(),
         gh<_i558.FlutterSecureStorage>(),
       ),
     );
-    gh.factory<_i100.CareNetworkBloc>(
-      () => _i100.CareNetworkBloc(gh<_i83.CareNetworkRepository>()),
+    gh.lazySingleton<_i417.GenerateInviteUseCase>(
+      () => _i417.GenerateInviteUseCase(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.lazySingleton<_i240.GetCareTeamUseCase>(
+      () => _i240.GetCareTeamUseCase(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.lazySingleton<_i1027.LeaveTeamUseCase>(
+      () => _i1027.LeaveTeamUseCase(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.lazySingleton<_i477.RemoveTeamMemberUseCase>(
+      () => _i477.RemoveTeamMemberUseCase(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.lazySingleton<_i754.TransferAdminUseCase>(
+      () => _i754.TransferAdminUseCase(gh<_i83.CareNetworkRepository>()),
     );
     gh.factory<_i844.DashboardBloc>(
       () => _i844.DashboardBloc(
@@ -152,6 +188,9 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),
+    );
+    gh.lazySingleton<_i48.LogoutUseCase>(
+      () => _i48.LogoutUseCase(gh<_i787.AuthRepository>()),
     );
     gh.lazySingleton<_i941.RegisterUseCase>(
       () => _i941.RegisterUseCase(gh<_i787.AuthRepository>()),
@@ -193,22 +232,42 @@ extension GetItInjectableX on _i174.GetIt {
       ),
     );
     gh.factory<_i454.CaregiverSetupBloc>(
-      () => _i454.CaregiverSetupBloc(gh<_i702.AcceptInviteUseCase>()),
+      () => _i454.CaregiverSetupBloc(
+        gh<_i702.AcceptInviteUseCase>(),
+        gh<_i1031.GetFollowedPatients>(),
+      ),
+    );
+    gh.lazySingleton<_i787.GetDailyLogsUseCase>(
+      () => _i787.GetDailyLogsUseCase(gh<_i1048.MedicineLogRepository>()),
+    );
+    gh.lazySingleton<_i797.AuthBloc>(
+      () => _i797.AuthBloc(
+        gh<_i188.LoginUseCase>(),
+        gh<_i941.RegisterUseCase>(),
+        gh<_i48.LogoutUseCase>(),
+        gh<_i787.AuthRepository>(),
+        gh<_i1031.GetFollowedPatients>(),
+        gh<_i411.CheckHasAdminUseCase>(),
+      ),
     );
     gh.factory<_i501.MedicationBloc>(
       () => _i501.MedicationBloc(
-        getMedicationsByDate: gh<_i429.GetMedicationsByDate>(),
+        getDailyLogsUseCase: gh<_i787.GetDailyLogsUseCase>(),
         addMedication: gh<_i107.AddMedication>(),
         updateMedication: gh<_i397.UpdateMedication>(),
         deleteMedication: gh<_i329.DeleteMedication>(),
         markMedicationAsTaken: gh<_i929.MarkMedicationAsTaken>(),
       ),
     );
-    gh.lazySingleton<_i797.AuthBloc>(
-      () => _i797.AuthBloc(
-        gh<_i188.LoginUseCase>(),
-        gh<_i941.RegisterUseCase>(),
-        gh<_i558.FlutterSecureStorage>(),
+    gh.factory<_i100.CareNetworkBloc>(
+      () => _i100.CareNetworkBloc(
+        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
+        getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
+        generateInviteUseCase: gh<_i417.GenerateInviteUseCase>(),
+        removeTeamMemberUseCase: gh<_i477.RemoveTeamMemberUseCase>(),
+        leaveTeamUseCase: gh<_i1027.LeaveTeamUseCase>(),
+        acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
+        transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
       ),
     );
     gh.factory<_i1068.PatientSetupBloc>(

@@ -1,84 +1,125 @@
+import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
+import '../../../../core/errors/exceptions.dart';
+import '../models/care_team_member_model.dart';
 
 abstract class CareNetworkRemoteDataSource {
-  Future<List<Map<String, dynamic>>> getNetworkUsers();
-  Future<String> generatePatientInviteLink();
-  Future<String> generateCaregiverInviteLink();
+  Future<List<CareTeamMemberModel>> getCareTeam(String patientId);
+  Future<String> generateInvite(String patientId);
+  Future<void> removeTeamMember(String patientId, String followerId);
+  Future<void> leaveTeam(String patientId);
+  Future<void> transferAdminRights(String patientId, String newAdminId);
 }
 
 @LazySingleton(as: CareNetworkRemoteDataSource)
 class CareNetworkRemoteDataSourceImpl implements CareNetworkRemoteDataSource {
-  final List<Map<String, dynamic>> _mockUsers = [
-    {
-      'id': 'patient_1',
-      'fullName': 'Ahmet Bey',
-      'role': 'patient',
-      'avatarUrl': '👴',
-      'isMe': false,
-      'email': 'deneme00@gmail.com',
-      'phoneNumber': '5555555550',
-    },
-    {
-      'id': 'patient_2',
-      'fullName': 'Ayşe Hanım',
-      'role': 'patient',
-      'avatarUrl': '👵',
-      'isMe': false,
-      'email': 'deneme0@gmail.com',
-      'phoneNumber': '5555555551',
-    },
-    {
-      'id': 'caregiver_1',
-      'fullName': 'Siz',
-      'role': 'caregiver',
-      'avatarUrl': '👩‍⚕️',
-      'isMe': true,
-      'email': 'deneme1@gmail.com',
-      'phoneNumber': '5555555552',
-    },
-    {
-      'id': 'caregiver_2',
-      'fullName': 'Mehmet Yılmaz',
-      'role': 'caregiver',
-      'avatarUrl': '👨',
-      'isMe': false,
-      'email': 'deneme2@gmail.com',
-      'phoneNumber': '5555555553',
-    },
-    {
-      'id': 'caregiver_3',
-      'fullName': 'Zeynep Yılmaz',
-      'role': 'caregiver',
-      'avatarUrl': '👩',
-      'isMe': false,
-      'email': 'deneme3@gmail.com',
-      'phoneNumber': '5555555554',
-    },
-  ];
+  final Dio dio;
+
+  CareNetworkRemoteDataSourceImpl(this.dio);
 
   @override
-  Future<List<Map<String, dynamic>>> getNetworkUsers() async {
-    await Future.delayed(const Duration(seconds: 1));
-    return _mockUsers;
+  Future<List<CareTeamMemberModel>> getCareTeam(String patientId) async {
+    try {
+      final response = await dio.get('/api/Follower/patient/$patientId/team');
+      if (response.data is List) {
+        return (response.data as List)
+            .map((json) => CareTeamMemberModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+      throw ServerException(message: 'Sunucudan geçersiz bir yanıt alındı.');
+    } on DioException catch (e) {
+      throw ServerException(message: _parseProblemDetails(e));
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
   }
 
   @override
-  Future<String> generatePatientInviteLink() async {
-    // Backend API call simülasyonu
-    // final response = await dio.post('/api/invites/patient');
-    // return response.data['invite_url'];
-
-    await Future.delayed(const Duration(seconds: 1));
-    return 'https://alzheimerapp.com/invite/patient/${DateTime.now().millisecondsSinceEpoch}';
+  Future<String> generateInvite(String patientId) async {
+    try {
+      final response = await dio.post(
+        '/api/Follower/invite/generate',
+        data: {'patientId': patientId, 'isPrimaryInvite': false},
+      );
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        final inviteCode = data['inviteCode'] ?? data['invite_code'];
+        if (inviteCode != null) {
+          return inviteCode.toString();
+        }
+      }
+      throw ServerException(message: 'Sunucudan geçersiz davet kodu yanıtı alındı.');
+    } on DioException catch (e) {
+      throw ServerException(message: _parseProblemDetails(e));
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
   }
 
   @override
-  Future<String> generateCaregiverInviteLink() async {
-    // Backend API call simülasyonu
-    // final response = await dio.post('/api/invites/caregiver');
-    // return response.data['invite_url'];
+  Future<void> removeTeamMember(String patientId, String followerId) async {
+    try {
+      await dio.delete('/api/Follower/patient/$patientId/remove/$followerId');
+    } on DioException catch (e) {
+      throw ServerException(message: _parseProblemDetails(e));
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
 
-    await Future.delayed(const Duration(seconds: 1));
-    return 'https://alzheimerapp.com/invite/caregiver/${DateTime.now().millisecondsSinceEpoch}';
+  @override
+  Future<void> leaveTeam(String patientId) async {
+    try {
+      await dio.delete('/api/Follower/patient/$patientId/leave');
+    } on DioException catch (e) {
+      throw ServerException(
+        message: e.response?.data['detail'] ??
+            'İşlem gerçekleştirilemedi. Yetkileriniz güncelleniyor...',
+      );
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> transferAdminRights(String patientId, String newAdminId) async {
+    try {
+      await dio.put('/api/Follower/patient/$patientId/transfer-admin/$newAdminId');
+    } on DioException catch (e) {
+      throw ServerException(message: _parseProblemDetails(e));
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  String _parseProblemDetails(DioException e) {
+    if (e.response?.data is Map<String, dynamic>) {
+      final data = e.response!.data as Map<String, dynamic>;
+      if (data.containsKey('detail') &&
+          data['detail'] != null &&
+          data['detail'].toString().isNotEmpty) {
+        return data['detail'].toString();
+      }
+      if (data.containsKey('title') &&
+          data['title'] != null &&
+          data['title'].toString().isNotEmpty) {
+        return data['title'].toString();
+      }
+      if (data.containsKey('errors') && data['errors'] is Map) {
+        final errors = data['errors'] as Map;
+        final messages = <String>[];
+        errors.forEach((key, value) {
+          if (value is List) {
+            messages.add(value.join(', '));
+          } else if (value is String) {
+            messages.add(value);
+          }
+        });
+        if (messages.isNotEmpty) {
+          return messages.join('\n');
+        }
+      }
+    }
+    return e.message ?? 'Bilinmeyen bir sunucu hatası oluştu.';
   }
 }

@@ -41,48 +41,39 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Hastaya Bağlan'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: BlocProvider(
-        create: (_) => getIt<CaregiverSetupBloc>(),
-        child: BlocConsumer<CaregiverSetupBloc, CaregiverSetupState>(
-          listener: (context, state) {
-            if (state is CaregiverSetupSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Hastanıza başarıyla bağlandınız! Dashboard açılıyor...',
-                  ),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              Future.delayed(const Duration(seconds: 1), () {
-                if (context.mounted) {
-                  // Direct to Caregiver Dashboard
-                  context.goNamed('caregiver_dashboard');
-                }
-              });
-            } else if (state is CaregiverSetupError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: theme.colorScheme.error,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            if (state is CaregiverSetupLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    return BlocProvider(
+      create: (_) => getIt<CaregiverSetupBloc>()..add(CheckFollowedPatients()),
+      child: BlocConsumer<CaregiverSetupBloc, CaregiverSetupState>(
+        listener: (context, state) {
+          if (state is CaregiverSetupHasPatients) {
+            context.goNamed('caregiver_dashboard');
+          } else if (state is CaregiverSetupError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: theme.colorScheme.error,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state is CaregiverSetupLoading ||
+              state is CaregiverSetupInitial) {
+            return Scaffold(
+              backgroundColor: theme.colorScheme.surface,
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          }
 
-            return SingleChildScrollView(
+          return Scaffold(
+            backgroundColor: theme.colorScheme.surface,
+            appBar: AppBar(
+              title: const Text('Hastaya Bağlan'),
+              centerTitle: true,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+            ),
+            body: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Form(
                 key: _formKey,
@@ -166,7 +157,7 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                     ),
                     const SizedBox(height: 24),
                     DropdownButtonFormField<String>(
-                      value: _selectedRelationship,
+                      initialValue: _selectedRelationship,
                       items: _relationships.map((relation) {
                         return DropdownMenuItem<String>(
                           value: relation,
@@ -199,8 +190,8 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
                           context.read<CaregiverSetupBloc>().add(
-                            AcceptInviteCode(
-                              inviteCode: _codeController.text.trim(),
+                            AcceptInvite(
+                              code: _codeController.text.trim(),
                               relationship: _selectedRelationship,
                             ),
                           );
@@ -223,9 +214,9 @@ class _CaregiverSetupScreenState extends State<CaregiverSetupScreen> {
                   ],
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

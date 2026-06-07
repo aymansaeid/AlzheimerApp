@@ -7,15 +7,17 @@ abstract class CaregiverSetupEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class AcceptInviteCode extends CaregiverSetupEvent {
-  final String inviteCode;
+class CheckFollowedPatients extends CaregiverSetupEvent {}
+
+class AcceptInvite extends CaregiverSetupEvent {
+  final String code;
   final String relationship;
 
-  const AcceptInviteCode({
-    required this.inviteCode,
+  const AcceptInvite({
+    required this.code,
     required this.relationship,
   });
 
   @override
-  List<Object?> get props => [inviteCode, relationship];
+  List<Object?> get props => [code, relationship];
 }

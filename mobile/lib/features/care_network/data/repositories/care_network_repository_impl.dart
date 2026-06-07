@@ -1,10 +1,9 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
-import '../../domain/entities/network_user.dart';
+import '../../domain/entities/care_team_member.dart';
 import '../../domain/repositories/care_network_repository.dart';
 import '../datasources/care_network_remote_data_source.dart';
-import '../models/network_user_model.dart';
 
 @LazySingleton(as: CareNetworkRepository)
 class CareNetworkRepositoryImpl implements CareNetworkRepository {
@@ -13,33 +12,50 @@ class CareNetworkRepositoryImpl implements CareNetworkRepository {
   CareNetworkRepositoryImpl(this.remoteDataSource);
 
   @override
-  Future<Either<Failure, List<NetworkUser>>> getNetworkUsers() async {
+  Future<Either<Failure, List<CareTeamMember>>> getCareTeam(String patientId) async {
     try {
-      final data = await remoteDataSource.getNetworkUsers();
-      final users = data
-          .map((json) => NetworkUserModel.fromJson(json))
-          .toList();
-      return Right(users);
+      final team = await remoteDataSource.getCareTeam(patientId);
+      return Right(team);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, String>> generatePatientInviteLink() async {
+  Future<Either<Failure, String>> generateInvite(String patientId) async {
     try {
-      final link = await remoteDataSource.generatePatientInviteLink();
-      return Right(link);
+      final code = await remoteDataSource.generateInvite(patientId);
+      return Right(code);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, String>> generateCaregiverInviteLink() async {
+  Future<Either<Failure, void>> removeTeamMember(String patientId, String followerId) async {
     try {
-      final link = await remoteDataSource.generateCaregiverInviteLink();
-      return Right(link);
+      await remoteDataSource.removeTeamMember(patientId, followerId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> leaveTeam(String patientId) async {
+    try {
+      await remoteDataSource.leaveTeam(patientId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> transferAdminRights(String patientId, String newAdminId) async {
+    try {
+      await remoteDataSource.transferAdminRights(patientId, newAdminId);
+      return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

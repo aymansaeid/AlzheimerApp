@@ -7,19 +7,55 @@ abstract class CareNetworkEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class FetchNetworkUsers extends CareNetworkEvent {}
+class FetchCareNetwork extends CareNetworkEvent {}
 
-class GeneratePatientInviteLink extends CareNetworkEvent {}
+class GenerateInviteClicked extends CareNetworkEvent {
+  final String patientId;
 
-class GenerateCaregiverInviteLink extends CareNetworkEvent {}
-
-class ClearGeneratedLink extends CareNetworkEvent {}
-
-class RemoveUserEvent extends CareNetworkEvent {
-  final String userId;
-
-  const RemoveUserEvent(this.userId);
+  const GenerateInviteClicked(this.patientId);
 
   @override
-  List<Object?> get props => [userId];
+  List<Object?> get props => [patientId];
 }
+
+class RemoveMemberClicked extends CareNetworkEvent {
+  final String patientId;
+  final String followerId;
+
+  const RemoveMemberClicked({required this.patientId, required this.followerId});
+
+  @override
+  List<Object?> get props => [patientId, followerId];
+}
+
+class LeaveTeamClicked extends CareNetworkEvent {
+  final String patientId;
+
+  const LeaveTeamClicked(this.patientId);
+
+  @override
+  List<Object?> get props => [patientId];
+}
+
+class ClearGeneratedInvite extends CareNetworkEvent {}
+
+class AcceptInviteClicked extends CareNetworkEvent {
+  final String inviteCode;
+  final String relationship;
+
+  const AcceptInviteClicked({required this.inviteCode, required this.relationship});
+
+  @override
+  List<Object?> get props => [inviteCode, relationship];
+}
+
+class TransferAdminClicked extends CareNetworkEvent {
+  final String patientId;
+  final String newAdminId;
+
+  const TransferAdminClicked({required this.patientId, required this.newAdminId});
+
+  @override
+  List<Object?> get props => [patientId, newAdminId];
+}
+

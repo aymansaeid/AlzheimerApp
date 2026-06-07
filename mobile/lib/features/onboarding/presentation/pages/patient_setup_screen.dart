@@ -23,52 +23,48 @@ class PatientSetupScreen extends StatelessWidget {
       patientId = authState.user.id;
     }
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Hesap Kurulumu'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: BlocProvider(
-        create: (_) =>
-            getIt<PatientSetupBloc>()..add(CheckAdminStatus(patientId)),
-        child: BlocConsumer<PatientSetupBloc, PatientSetupState>(
-          listener: (context, state) {
-            if (state is PatientSetupHasAdminInitial) {
-              context.goNamed('patient_home');
-            } else if (state is PatientSetupHasAdminRefreshed) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Takipçiniz başarıyla bağlandı! Ana sayfaya yönlendiriliyorsunuz...',
-                  ),
-                  backgroundColor: Colors.green,
+    return BlocProvider(
+      create: (_) =>
+          getIt<PatientSetupBloc>()..add(CheckAdminStatus(patientId)),
+      child: BlocConsumer<PatientSetupBloc, PatientSetupState>(
+        listener: (context, state) {
+          if (state is PatientSetupHasAdminInitial) {
+            context.goNamed('patient_home');
+          } else if (state is PatientSetupHasAdminRefreshed) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Takipçiniz başarıyla bağlandı! Ana sayfaya yönlendiriliyorsunuz...',
                 ),
-              );
-              Future.delayed(const Duration(seconds: 1), () {
-                if (context.mounted) {
-                  context.goNamed('patient_home');
-                }
-              });
-            } else if (state is PatientSetupError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: theme.colorScheme.error,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            if (state is PatientSetupLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (state is PatientSetupNoAdmin) {
-              final invite = state.inviteResponse;
-              return SingleChildScrollView(
+                backgroundColor: Colors.green,
+              ),
+            );
+            Future.delayed(const Duration(seconds: 1), () {
+              if (context.mounted) {
+                context.goNamed('patient_home');
+              }
+            });
+          } else if (state is PatientSetupError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: theme.colorScheme.error,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state is PatientSetupNoAdmin) {
+            final invite = state.inviteResponse;
+            return Scaffold(
+              backgroundColor: theme.colorScheme.surface,
+              appBar: AppBar(
+                title: const Text('Hesap Kurulumu'),
+                centerTitle: true,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+              ),
+              body: SingleChildScrollView(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,7 +105,7 @@ class PatientSetupScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(24.0),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceVariant,
+                        color: theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
                           color: theme.colorScheme.outlineVariant,
@@ -146,13 +142,13 @@ class PatientSetupScreen extends StatelessWidget {
                                 vertical: 16,
                               ),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withOpacity(
-                                  0.08,
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.08,
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: theme.colorScheme.primary.withOpacity(
-                                    0.3,
+                                  color: theme.colorScheme.primary.withValues(
+                                    alpha: 0.3,
                                   ),
                                   width: 2,
                                 ),
@@ -214,12 +210,15 @@ class PatientSetupScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-              );
-            }
+              ),
+            );
+          }
 
-            return const Center(child: CircularProgressIndicator());
-          },
-        ),
+          return Scaffold(
+            backgroundColor: theme.colorScheme.surface,
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        },
       ),
     );
   }

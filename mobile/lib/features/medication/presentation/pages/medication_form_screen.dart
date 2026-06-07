@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../domain/entities/medication.dart';
 import '../bloc/medication_bloc.dart';
 import '../bloc/medication_event.dart';
 import '../bloc/medication_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
-import '../../../caregiver/presentation/bloc/dashboard_bloc.dart';
 
 class MedicationFormScreen extends StatefulWidget {
   final String? medicationId;
@@ -32,7 +30,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
   Medication? _existingMedication;
-
+  
   @override
   void initState() {
     super.initState();
@@ -43,21 +41,39 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
     if (widget.medicationId != null) {
       final state = context.read<MedicationBloc>().state;
       if (state is MedicationLoaded) {
-        _existingMedication = state.medications.firstWhere(
-          (m) => m.id == widget.medicationId,
-          orElse: () => throw Exception('Medication not found'),
-        );
-        _nameController.text = _existingMedication!.name;
-        _dosageController.text = _existingMedication!.dosage;
-        _instructionsController.text = _existingMedication!.instructions;
-        _selectedDays = List.from(_existingMedication!.daysOfWeek);
-        _startDate = _existingMedication!.startDate;
-        _endDate = _existingMedication!.endDate;
+        try {
+          final existingLog = state.medications.firstWhere(
+            (m) => m.medicineId == widget.medicationId || m.id == widget.medicationId,
+          );
+          _nameController.text = existingLog.medicineName;
+          _dosageController.text = existingLog.dosage;
+          _instructionsController.text = ''; // Instructions are not in JIT log
+          _selectedDays = [1, 2, 3, 4, 5, 6, 7];
+          _startDate = DateTime.now();
 
-        final parts = _existingMedication!.scheduleTime.split(':');
-        _selectedTimes = [
-          TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])),
-        ];
+          // Format time from scheduledAt
+          final hour = existingLog.scheduledAt.hour.toString().padLeft(2, '0');
+          final minute = existingLog.scheduledAt.minute.toString().padLeft(2, '0');
+          final timeStr = '$hour:$minute';
+          
+          _selectedTimes = [
+            TimeOfDay(hour: existingLog.scheduledAt.hour, minute: existingLog.scheduledAt.minute),
+          ];
+
+          _existingMedication = Medication(
+            id: existingLog.medicineId.isNotEmpty ? existingLog.medicineId : existingLog.id,
+            patientId: widget.patientId ?? '',
+            creatorId: '',
+            name: existingLog.medicineName,
+            dosage: existingLog.dosage,
+            instructions: '',
+            scheduleTime: timeStr,
+            daysOfWeek: const [1, 2, 3, 4, 5, 6, 7],
+            startDate: DateTime.now(),
+            isActive: true,
+            isTaken: existingLog.status == 1,
+          );
+        } catch (_) {}
       }
     }
   }
@@ -254,7 +270,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
               }
             });
           },
-          selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+          selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
           checkmarkColor: Theme.of(context).colorScheme.primary,
         );
       }),
@@ -439,7 +455,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
               ],
             ),
           );
-        }).toList(),
+        }),
         if (!isEditing)
           TextButton.icon(
             onPressed: () {

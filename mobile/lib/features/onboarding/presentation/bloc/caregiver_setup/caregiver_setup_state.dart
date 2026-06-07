@@ -11,7 +11,9 @@ class CaregiverSetupInitial extends CaregiverSetupState {}
 
 class CaregiverSetupLoading extends CaregiverSetupState {}
 
-class CaregiverSetupSuccess extends CaregiverSetupState {}
+class CaregiverSetupEmpty extends CaregiverSetupState {}
+
+class CaregiverSetupHasPatients extends CaregiverSetupState {}
 
 class CaregiverSetupError extends CaregiverSetupState {
   final String message;
