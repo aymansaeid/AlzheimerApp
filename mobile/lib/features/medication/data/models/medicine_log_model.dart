@@ -13,20 +13,18 @@ class MedicineLogModel extends MedicineLog {
 
   factory MedicineLogModel.fromJson(Map<String, dynamic> json) {
     DateTime parsedScheduled = DateTime.now();
-    if (json['scheduledAt'] ?? json['scheduled_at'] != null) {
+    final scheduledVal = json['scheduledAt'] ?? json['scheduled_at'];
+    if (scheduledVal != null) {
       try {
-        parsedScheduled = DateTime.parse(
-          (json['scheduledAt'] ?? json['scheduled_at']).toString(),
-        );
+        parsedScheduled = DateTime.parse(scheduledVal.toString());
       } catch (_) {}
     }
 
     DateTime? parsedTaken;
-    if (json['takenAt'] ?? json['taken_at'] != null) {
+    final takenVal = json['takenAt'] ?? json['taken_at'];
+    if (takenVal != null) {
       try {
-        parsedTaken = DateTime.parse(
-          (json['takenAt'] ?? json['taken_at']).toString(),
-        );
+        parsedTaken = DateTime.parse(takenVal.toString());
       } catch (_) {}
     }
 

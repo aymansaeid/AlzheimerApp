@@ -71,14 +71,38 @@ class UserDetailScreen extends StatelessWidget {
                     children: [
                       UserDetailCard(user: user, isMe: isMe),
                       const Spacer(),
-                      if (!isMe && isCurrentUserAdmin)
+                      if (!isMe && isCurrentUserAdmin) ...[
                         SizedBox(
                           width: double.infinity,
                           height: 56,
-                          child: ElevatedButton(
+                          child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.colorScheme.errorContainer,
-                              foregroundColor: theme.colorScheme.onErrorContainer,
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            onPressed: () =>
+                                _showTransferAdminConfirmDialog(context, patientId!, user.fullName),
+                            icon: const Icon(Icons.admin_panel_settings),
+                            label: const Text(
+                              'Yönetici Yap',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.colorScheme.error,
+                              side: BorderSide(color: theme.colorScheme.error),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -94,6 +118,7 @@ class UserDetailScreen extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ),
@@ -139,6 +164,43 @@ class UserDetailScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTransferAdminConfirmDialog(
+    BuildContext context,
+    String patientId,
+    String newAdminName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Emin misiniz?'),
+          content: const Text(
+            'Yöneticilik yetkilerini devrederseniz, bu hastanın ayarlarını bir daha değiştiremezsiniz ve kimseyi takımdan çıkaramazsınız.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext); // Close dialog
+                context.read<CareNetworkBloc>().add(
+                      TransferAdminClicked(
+                        patientId: patientId,
+                        newAdminId: userId,
+                      ),
+                    );
+                context.pop(); // Go back to network list
+              },
+              child: const Text('Onayla'),
             ),
           ],
         );

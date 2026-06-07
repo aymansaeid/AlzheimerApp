@@ -7,5 +7,6 @@ abstract class CareNetworkRepository {
   Future<Either<Failure, String>> generateInvite(String patientId);
   Future<Either<Failure, void>> removeTeamMember(String patientId, String followerId);
   Future<Either<Failure, void>> leaveTeam(String patientId);
+  Future<Either<Failure, void>> transferAdminRights(String patientId, String newAdminId);
 }
 

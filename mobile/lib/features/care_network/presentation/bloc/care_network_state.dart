@@ -57,11 +57,19 @@ class CareNetworkLoaded extends CareNetworkState {
 
 class CareNetworkError extends CareNetworkState {
   final String message;
+  final List<FollowedPatient>? patients;
+  final Map<String, List<CareTeamMember>>? patientTeams;
+  final Map<String, bool>? isAdminForPatient;
 
-  const CareNetworkError(this.message);
+  const CareNetworkError(
+    this.message, {
+    this.patients,
+    this.patientTeams,
+    this.isAdminForPatient,
+  });
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, patients, patientTeams, isAdminForPatient];
 }
 
 class CareNetworkLeftTeamSuccess extends CareNetworkState {}

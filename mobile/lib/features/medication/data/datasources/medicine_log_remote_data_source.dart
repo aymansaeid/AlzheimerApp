@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
-import 'package:intl/intl.dart';
 import 'package:mobile/core/errors/exceptions.dart';
 import '../models/medicine_log_model.dart';
 
@@ -21,8 +20,8 @@ class MedicineLogRemoteDataSourceImpl implements MedicineLogRemoteDataSource {
     DateTime date,
   ) async {
     try {
-      // Format to yyyy-MM-dd format exactly
-      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+      // Format to UTC ISO 8601 to satisfy PostgreSQL timestamp with time zone on backend
+      final dateStr = date.toUtc().toIso8601String();
 
       final response = await dio.get(
         '/api/MedicineLogs/patient/$patientId/date/$dateStr',

@@ -50,4 +50,14 @@ class CareNetworkRepositoryImpl implements CareNetworkRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> transferAdminRights(String patientId, String newAdminId) async {
+    try {
+      await remoteDataSource.transferAdminRights(patientId, newAdminId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

@@ -12,6 +12,8 @@ import '../widgets/patient_section_card.dart';
 import '../../../caregiver/presentation/bloc/dashboard_bloc.dart';
 import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
 import 'package:mobile/features/medication/presentation/bloc/medication_event.dart';
+import 'package:mobile/features/care_network/domain/entities/care_team_member.dart';
+import 'package:mobile/features/caregiver/domain/entities/followed_patient.dart';
 
 
 class CareNetworkScreen extends StatelessWidget {
@@ -72,6 +74,13 @@ class CareNetworkView extends StatelessWidget {
             context.read<DashboardBloc>().add(ResetDashboard());
             context.read<MedicationBloc>().add(ResetMedications());
             context.goNamed('caregiver_setup');
+          } else if (state is CareNetworkError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.orange.shade800,
+              ),
+            );
           }
         },
         child: BlocBuilder<CareNetworkBloc, CareNetworkState>(
@@ -79,6 +88,16 @@ class CareNetworkView extends StatelessWidget {
             if (state is CareNetworkLoading || state is CareNetworkInitial) {
               return const Center(child: CircularProgressIndicator());
             } else if (state is CareNetworkError) {
+              if (state.patients != null && state.patients!.isNotEmpty) {
+                return _buildNetworkList(
+                  context: context,
+                  theme: theme,
+                  patients: state.patients!,
+                  patientTeams: state.patientTeams ?? {},
+                  isAdminForPatient: state.isAdminForPatient ?? {},
+                  currentUserId: currentUserId,
+                );
+              }
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -108,54 +127,72 @@ class CareNetworkView extends StatelessWidget {
                 );
               }
 
-              return RefreshIndicator(
-                onRefresh: () async {
-                  context.read<CareNetworkBloc>().add(FetchCareNetwork());
-                },
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: state.patients.length,
-                  itemBuilder: (context, index) {
-                    final patient = state.patients[index];
-                    final team = state.patientTeams[patient.patientId] ?? [];
-                    final isAdmin = state.isAdminForPatient[patient.patientId] ?? false;
-
-                    return PatientSectionCard(
-                      patient: patient,
-                      team: team,
-                      isAdmin: isAdmin,
-                      currentUserId: currentUserId,
-                      onInvitePressed: () => _showInviteDialog(
-                        context,
-                        patient.patientId,
-                        context.read<CareNetworkBloc>(),
-                      ),
-                      onLeavePressed: () => _showLeaveConfirmDialog(
-                        context,
-                        patient.patientId,
-                        patient.fullName,
-                      ),
-                      onRemoveMemberPressed: (member) => _showRemoveConfirmDialog(
-                        context,
-                        patient.patientId,
-                        member.id,
-                        member.fullName,
-                      ),
-                      onMemberTapped: (member) {
-                        context.pushNamed(
-                          'user_detail',
-                          pathParameters: {'id': member.id},
-                          extra: context.read<CareNetworkBloc>(),
-                        );
-                      },
-                    );
-                  },
-                ),
+              return _buildNetworkList(
+                context: context,
+                theme: theme,
+                patients: state.patients,
+                patientTeams: state.patientTeams,
+                isAdminForPatient: state.isAdminForPatient,
+                currentUserId: currentUserId,
               );
             }
             return const SizedBox();
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildNetworkList({
+    required BuildContext context,
+    required ThemeData theme,
+    required List<FollowedPatient> patients,
+    required Map<String, List<CareTeamMember>> patientTeams,
+    required Map<String, bool> isAdminForPatient,
+    required String? currentUserId,
+  }) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        context.read<CareNetworkBloc>().add(FetchCareNetwork());
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        itemCount: patients.length,
+        itemBuilder: (context, index) {
+          final patient = patients[index];
+          final team = patientTeams[patient.patientId] ?? [];
+          final isAdmin = isAdminForPatient[patient.patientId] ?? false;
+
+          return PatientSectionCard(
+            patient: patient,
+            team: team,
+            isAdmin: isAdmin,
+            currentUserId: currentUserId,
+            onInvitePressed: () => _showInviteDialog(
+              context,
+              patient.patientId,
+              context.read<CareNetworkBloc>(),
+            ),
+            onLeavePressed: () => _showLeaveConfirmDialog(
+              context,
+              patient.patientId,
+              patient.fullName,
+            ),
+            onRemoveMemberPressed: (member) => _showRemoveConfirmDialog(
+              context,
+              patient.patientId,
+              member.id,
+              member.fullName,
+            ),
+            onMemberTapped: (member) {
+              context.pushNamed(
+                'user_detail',
+                pathParameters: {'id': member.id},
+                extra: context.read<CareNetworkBloc>(),
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -362,6 +399,8 @@ class CareNetworkView extends StatelessWidget {
       },
     );
   }
+
+
 
   void _showJoinPatientDialog(BuildContext context, CareNetworkBloc bloc) {
     final formKey = GlobalKey<FormState>();

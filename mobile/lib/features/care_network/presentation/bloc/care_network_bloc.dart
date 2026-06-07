@@ -12,6 +12,7 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../../core/di/injection.dart';
 import '../../../onboarding/domain/usecases/accept_invite_usecase.dart';
+import '../../domain/usecases/transfer_admin_usecase.dart';
 
 @injectable
 class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
@@ -21,6 +22,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
   final RemoveTeamMemberUseCase removeTeamMemberUseCase;
   final LeaveTeamUseCase leaveTeamUseCase;
   final AcceptInviteUseCase acceptInviteUseCase;
+  final TransferAdminUseCase transferAdminUseCase;
 
   CareNetworkBloc({
     required this.getFollowedPatients,
@@ -29,6 +31,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     required this.removeTeamMemberUseCase,
     required this.leaveTeamUseCase,
     required this.acceptInviteUseCase,
+    required this.transferAdminUseCase,
   }) : super(CareNetworkInitial()) {
     on<FetchCareNetwork>(_onFetchCareNetwork);
     on<GenerateInviteClicked>(_onGenerateInviteClicked);
@@ -36,6 +39,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     on<LeaveTeamClicked>(_onLeaveTeamClicked);
     on<ClearGeneratedInvite>(_onClearGeneratedInvite);
     on<AcceptInviteClicked>(_onAcceptInviteClicked);
+    on<TransferAdminClicked>(_onTransferAdminClicked);
   }
 
   Future<void> _onFetchCareNetwork(
@@ -48,7 +52,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
 
     await patientsResult.fold(
       (failure) async {
-        emit(CareNetworkError(failure.message));
+        emit(_errorState(failure.message));
       },
       (patients) async {
         if (patients.isEmpty) {
@@ -94,7 +98,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
         await Future.wait(futures);
 
         if (errorMessage != null && patientTeams.isEmpty) {
-          emit(CareNetworkError(errorMessage!));
+          emit(_errorState(errorMessage!));
         } else {
           emit(
             CareNetworkLoaded(
@@ -119,7 +123,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
       final result = await generateInviteUseCase(event.patientId);
 
       result.fold(
-        (failure) => emit(CareNetworkError(failure.message)),
+        (failure) => emit(_errorState(failure.message)),
         (code) => emit(
           currentState.copyWith(isGeneratingCode: false, generatedCode: code),
         ),
@@ -141,7 +145,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
 
       await result.fold(
         (failure) async {
-          emit(CareNetworkError(failure.message));
+          emit(_errorState(failure.message));
         },
         (_) async {
           emit(const CareNetworkActionSuccess('Üye başarıyla çıkarıldı.'));
@@ -160,7 +164,10 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     final result = await leaveTeamUseCase(event.patientId);
 
     result.fold(
-      (failure) => emit(CareNetworkError(failure.message)),
+      (failure) {
+        emit(_errorState(failure.message));
+        add(FetchCareNetwork());
+      },
       (_) {
         emit(const CareNetworkActionSuccess('Takımdan başarıyla ayrıldınız.'));
         add(FetchCareNetwork());
@@ -187,14 +194,45 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     final result = await acceptInviteUseCase(event.inviteCode, event.relationship);
 
     result.fold(
-      (failure) => emit(CareNetworkError(failure.message)),
+      (failure) => emit(_errorState(failure.message)),
       (success) {
         if (success) {
           emit(CareNetworkJoinSuccess());
+          add(FetchCareNetwork());
         } else {
-          emit(const CareNetworkError('Davet kodu kabul edilemedi.'));
+          emit(_errorState('Davet kodu kabul edilemedi.'));
         }
       },
     );
+  }
+
+  Future<void> _onTransferAdminClicked(
+    TransferAdminClicked event,
+    Emitter<CareNetworkState> emit,
+  ) async {
+    emit(CareNetworkLoading());
+
+    final result = await transferAdminUseCase(event.patientId, event.newAdminId);
+
+    result.fold(
+      (failure) => emit(_errorState(failure.message)),
+      (_) {
+        emit(const CareNetworkActionSuccess('Yöneticilik devredildi.'));
+        add(FetchCareNetwork());
+      },
+    );
+  }
+
+  CareNetworkError _errorState(String message) {
+    if (state is CareNetworkLoaded) {
+      final loadedState = state as CareNetworkLoaded;
+      return CareNetworkError(
+        message,
+        patients: loadedState.patients,
+        patientTeams: loadedState.patientTeams,
+        isAdminForPatient: loadedState.isAdminForPatient,
+      );
+    }
+    return CareNetworkError(message);
   }
 }

@@ -8,6 +8,7 @@ abstract class CareNetworkRemoteDataSource {
   Future<String> generateInvite(String patientId);
   Future<void> removeTeamMember(String patientId, String followerId);
   Future<void> leaveTeam(String patientId);
+  Future<void> transferAdminRights(String patientId, String newAdminId);
 }
 
 @LazySingleton(as: CareNetworkRemoteDataSource)
@@ -70,6 +71,20 @@ class CareNetworkRemoteDataSourceImpl implements CareNetworkRemoteDataSource {
   Future<void> leaveTeam(String patientId) async {
     try {
       await dio.delete('/api/Follower/patient/$patientId/leave');
+    } on DioException catch (e) {
+      throw ServerException(
+        message: e.response?.data['detail'] ??
+            'İşlem gerçekleştirilemedi. Yetkileriniz güncelleniyor...',
+      );
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> transferAdminRights(String patientId, String newAdminId) async {
+    try {
+      await dio.put('/api/Follower/patient/$patientId/transfer-admin/$newAdminId');
     } on DioException catch (e) {
       throw ServerException(message: _parseProblemDetails(e));
     } catch (e) {

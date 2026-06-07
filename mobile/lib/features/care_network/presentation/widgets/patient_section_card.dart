@@ -118,24 +118,26 @@ class PatientSectionCard extends StatelessWidget {
                   );
                 },
               ),
-            // Leave Button (Visible to both Admins and Viewers under each patient card)
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.colorScheme.error,
-                  side: BorderSide(color: theme.colorScheme.error),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Leave Button (Visible only to Viewers under each patient card, hidden for Admins)
+            if (!isAdmin) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.error,
+                    side: BorderSide(color: theme.colorScheme.error),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
+                  onPressed: onLeavePressed,
+                  icon: const Icon(Icons.exit_to_app),
+                  label: const Text('Takımdan Ayrıl'),
                 ),
-                onPressed: onLeavePressed,
-                icon: const Icon(Icons.exit_to_app),
-                label: const Text('Takımdan Ayrıl'),
               ),
-            ),
+            ],
           ],
         ),
       ),

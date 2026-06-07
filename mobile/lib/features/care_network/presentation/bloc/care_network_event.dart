@@ -48,3 +48,14 @@ class AcceptInviteClicked extends CareNetworkEvent {
   @override
   List<Object?> get props => [inviteCode, relationship];
 }
+
+class TransferAdminClicked extends CareNetworkEvent {
+  final String patientId;
+  final String newAdminId;
+
+  const TransferAdminClicked({required this.patientId, required this.newAdminId});
+
+  @override
+  List<Object?> get props => [patientId, newAdminId];
+}
+

@@ -37,6 +37,8 @@ import '../../features/care_network/domain/usecases/leave_team_usecase.dart'
     as _i1027;
 import '../../features/care_network/domain/usecases/remove_team_member_usecase.dart'
     as _i477;
+import '../../features/care_network/domain/usecases/transfer_admin_usecase.dart'
+    as _i754;
 import '../../features/care_network/presentation/bloc/care_network_bloc.dart'
     as _i100;
 import '../../features/caregiver/data/datasources/dashboard_remote_data_source.dart'
@@ -175,6 +177,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i477.RemoveTeamMemberUseCase>(
       () => _i477.RemoveTeamMemberUseCase(gh<_i83.CareNetworkRepository>()),
     );
+    gh.lazySingleton<_i754.TransferAdminUseCase>(
+      () => _i754.TransferAdminUseCase(gh<_i83.CareNetworkRepository>()),
+    );
     gh.factory<_i844.DashboardBloc>(
       () => _i844.DashboardBloc(
         getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
@@ -254,12 +259,6 @@ extension GetItInjectableX on _i174.GetIt {
         markMedicationAsTaken: gh<_i929.MarkMedicationAsTaken>(),
       ),
     );
-    gh.factory<_i1068.PatientSetupBloc>(
-      () => _i1068.PatientSetupBloc(
-        gh<_i411.CheckHasAdminUseCase>(),
-        gh<_i470.GenerateInviteUseCase>(),
-      ),
-    );
     gh.factory<_i100.CareNetworkBloc>(
       () => _i100.CareNetworkBloc(
         getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
@@ -268,6 +267,13 @@ extension GetItInjectableX on _i174.GetIt {
         removeTeamMemberUseCase: gh<_i477.RemoveTeamMemberUseCase>(),
         leaveTeamUseCase: gh<_i1027.LeaveTeamUseCase>(),
         acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
+        transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
+      ),
+    );
+    gh.factory<_i1068.PatientSetupBloc>(
+      () => _i1068.PatientSetupBloc(
+        gh<_i411.CheckHasAdminUseCase>(),
+        gh<_i470.GenerateInviteUseCase>(),
       ),
     );
     return this;
