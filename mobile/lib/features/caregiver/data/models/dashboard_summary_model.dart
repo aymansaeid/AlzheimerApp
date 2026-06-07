@@ -8,11 +8,12 @@ class DashboardSummaryModel extends DashboardSummary {
   });
 
   factory DashboardSummaryModel.fromJson(Map<String, dynamic> json) {
-    // In a production application, nested medications would be parsed here from a list of maps.
-    // For our clean Clean Architecture setup, this provides proper API mapping structure.
+    final dynamic isOutside = json['isCurrentlyOutside'] ?? json['is_currently_outside'];
+    final bool isSafe = isOutside is bool ? !isOutside : (json['isPatientSafe'] ?? json['is_patient_safe'] ?? true);
+
     return DashboardSummaryModel(
-      patientId: json['patientId'] as String,
-      isPatientSafe: json['isPatientSafe'] as bool,
+      patientId: (json['patientId'] ?? json['patient_id'] ?? '').toString(),
+      isPatientSafe: isSafe,
       todayMedications: const [],
     );
   }

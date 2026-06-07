@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../care_network/domain/entities/network_user.dart';
+import '../entities/followed_patient.dart';
 import '../repositories/dashboard_repository.dart';
 
 @lazySingleton
@@ -10,7 +10,7 @@ class GetFollowedPatients {
 
   GetFollowedPatients(this.repository);
 
-  Future<Either<Failure, List<NetworkUser>>> call() {
-    return repository.getFollowedPatients();
+  Future<Either<Failure, List<FollowedPatient>>> call() {
+    return repository.getMyPatients();
   }
 }

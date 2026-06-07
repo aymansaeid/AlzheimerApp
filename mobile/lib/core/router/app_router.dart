@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile/features/auth/presentation/pages/login_screen.dart';
 import 'package:mobile/features/auth/presentation/pages/register_screen.dart';
 import 'package:mobile/features/auth/presentation/pages/splash_screen.dart';
+import 'package:mobile/features/profile/presentation/pages/profile_screen.dart';
 import 'package:mobile/features/caregiver/presentation/pages/caregiver_dashboard_screen.dart';
 import 'package:mobile/features/caregiver/presentation/widgets/caregiver_layout.dart';
 import 'package:mobile/features/geofence/presentation/pages/geofence_alert_screen.dart';
@@ -20,9 +21,34 @@ import 'package:mobile/features/onboarding/presentation/pages/patient_setup_scre
 import 'package:mobile/features/onboarding/presentation/pages/caregiver_setup_screen.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mobile/core/router/go_router_refresh_stream.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
+  refreshListenable: GoRouterRefreshStream(getIt<AuthBloc>().stream),
+  redirect: (context, state) {
+    final authState = getIt<AuthBloc>().state;
+    final isGoingToLogin = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+
+    if (authState is AuthUnauthenticated && !isGoingToLogin) {
+      return '/login';
+    }
+
+    if (authState is AuthAuthenticated) {
+      final isAtAuthPage = isGoingToLogin || state.matchedLocation == '/splash' || state.matchedLocation == '/';
+      if (isAtAuthPage) {
+        if (authState.user.role == 'patient') {
+          return authState.isSetupComplete ? '/patient/home' : '/patient_setup';
+        } else {
+          return authState.isSetupComplete ? '/caregiver/dashboard' : '/caregiver_setup';
+        }
+      }
+    }
+
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/splash',
@@ -113,6 +139,15 @@ final appRouter = GoRouter(
             ),
           ],
         ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/patient_profile',
+              name: 'patient_profile',
+              builder: (context, state) => const ProfileScreen(),
+            ),
+          ],
+        ),
       ],
     ),
     // Caregiver StatefulShellRoute
@@ -183,6 +218,15 @@ final appRouter = GoRouter(
                   },
                 ),
               ],
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/caregiver_profile',
+              name: 'caregiver_profile',
+              builder: (context, state) => const ProfileScreen(),
             ),
           ],
         ),

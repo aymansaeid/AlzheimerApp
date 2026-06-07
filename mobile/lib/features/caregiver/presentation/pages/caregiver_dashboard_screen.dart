@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mobile/features/caregiver/data/models/followed_patient_model.dart';
 
 import '../../../../core/widgets/section_title.dart';
-import '../../../care_network/domain/entities/network_user.dart';
+import '../../domain/entities/followed_patient.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../widgets/medication_summary.dart';
 import '../widgets/patient_selector.dart';
@@ -31,11 +33,13 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
               setState(() {
                 _selectedPatientId = state.summary.patientId;
               });
+            } else if (state is DashboardEmptyPatients) {
+              context.go('/caregiver_setup');
             }
           },
           builder: (context, state) {
             // Extract patients and select active patient ID dynamically
-            List<NetworkUser>? patients;
+            List<FollowedPatient>? patients;
             String? activePatientId = _selectedPatientId;
 
             if (state is DashboardLoaded) {
@@ -71,11 +75,12 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                     if (patients != null && patients.isNotEmpty) ...[
                       PatientSelector(
                         patients: patients,
-                        selectedPatientId: activePatientId ?? patients.first.id,
+                        selectedPatientId:
+                            activePatientId ?? patients.first.patientId,
                         onPatientSelected: (patientId) {
                           // Tap-guard: Ignore selection click if already active or currently loading this patient ID
                           final String currentActive =
-                              activePatientId ?? patients!.first.id;
+                              activePatientId ?? patients!.first.patientId;
                           if (currentActive == patientId) return;
 
                           setState(() {
@@ -103,26 +108,27 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                           padding: EdgeInsets.symmetric(vertical: 80.0),
                           child: Center(child: CircularProgressIndicator()),
                         ),
-                    ] else if (state is DashboardNoPatients)
+                    ] else if (state is DashboardNoPatients ||
+                        state is DashboardEmptyPatients)
                       _buildNoPatientsFallback(theme)
                     else if (state is DashboardLoaded) ...[
-                      // ADIM 4: Safety Status Widget
+                      // Safety Status Widget
                       SafetyStatusCard(
                         isPatientSafe: state.summary.isPatientSafe,
                         patientName: state.patients
                             .firstWhere(
                               (p) =>
-                                  p.id ==
+                                  p.patientId ==
                                   (activePatientId ?? state.summary.patientId),
-                              orElse: () => state.patients.first,
+                              orElse: () => state.patients.first as FollowedPatientModel,
                             )
                             .fullName,
                       ),
                       const SizedBox(height: 24),
-                      // ADIM 4: Bugünkü İlaçlar başlığı
+                      // Bugünkü İlaçlar başlığı
                       const SectionTitle(text: 'Bugünkü İlaçlar'),
                       const SizedBox(height: 12),
-                      // ADIM 4: Günlük İlaçlar Özeti (Medication Summary List)
+                      // Günlük İlaçlar Özeti (Medication Summary List)
                       MedicationSummary(
                         medications: state.summary.todayMedications,
                       ),
@@ -243,7 +249,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () {
-                  // context.pushNamed('add_patient');
+                  context.go('/caregiver_setup');
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(

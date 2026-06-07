@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/medication.dart';
+import '../../domain/entities/medicine_log.dart';
 
 abstract class MedicationState extends Equatable {
   const MedicationState();
@@ -13,7 +13,7 @@ class MedicationInitial extends MedicationState {}
 class MedicationLoading extends MedicationState {}
 
 class MedicationLoaded extends MedicationState {
-  final List<Medication> medications;
+  final List<MedicineLog> medications;
   final DateTime selectedDate;
   final String? patientId;
 

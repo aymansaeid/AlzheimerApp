@@ -1,8 +1,9 @@
 import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../care_network/domain/entities/network_user.dart';
 import '../../domain/entities/dashboard_summary.dart';
+import '../../domain/entities/followed_patient.dart';
 import '../../domain/repositories/dashboard_repository.dart';
 import '../datasources/dashboard_remote_data_source.dart';
 
@@ -21,16 +22,20 @@ class DashboardRepositoryImpl implements DashboardRepository {
         patientId,
       );
       return Right(summary);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<NetworkUser>>> getFollowedPatients() async {
+  Future<Either<Failure, List<FollowedPatient>>> getMyPatients() async {
     try {
       final patients = await remoteDataSource.getFollowedPatients();
       return Right(patients);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

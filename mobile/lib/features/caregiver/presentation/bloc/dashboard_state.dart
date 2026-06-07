@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import '../../../care_network/domain/entities/network_user.dart';
 import '../../domain/entities/dashboard_summary.dart';
+import '../../domain/entities/followed_patient.dart';
 
 abstract class DashboardState extends Equatable {
   const DashboardState();
@@ -12,7 +12,7 @@ abstract class DashboardState extends Equatable {
 class DashboardInitial extends DashboardState {}
 
 class DashboardLoading extends DashboardState {
-  final List<NetworkUser>? patients;
+  final List<FollowedPatient>? patients;
   final String? loadingPatientId;
 
   const DashboardLoading({this.patients, this.loadingPatientId});
@@ -23,7 +23,7 @@ class DashboardLoading extends DashboardState {
 
 class DashboardLoaded extends DashboardState {
   final DashboardSummary summary;
-  final List<NetworkUser> patients;
+  final List<FollowedPatient> patients;
 
   const DashboardLoaded({required this.summary, required this.patients});
 
@@ -33,9 +33,11 @@ class DashboardLoaded extends DashboardState {
 
 class DashboardNoPatients extends DashboardState {}
 
+class DashboardEmptyPatients extends DashboardState {}
+
 class DashboardError extends DashboardState {
   final String message;
-  final List<NetworkUser>? patients;
+  final List<FollowedPatient>? patients;
 
   const DashboardError(this.message, {this.patients});
 

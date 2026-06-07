@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
-import '../../../care_network/domain/entities/network_user.dart';
+import '../../domain/entities/followed_patient.dart';
 import '../../domain/usecases/get_dashboard_summary.dart';
 import '../../domain/usecases/get_followed_patients.dart';
 import 'dashboard_event.dart';
@@ -34,7 +34,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     _currentlyLoadingPatientId = localPatientId;
 
     // Dynamically extract already loaded patients list from the current state
-    List<NetworkUser>? existingPatients;
+    List<FollowedPatient>? existingPatients;
     if (state is DashboardLoaded) {
       existingPatients = (state as DashboardLoaded).patients;
     } else if (state is DashboardLoading) {
@@ -63,12 +63,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       (patients) async {
         // 2. If caregiver has no followed patients, yield fallback state
         if (patients.isEmpty) {
-          emit(DashboardNoPatients());
+          emit(DashboardEmptyPatients());
           return;
         }
 
         // 3. Select the patient ID dynamically: use selected patient or default to the first one in the list
-        final String targetPatientId = localPatientId ?? patients.first.id;
+        final String targetPatientId = localPatientId ?? patients.first.patientId;
 
         // Update class level loader ID to reflect targetPatientId if it was resolved from default first index
         _currentlyLoadingPatientId = targetPatientId;

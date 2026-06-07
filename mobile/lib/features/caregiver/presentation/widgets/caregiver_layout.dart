@@ -22,6 +22,7 @@ class CaregiverLayout extends StatelessWidget {
           AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlar'),
           AppNavItem(icon: Icons.warning_rounded, label: 'Uyarılar'),
           AppNavItem(icon: Icons.people_rounded, label: 'Ağım'),
+          AppNavItem(icon: Icons.person, label: 'Profil'),
         ],
         onTap: (index) {
           navigationShell.goBranch(
@@ -36,7 +37,7 @@ class CaregiverLayout extends StatelessWidget {
               patientId = dashboardState.summary.patientId;
             }
             context.read<MedicationBloc>().add(
-              LoadMedications(DateTime.now(), patientId: patientId),
+              LoadDailyMedications(patientId ?? '', DateTime.now()),
             );
           }
         },

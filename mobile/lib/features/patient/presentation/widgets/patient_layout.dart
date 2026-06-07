@@ -23,6 +23,7 @@ class PatientLayout extends StatelessWidget {
           AppNavItem(icon: Icons.home_rounded, label: 'Ana Sayfa'),
           AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlarım'),
           AppNavItem(icon: Icons.photo_album_rounded, label: 'Anılarım'),
+          AppNavItem(icon: Icons.person, label: 'Profil'),
         ],
         onTap: (index) {
           // Path'leri bilmemize gerek yok, go_router index'e göre Branch'e (dallanmaya) gider.
@@ -38,7 +39,7 @@ class PatientLayout extends StatelessWidget {
               patientId = authState.user.id;
             }
             context.read<MedicationBloc>().add(
-              LoadMedications(DateTime.now(), patientId: patientId),
+              LoadDailyMedications(patientId ?? '', DateTime.now()),
             );
           }
           /* BLoC Veri Tazeleme Örneği:

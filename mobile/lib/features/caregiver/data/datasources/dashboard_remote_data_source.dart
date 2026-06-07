@@ -1,76 +1,97 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:mobile/features/medication/domain/entities/medication.dart';
-import '../../../care_network/domain/entities/network_user.dart';
+import 'package:mobile/core/errors/exceptions.dart';
 import '../models/dashboard_summary_model.dart';
+import '../models/followed_patient_model.dart';
 
 abstract class DashboardRemoteDataSource {
   Future<DashboardSummaryModel> getPatientDashboardSummary(String patientId);
-  Future<List<NetworkUser>> getFollowedPatients();
+  Future<List<FollowedPatientModel>> getFollowedPatients();
 }
 
 @LazySingleton(as: DashboardRemoteDataSource)
-class MockDashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
+class DashboardRemoteDataSourceImpl implements DashboardRemoteDataSource {
   final Dio dio;
-  final FlutterSecureStorage secureStorage;
 
-  MockDashboardRemoteDataSourceImpl(this.dio, this.secureStorage);
+  DashboardRemoteDataSourceImpl(this.dio);
 
   @override
   Future<DashboardSummaryModel> getPatientDashboardSummary(
     String patientId,
   ) async {
-    // -------------------------------------------------------------
-    // GERÇEK API BAĞLANTISI İÇİN ÖRNEK KOD (YORUM SATIRINDA)
-    // -------------------------------------------------------------
-    // try {
-    //   final response = await dio.get('/api/dashboard/$patientId');
-    //   return DashboardSummaryModel.fromJson(response.data);
-    // } on DioException catch (e) {
-    //   throw ServerException();
-    // }
-    // -------------------------------------------------------------
-
-    return DashboardSummaryModel(
-      patientId: patientId,
-      isPatientSafe: true,
-      todayMedications: [],
-    );
+    try {
+      final response = await dio.get('/api/Follower/patient/$patientId/dashboard');
+      if (response.data is Map<String, dynamic>) {
+        return DashboardSummaryModel.fromJson(response.data as Map<String, dynamic>);
+      }
+      throw ServerException(message: 'Sunucudan geçersiz bir yanıt alındı.');
+    } on DioException catch (e) {
+      final parsedMsg = _parseProblemDetails(e);
+      debugPrint(
+        'DashboardRemoteDataSource [getPatientDashboardSummary] DioException: $parsedMsg',
+      );
+      throw ServerException(message: parsedMsg);
+    } catch (e, stack) {
+      debugPrint(
+        'DashboardRemoteDataSource [getPatientDashboardSummary] Generic Exception: $e\n$stack',
+      );
+      throw ServerException(message: e.toString());
+    }
   }
 
   @override
-  Future<List<NetworkUser>> getFollowedPatients() async {
-    // -------------------------------------------------------------
-    // GERÇEK API BAĞLANTISI İÇİN ÖRNEK KOD (YORUM SATIRINDA)
-    // -------------------------------------------------------------
-    // try {
-    //   final response = await dio.get('/api/caregiver/patients');
-    //   return (response.data as List).map((p) => NetworkUserModel.fromJson(p)).toList();
-    // } on DioException catch (e) {
-    //   throw ServerException();
-    // }
-    // -------------------------------------------------------------
-
-    // Backend'i simüle etmek için 1 saniye bekle
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Check if the caregiver has accepted an invite using local secure storage key
-    final hasInvite = await secureStorage.read(key: 'has_accepted_invite');
-    if (hasInvite != 'true') {
-      return const []; // Return empty so caregiver setup onboarding triggers
+  Future<List<FollowedPatientModel>> getFollowedPatients() async {
+    try {
+      final response = await dio.get('/api/Follower/my-patients');
+      if (response.data is List) {
+        return (response.data as List)
+            .map((p) => FollowedPatientModel.fromJson(p as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      final parsedMsg = _parseProblemDetails(e);
+      debugPrint(
+        'DashboardRemoteDataSource [getFollowedPatients] DioException: $parsedMsg',
+      );
+      throw ServerException(message: parsedMsg);
+    } catch (e, stack) {
+      debugPrint(
+        'DashboardRemoteDataSource [getFollowedPatients] Generic Exception: $e\n$stack',
+      );
+      throw ServerException(message: e.toString());
     }
+  }
 
-    // Takipçinin takip ettiği hastalar listesi (Test amaçlı burası boşaltılabilir)
-    return const [
-      NetworkUser(
-        id: '019e64f5-4474-7170-b7eb-08e7ec670197',
-        fullName: 'Hasta 1',
-        role: 'patient',
-        avatarUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Ahmet',
-        email: 'hasta1@gmail.com',
-        phoneNumber: '+905551234567',
-      ),
-    ];
+  String _parseProblemDetails(DioException e) {
+    if (e.response?.data is Map<String, dynamic>) {
+      final data = e.response!.data as Map<String, dynamic>;
+      if (data.containsKey('detail') &&
+          data['detail'] != null &&
+          data['detail'].toString().isNotEmpty) {
+        return data['detail'].toString();
+      }
+      if (data.containsKey('title') &&
+          data['title'] != null &&
+          data['title'].toString().isNotEmpty) {
+        return data['title'].toString();
+      }
+      if (data.containsKey('errors') && data['errors'] is Map) {
+        final errors = data['errors'] as Map;
+        final messages = <String>[];
+        errors.forEach((key, value) {
+          if (value is List) {
+            messages.add(value.join(', '));
+          } else if (value is String) {
+            messages.add(value);
+          }
+        });
+        if (messages.isNotEmpty) {
+          return messages.join('\n');
+        }
+      }
+    }
+    return e.message ?? 'Bilinmeyen bir sunucu hatası oluştu.';
   }
 }
