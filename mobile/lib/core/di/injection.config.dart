@@ -29,6 +29,14 @@ import '../../features/care_network/data/repositories/care_network_repository_im
     as _i517;
 import '../../features/care_network/domain/repositories/care_network_repository.dart'
     as _i83;
+import '../../features/care_network/domain/usecases/generate_invite_usecase.dart'
+    as _i417;
+import '../../features/care_network/domain/usecases/get_care_team_usecase.dart'
+    as _i240;
+import '../../features/care_network/domain/usecases/leave_team_usecase.dart'
+    as _i1027;
+import '../../features/care_network/domain/usecases/remove_team_member_usecase.dart'
+    as _i477;
 import '../../features/care_network/presentation/bloc/care_network_bloc.dart'
     as _i100;
 import '../../features/caregiver/data/datasources/dashboard_remote_data_source.dart'
@@ -105,11 +113,11 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i368.DashboardRemoteDataSource>(
       () => _i368.DashboardRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
-    gh.lazySingleton<_i485.CareNetworkRemoteDataSource>(
-      () => _i485.CareNetworkRemoteDataSourceImpl(),
-    );
     gh.lazySingleton<_i237.FollowerRemoteDataSource>(
       () => _i237.FollowerRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i485.CareNetworkRemoteDataSource>(
+      () => _i485.CareNetworkRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i484.MedicationRemoteDataSource>(
       () => _i484.MedicationRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -155,8 +163,17 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i558.FlutterSecureStorage>(),
       ),
     );
-    gh.factory<_i100.CareNetworkBloc>(
-      () => _i100.CareNetworkBloc(gh<_i83.CareNetworkRepository>()),
+    gh.lazySingleton<_i417.GenerateInviteUseCase>(
+      () => _i417.GenerateInviteUseCase(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.lazySingleton<_i240.GetCareTeamUseCase>(
+      () => _i240.GetCareTeamUseCase(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.lazySingleton<_i1027.LeaveTeamUseCase>(
+      () => _i1027.LeaveTeamUseCase(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.lazySingleton<_i477.RemoveTeamMemberUseCase>(
+      () => _i477.RemoveTeamMemberUseCase(gh<_i83.CareNetworkRepository>()),
     );
     gh.factory<_i844.DashboardBloc>(
       () => _i844.DashboardBloc(
@@ -241,6 +258,16 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i1068.PatientSetupBloc(
         gh<_i411.CheckHasAdminUseCase>(),
         gh<_i470.GenerateInviteUseCase>(),
+      ),
+    );
+    gh.factory<_i100.CareNetworkBloc>(
+      () => _i100.CareNetworkBloc(
+        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
+        getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
+        generateInviteUseCase: gh<_i417.GenerateInviteUseCase>(),
+        removeTeamMemberUseCase: gh<_i477.RemoveTeamMemberUseCase>(),
+        leaveTeamUseCase: gh<_i1027.LeaveTeamUseCase>(),
+        acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
       ),
     );
     return this;

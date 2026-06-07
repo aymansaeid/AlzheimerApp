@@ -24,3 +24,6 @@ class SelectPatient extends DashboardEvent {
   @override
   List<Object?> get props => [patientId];
 }
+
+class ResetDashboard extends DashboardEvent {}
+

@@ -54,3 +54,6 @@ class MarkAsTakenEvent extends MedicationEvent {
   @override
   List<Object?> get props => [id, date];
 }
+
+class ResetMedications extends MedicationEvent {}
+

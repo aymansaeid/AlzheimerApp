@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/network_user.dart';
+import '../../domain/entities/care_team_member.dart';
+import '../../../caregiver/domain/entities/followed_patient.dart';
 
 abstract class CareNetworkState extends Equatable {
   const CareNetworkState();
@@ -13,40 +14,45 @@ class CareNetworkInitial extends CareNetworkState {}
 class CareNetworkLoading extends CareNetworkState {}
 
 class CareNetworkLoaded extends CareNetworkState {
-  final List<NetworkUser> patients;
-  final List<NetworkUser> caregivers;
-  final String? generatedLink;
-  final bool isGeneratingLink;
+  final List<FollowedPatient> patients;
+  final Map<String, List<CareTeamMember>> patientTeams;
+  final Map<String, bool> isAdminForPatient;
+  final String? generatedCode;
+  final bool isGeneratingCode;
 
   const CareNetworkLoaded({
     required this.patients,
-    required this.caregivers,
-    this.generatedLink,
-    this.isGeneratingLink = false,
+    required this.patientTeams,
+    required this.isAdminForPatient,
+    this.generatedCode,
+    this.isGeneratingCode = false,
   });
 
   CareNetworkLoaded copyWith({
-    List<NetworkUser>? patients,
-    List<NetworkUser>? caregivers,
-    String? generatedLink,
-    bool? isGeneratingLink,
-    bool clearLink = false,
+    List<FollowedPatient>? patients,
+    Map<String, List<CareTeamMember>>? patientTeams,
+    Map<String, bool>? isAdminForPatient,
+    String? generatedCode,
+    bool? isGeneratingCode,
+    bool clearCode = false,
   }) {
     return CareNetworkLoaded(
       patients: patients ?? this.patients,
-      caregivers: caregivers ?? this.caregivers,
-      generatedLink: clearLink ? null : (generatedLink ?? this.generatedLink),
-      isGeneratingLink: isGeneratingLink ?? this.isGeneratingLink,
+      patientTeams: patientTeams ?? this.patientTeams,
+      isAdminForPatient: isAdminForPatient ?? this.isAdminForPatient,
+      generatedCode: clearCode ? null : (generatedCode ?? this.generatedCode),
+      isGeneratingCode: isGeneratingCode ?? this.isGeneratingCode,
     );
   }
 
   @override
   List<Object?> get props => [
-    patients,
-    caregivers,
-    generatedLink,
-    isGeneratingLink,
-  ];
+        patients,
+        patientTeams,
+        isAdminForPatient,
+        generatedCode,
+        isGeneratingCode,
+      ];
 }
 
 class CareNetworkError extends CareNetworkState {
@@ -57,3 +63,19 @@ class CareNetworkError extends CareNetworkState {
   @override
   List<Object?> get props => [message];
 }
+
+class CareNetworkLeftTeamSuccess extends CareNetworkState {}
+
+class CareNetworkJoinSuccess extends CareNetworkState {}
+
+class CareNetworkActionSuccess extends CareNetworkState {
+  final String message;
+
+  const CareNetworkActionSuccess(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+
+class CareNetworkEmpty extends CareNetworkState {}
+

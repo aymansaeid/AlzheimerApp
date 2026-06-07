@@ -35,6 +35,15 @@ class MedicationBloc extends Bloc<MedicationEvent, MedicationState> {
     on<UpdateMedicationEvent>(_onUpdateMedication);
     on<DeleteMedicationEvent>(_onDeleteMedication);
     on<MarkAsTakenEvent>(_onMarkAsTaken);
+    on<ResetMedications>(_onResetMedications);
+  }
+
+  void _onResetMedications(
+    ResetMedications event,
+    Emitter<MedicationState> emit,
+  ) {
+    _currentPatientId = null;
+    emit(MedicationInitial());
   }
 
   Future<void> _onLoadDailyMedications(
