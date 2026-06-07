@@ -45,4 +45,11 @@ public class MedicineRepository : IMedicineRepository
         _context.Medicines.Remove(medicine);
         await _context.SaveChangesAsync();
     }
+    public async Task<List<Medicine>> GetAllActiveMedicinesAsync()
+    {
+        // Fetches every active medicine in the entire system
+        return await _context.Medicines
+            .Where(m => m.IsActive)
+            .ToListAsync();
+    }
 }

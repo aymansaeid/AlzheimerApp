@@ -23,4 +23,5 @@ public class FollowerDashboardResponse
     public int MedsTakenToday { get; set; }
     public int TotalMedsToday { get; set; }
     public List<MedicineLogResponse> UpcomingMeds { get; set; } = new();
+    public bool CurrentUserIsAdmin { get; set; }
 }

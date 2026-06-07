@@ -142,6 +142,9 @@ namespace AlzheimerApp.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsAlarmSent")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("MedicineId")
                         .HasColumnType("uuid");
 

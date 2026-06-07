@@ -12,7 +12,8 @@ public enum AlertType
     SafeZoneBreach,
     AnomalyDetected,
     MedicineMissed,
-    Emergency
+    Emergency,
+    MedicineReminder
 }
 
 public enum MedicineStatus

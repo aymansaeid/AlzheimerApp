@@ -66,10 +66,11 @@ public class LocationService : ILocationService
 
             // 2. Get all family members following this patient
             var followers = await _followerRepository.GetFollowersByPatientIdAsync(request.PatientId);
-
             // 3. Extract their mobile device tokens
-            var tokens = followers.Where(f => !string.IsNullOrEmpty(f.FcmToken)).Select(f => f.FcmToken!).ToList();
-
+            var tokens = followers
+                .Where(f => f.Follower != null && !string.IsNullOrEmpty(f.Follower.FcmToken))
+                .Select(f => f.Follower!.FcmToken!)
+                .ToList();
             // 4. IF they have tokens, send the Firebase Push Notification
             if (tokens.Any())
             {
