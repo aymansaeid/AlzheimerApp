@@ -95,6 +95,12 @@ import '../../features/onboarding/presentation/bloc/patient_setup/patient_setup_
     as _i1068;
 import '../../features/patient/data/datasources/patient_remote_data_source.dart'
     as _i1012;
+import '../../features/patient/data/repositories/patient_repository_impl.dart'
+    as _i813;
+import '../../features/patient/domain/repositories/patient_repository.dart'
+    as _i233;
+import '../../features/patient/domain/usecases/get_patient_dashboard_usecase.dart'
+    as _i647;
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
@@ -210,6 +216,12 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i941.RegisterUseCase>(
       () => _i941.RegisterUseCase(gh<_i787.AuthRepository>()),
+    );
+    gh.lazySingleton<_i233.PatientRepository>(
+      () => _i813.PatientRepositoryImpl(gh<_i1012.PatientRemoteDataSource>()),
+    );
+    gh.lazySingleton<_i647.GetPatientDashboardUseCase>(
+      () => _i647.GetPatientDashboardUseCase(gh<_i233.PatientRepository>()),
     );
     gh.lazySingleton<_i702.AcceptInviteUseCase>(
       () => _i702.AcceptInviteUseCase(gh<_i1019.FollowerRepository>()),

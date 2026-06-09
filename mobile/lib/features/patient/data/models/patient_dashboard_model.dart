@@ -1,15 +1,12 @@
 import '../../../medication/data/models/medicine_log_model.dart';
+import '../../domain/entities/patient_dashboard.dart';
 import 'dashboard_loved_one_model.dart';
 
-class PatientDashboardModel {
-  final String patientName;
-  final List<MedicineLogModel> todayMedicines;
-  final List<DashboardLovedOneModel> lovedOnes;
-
+class PatientDashboardModel extends PatientDashboard {
   const PatientDashboardModel({
-    required this.patientName,
-    required this.todayMedicines,
-    required this.lovedOnes,
+    required super.patientName,
+    required super.todayMedicines,
+    required super.lovedOnes,
   });
 
   factory PatientDashboardModel.fromJson(Map<String, dynamic> json) {
@@ -39,7 +36,7 @@ class PatientDashboardModel {
     return {
       'patientName': patientName,
       'todayMedicines': todayMedicines.map((e) => e.toJson()).toList(),
-      'lovedOnes': lovedOnes.map((e) => e.toJson()).toList(),
+      'lovedOnes': lovedOnes.map((e) => (e as DashboardLovedOneModel).toJson()).toList(),
     };
   }
 }

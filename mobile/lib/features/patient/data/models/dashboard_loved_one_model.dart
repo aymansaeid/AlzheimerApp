@@ -1,18 +1,13 @@
-class DashboardLovedOneModel {
-  final String followerId;
-  final String fullName;
-  final String phone;
-  final String relationshipType;
-  final bool isPrimary;
-  final String joinedAt;
+import '../../domain/entities/loved_one.dart';
 
+class DashboardLovedOneModel extends LovedOne {
   const DashboardLovedOneModel({
-    required this.followerId,
-    required this.fullName,
-    required this.phone,
-    required this.relationshipType,
-    required this.isPrimary,
-    required this.joinedAt,
+    required super.followerId,
+    required super.fullName,
+    required super.phone,
+    required super.relationshipType,
+    required super.isPrimary,
+    required super.joinedAt,
   });
 
   factory DashboardLovedOneModel.fromJson(Map<String, dynamic> json) {
