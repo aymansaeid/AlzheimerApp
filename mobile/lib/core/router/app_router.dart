@@ -12,10 +12,10 @@ import 'package:mobile/features/patient/presentation/widgets/patient_layout.dart
 import 'package:mobile/features/care_network/presentation/pages/care_network_screen.dart';
 import 'package:mobile/features/care_network/presentation/pages/user_detail_screen.dart';
 import 'package:mobile/features/care_network/presentation/bloc/care_network_bloc.dart';
-import 'package:mobile/features/medication/presentation/pages/medication_list_screen.dart';
-import 'package:mobile/features/medication/presentation/pages/medication_detail_screen.dart';
-import 'package:mobile/features/medication/presentation/pages/medication_form_screen.dart';
-import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
+import 'package:mobile/features/medication/presentation/pages/medicine_list_screen.dart';
+import 'package:mobile/features/medication/presentation/pages/medicine_detail_screen.dart';
+import 'package:mobile/features/medication/presentation/pages/medicine_form_screen.dart';
+import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart';
 import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
 import 'package:mobile/features/onboarding/presentation/pages/patient_setup_screen.dart';
 import 'package:mobile/features/onboarding/presentation/pages/caregiver_setup_screen.dart';
@@ -80,10 +80,10 @@ final appRouter = GoRouter(
       name: 'medication_detail',
       builder: (context, state) {
         final id = state.pathParameters['id']!;
-        final bloc = state.extra as MedicationBloc;
+        final bloc = state.extra as MedicineBloc;
         return BlocProvider.value(
           value: bloc,
-          child: MedicationDetailScreen(medicationId: id),
+          child: MedicineDetailScreen(medicationId: id),
         );
       },
     ),
@@ -93,17 +93,17 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final id = state.uri.queryParameters['id'];
         final patientId = state.uri.queryParameters['patientId'];
-        final bloc = state.extra as MedicationBloc;
+        final bloc = state.extra as MedicineBloc;
         return BlocProvider.value(
           value: bloc,
-          child: MedicationFormScreen(medicationId: id, patientId: patientId),
+          child: MedicineFormScreen(medicationId: id, patientId: patientId),
         );
       },
     ),
     // Patient StatefulShellRoute
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MultiBlocProvider(
-        providers: [BlocProvider(create: (_) => getIt<MedicationBloc>())],
+        providers: [BlocProvider(create: (_) => getIt<MedicineBloc>())],
         child: PatientLayout(navigationShell: navigationShell),
       ),
       branches: [
@@ -125,7 +125,7 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/patient/medications',
               name: 'patient_medications',
-              builder: (context, state) => const MedicationListScreen(),
+              builder: (context, state) => const MedicineListScreen(),
             ),
           ],
         ),
@@ -154,7 +154,7 @@ final appRouter = GoRouter(
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MultiBlocProvider(
         providers: [
-          BlocProvider(create: (_) => getIt<MedicationBloc>()),
+          BlocProvider(create: (_) => getIt<MedicineBloc>()),
           BlocProvider(
             create: (_) =>
                 getIt<DashboardBloc>()..add(const LoadDashboard(null)),
@@ -177,7 +177,7 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/caregiver/medications',
               name: 'caregiver_medications',
-              builder: (context, state) => const MedicationListScreen(),
+              builder: (context, state) => const MedicineListScreen(),
             ),
           ],
         ),

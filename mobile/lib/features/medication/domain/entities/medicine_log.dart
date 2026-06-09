@@ -8,6 +8,7 @@ class MedicineLog extends Equatable {
   final int status; // 0=Pending, 1=Taken, 2=Missed
   final DateTime scheduledAt;
   final DateTime? takenAt;
+  final String? note;
 
   const MedicineLog({
     required this.id,
@@ -17,6 +18,7 @@ class MedicineLog extends Equatable {
     required this.status,
     required this.scheduledAt,
     this.takenAt,
+    this.note,
   });
 
   MedicineLog copyWith({
@@ -27,6 +29,7 @@ class MedicineLog extends Equatable {
     int? status,
     DateTime? scheduledAt,
     DateTime? takenAt,
+    String? note,
   }) {
     return MedicineLog(
       id: id ?? this.id,
@@ -36,6 +39,7 @@ class MedicineLog extends Equatable {
       status: status ?? this.status,
       scheduledAt: scheduledAt ?? this.scheduledAt,
       takenAt: takenAt ?? this.takenAt,
+      note: note ?? this.note,
     );
   }
 
@@ -48,5 +52,6 @@ class MedicineLog extends Equatable {
         status,
         scheduledAt,
         takenAt,
+        note,
       ];
 }

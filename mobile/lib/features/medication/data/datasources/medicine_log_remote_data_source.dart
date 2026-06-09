@@ -1,11 +1,11 @@
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:injectable/injectable.dart';
-import 'package:mobile/core/errors/exceptions.dart';
 import '../models/medicine_log_model.dart';
+import 'package:dio/dio.dart';
+import 'package:injectable/injectable.dart';
+import '../../../../core/errors/exceptions.dart';
 
 abstract class MedicineLogRemoteDataSource {
   Future<List<MedicineLogModel>> getDailyLogs(String patientId, DateTime date);
+  Future<void> updateMedicineStatus(String logId, int status, String? note);
 }
 
 @LazySingleton(as: MedicineLogRemoteDataSource)
@@ -20,11 +20,12 @@ class MedicineLogRemoteDataSourceImpl implements MedicineLogRemoteDataSource {
     DateTime date,
   ) async {
     try {
-      // Format to UTC ISO 8601 to satisfy PostgreSQL timestamp with time zone on backend
-      final dateStr = date.toUtc().toIso8601String();
+      // POSTGRESQL İÇİN KUSURSUZ UTC GECE YARISI FORMATI
+      final cleanDate =
+          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}T00:00:00Z";
 
       final response = await dio.get(
-        '/api/MedicineLogs/patient/$patientId/date/$dateStr',
+        '/api/MedicineLogs/patient/$patientId/date/$cleanDate',
       );
 
       if (response.data is List) {
@@ -36,22 +37,32 @@ class MedicineLogRemoteDataSourceImpl implements MedicineLogRemoteDataSource {
       }
       return [];
     } on DioException catch (e) {
-      debugPrint('API ERROR (${e.response?.statusCode}): ${e.response?.data}');
       if (e.response?.statusCode == 400 || e.response?.statusCode == 404) {
-        debugPrint(
-          'Uyarı: İlaç bulunamadı veya hasta schedulesi boş. Boş liste dönülüyor.',
-        );
         return [];
       }
-      final parsedMsg = _parseProblemDetails(e);
-      debugPrint(
-        'MedicineLogRemoteDataSource [getDailyLogs] DioException: $parsedMsg',
+      throw ServerException(message: _parseProblemDetails(e));
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<void> updateMedicineStatus(
+    String logId,
+    int status,
+    String? note,
+  ) async {
+    try {
+      await dio.put(
+        '/api/MedicineLogs/$logId/status',
+        data: {
+          'status': status,
+          if (note != null && note.isNotEmpty) 'note': note,
+        },
       );
-      throw ServerException(message: parsedMsg);
-    } catch (e, stack) {
-      debugPrint(
-        'MedicineLogRemoteDataSource [getDailyLogs] Generic Exception: $e\n$stack',
-      );
+    } on DioException catch (e) {
+      throw ServerException(message: _parseProblemDetails(e));
+    } catch (e) {
       throw ServerException(message: e.toString());
     }
   }
@@ -59,29 +70,11 @@ class MedicineLogRemoteDataSourceImpl implements MedicineLogRemoteDataSource {
   String _parseProblemDetails(DioException e) {
     if (e.response?.data is Map<String, dynamic>) {
       final data = e.response!.data as Map<String, dynamic>;
-      if (data.containsKey('detail') &&
-          data['detail'] != null &&
-          data['detail'].toString().isNotEmpty) {
+      if (data.containsKey('detail') && data['detail'] != null) {
         return data['detail'].toString();
       }
-      if (data.containsKey('title') &&
-          data['title'] != null &&
-          data['title'].toString().isNotEmpty) {
+      if (data.containsKey('title') && data['title'] != null) {
         return data['title'].toString();
-      }
-      if (data.containsKey('errors') && data['errors'] is Map) {
-        final errors = data['errors'] as Map;
-        final messages = <String>[];
-        errors.forEach((key, value) {
-          if (value is List) {
-            messages.add(value.join(', '));
-          } else if (value is String) {
-            messages.add(value);
-          }
-        });
-        if (messages.isNotEmpty) {
-          return messages.join('\n');
-        }
       }
     }
     return e.message ?? 'Bilinmeyen bir sunucu hatası oluştu.';

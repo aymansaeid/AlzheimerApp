@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../medication/domain/entities/medication.dart';
-import '../../../medication/presentation/bloc/medication_bloc.dart';
+import '../../../medication/domain/entities/medicine.dart';
+import '../../../medication/presentation/bloc/medicine_bloc.dart';
 
-class MedicationSummary extends StatelessWidget {
-  final List<Medication> medications;
+class MedicineSummary extends StatelessWidget {
+  final List<Medicine> medicines;
 
-  const MedicationSummary({super.key, required this.medications});
+  const MedicineSummary({super.key, required this.medicines});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    if (medications.isEmpty) {
+    if (medicines.isEmpty) {
       return Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -51,9 +51,9 @@ class MedicationSummary extends StatelessWidget {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: medications.length,
+      itemCount: medicines.length,
       itemBuilder: (context, index) {
-        final med = medications[index];
+        final med = medicines[index];
         return Card(
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 12),
@@ -65,7 +65,7 @@ class MedicationSummary extends StatelessWidget {
               context.pushNamed(
                 'medication_detail',
                 pathParameters: {'id': med.id},
-                extra: context.read<MedicationBloc>(),
+                extra: context.read<MedicineBloc>(),
               );
             },
             borderRadius: BorderRadius.circular(16),

@@ -3,17 +3,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/core/di/injection.dart';
+import 'package:mobile/features/medication/presentation/bloc/medicine_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/medicine_log.dart';
-import '../bloc/medication_bloc.dart';
-import '../bloc/medication_event.dart';
-import '../bloc/medication_state.dart';
+import '../bloc/medicine_bloc.dart';
+import '../bloc/medicine_event.dart';
 
-class MedicationDetailScreen extends StatelessWidget {
+class MedicineDetailScreen extends StatelessWidget {
   final String medicationId;
 
-  const MedicationDetailScreen({super.key, required this.medicationId});
+  const MedicineDetailScreen({super.key, required this.medicationId});
 
   @override
   Widget build(BuildContext context) {
@@ -31,13 +31,13 @@ class MedicationDetailScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: BlocBuilder<MedicationBloc, MedicationState>(
+      body: BlocBuilder<MedicineBloc, MedicineState>(
         builder: (context, state) {
-          if (state is MedicationLoaded) {
+          if (state is MedicineLoaded) {
             // Find medication log by ID
             final MedicineLog medication;
             try {
-              medication = state.medications.firstWhere(
+              medication = state.medicines.firstWhere(
                 (m) => m.id == medicationId,
               );
             } catch (_) {
@@ -143,8 +143,8 @@ class MedicationDetailScreen extends StatelessWidget {
                                   medication.status == 0
                                       ? 'İlaç henüz alınmadı. Alındı olarak işaretlemek için aşağıdaki butonu kullanabilirsiniz.'
                                       : medication.status == 1
-                                          ? 'İlaç alındı. Alınma zamanı: ${medication.takenAt != null ? DateFormat('HH:mm').format(medication.takenAt!) : '-'}'
-                                          : 'İlaç saati geçirildi (Kaçırıldı).',
+                                      ? 'İlaç alındı. Alınma zamanı: ${medication.takenAt != null ? DateFormat('HH:mm').format(medication.takenAt!) : '-'}'
+                                      : 'İlaç saati geçirildi (Kaçırıldı).',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.grey[700],
@@ -173,7 +173,7 @@ class MedicationDetailScreen extends StatelessWidget {
                 ],
               ),
             );
-          } else if (state is MedicationLoading) {
+          } else if (state is MedicineLoading) {
             return const Center(child: CircularProgressIndicator());
           }
           return const Center(child: Text('Veri bulunamadı.'));
@@ -237,7 +237,7 @@ class MedicationDetailScreen extends StatelessWidget {
         onPressed: isTaken
             ? null
             : () {
-                context.read<MedicationBloc>().add(
+                context.read<MedicineBloc>().add(
                   MarkAsTakenEvent(id: medication.id, date: DateTime.now()),
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -279,7 +279,7 @@ class MedicationDetailScreen extends StatelessWidget {
               onPressed: () {
                 context.push(
                   '/medication/form?id=${medication.medicineId}',
-                  extra: context.read<MedicationBloc>(),
+                  extra: context.read<MedicineBloc>(),
                 );
               },
               icon: const Icon(Icons.edit, color: Colors.white),
@@ -329,12 +329,14 @@ class MedicationDetailScreen extends StatelessWidget {
   }
 
   void _showDeleteConfirmation(BuildContext context, MedicineLog medication) {
-    final bloc = context.read<MedicationBloc>();
+    final bloc = context.read<MedicineBloc>();
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('İlacı Sil'),
-        content: const Text('Bu ilacı (ve planlamasını) silmek istediğinize emin misiniz?'),
+        content: const Text(
+          'Bu ilacı (ve planlamasını) silmek istediğinize emin misiniz?',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -347,7 +349,7 @@ class MedicationDetailScreen extends StatelessWidget {
               final idToDelete = medication.medicineId.isNotEmpty
                   ? medication.medicineId
                   : medication.id;
-              bloc.add(DeleteMedicationEvent(idToDelete));
+              bloc.add(DeleteMedicineEvent(idToDelete));
               Navigator.pop(dialogContext);
               context.pop(); // Go back to list
             },

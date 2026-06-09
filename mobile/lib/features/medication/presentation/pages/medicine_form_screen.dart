@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../domain/entities/medication.dart';
-import '../bloc/medication_bloc.dart';
-import '../bloc/medication_event.dart';
-import '../bloc/medication_state.dart';
+import '../../domain/entities/medicine.dart';
+import '../bloc/medicine_bloc.dart';
+import '../bloc/medicine_event.dart';
+import '../bloc/medicine_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 
-class MedicationFormScreen extends StatefulWidget {
+class MedicineFormScreen extends StatefulWidget {
   final String? medicationId;
   final String? patientId;
 
-  const MedicationFormScreen({super.key, this.medicationId, this.patientId});
+  const MedicineFormScreen({super.key, this.medicationId, this.patientId});
 
   @override
-  State<MedicationFormScreen> createState() => _MedicationFormScreenState();
+  State<MedicineFormScreen> createState() => _MedicineFormScreenState();
 }
 
-class _MedicationFormScreenState extends State<MedicationFormScreen> {
+class _MedicineFormScreenState extends State<MedicineFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _nameController;
@@ -29,7 +29,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
   List<int> _selectedDays = [1, 2, 3, 4, 5, 6, 7];
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
-  Medication? _existingMedication;
+  Medicine? _existingMedication;
   
   @override
   void initState() {
@@ -39,10 +39,10 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
     _instructionsController = TextEditingController();
 
     if (widget.medicationId != null) {
-      final state = context.read<MedicationBloc>().state;
-      if (state is MedicationLoaded) {
+      final state = context.read<MedicineBloc>().state;
+      if (state is MedicineLoaded) {
         try {
-          final existingLog = state.medications.firstWhere(
+          final existingLog = state.medicines.firstWhere(
             (m) => m.medicineId == widget.medicationId || m.id == widget.medicationId,
           );
           _nameController.text = existingLog.medicineName;
@@ -60,7 +60,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
             TimeOfDay(hour: existingLog.scheduledAt.hour, minute: existingLog.scheduledAt.minute),
           ];
 
-          _existingMedication = Medication(
+          _existingMedication = Medicine(
             id: existingLog.medicineId.isNotEmpty ? existingLog.medicineId : existingLog.id,
             patientId: widget.patientId ?? '',
             creatorId: '',
@@ -110,7 +110,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
           startDate: _startDate,
           endDate: _endDate,
         );
-        context.read<MedicationBloc>().add(UpdateMedicationEvent(updated));
+        context.read<MedicineBloc>().add(UpdateMedicineEvent(updated));
       } else {
         // Resolve patientId and createdBy dynamically
         String creatorId = '';
@@ -124,7 +124,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
           final formattedTime =
               '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
 
-          final newMed = Medication(
+          final newMed = Medicine(
             id: '',
             patientId: widget.patientId!,
             creatorId: creatorId,
@@ -138,7 +138,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
             isActive: true,
             isTaken: false,
           );
-          context.read<MedicationBloc>().add(AddMedicationEvent(newMed));
+          context.read<MedicineBloc>().add(AddMedicineEvent(newMed));
         }
       }
 

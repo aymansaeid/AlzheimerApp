@@ -10,8 +10,8 @@ import '../bloc/care_network_event.dart';
 import '../bloc/care_network_state.dart';
 import '../widgets/patient_section_card.dart';
 import '../../../caregiver/presentation/bloc/dashboard_bloc.dart';
-import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
-import 'package:mobile/features/medication/presentation/bloc/medication_event.dart';
+import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart';
+import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
 import 'package:mobile/features/care_network/domain/entities/care_team_member.dart';
 import 'package:mobile/features/caregiver/domain/entities/followed_patient.dart';
 
@@ -72,7 +72,7 @@ class CareNetworkView extends StatelessWidget {
             context.read<DashboardBloc>().add(const LoadDashboard(null));
           } else if (state is CareNetworkEmpty) {
             context.read<DashboardBloc>().add(ResetDashboard());
-            context.read<MedicationBloc>().add(ResetMedications());
+            context.read<MedicineBloc>().add(ResetMedications());
             context.goNamed('caregiver_setup');
           } else if (state is CareNetworkError) {
             ScaffoldMessenger.of(context).showSnackBar(

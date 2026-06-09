@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-class Medication extends Equatable {
+class Medicine extends Equatable {
   final String id;
   final String patientId;
   final String creatorId; // ID of the user who created it
@@ -13,9 +13,9 @@ class Medication extends Equatable {
   final DateTime? endDate;
   final bool isActive;
   final bool
-  isTaken; // UI specific: Whether the medication was taken for the queried date
+  isTaken; // UI specific: Whether the Medicine was taken for the queried date
 
-  const Medication({
+  const Medicine({
     required this.id,
     required this.patientId,
     required this.creatorId,
@@ -30,7 +30,7 @@ class Medication extends Equatable {
     required this.isTaken,
   });
 
-  Medication copyWith({
+  Medicine copyWith({
     String? id,
     String? patientId,
     String? creatorId,
@@ -44,7 +44,7 @@ class Medication extends Equatable {
     bool? isActive,
     bool? isTaken,
   }) {
-    return Medication(
+    return Medicine(
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
       creatorId: creatorId ?? this.creatorId,

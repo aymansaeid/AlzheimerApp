@@ -1,8 +1,8 @@
 import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/features/medication/domain/repositories/medicine_log_repository.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/medicine_log.dart';
-import '../repositories/medicine_log_repository.dart';
 
 @lazySingleton
 class GetDailyLogsUseCase {

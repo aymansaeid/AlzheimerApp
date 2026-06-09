@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/di/injection.dart';
+import 'package:mobile/features/medication/presentation/bloc/medicine_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../caregiver/presentation/bloc/dashboard_bloc.dart';
-import '../bloc/medication_bloc.dart';
-import '../bloc/medication_event.dart';
-import '../bloc/medication_state.dart';
+import '../bloc/medicine_bloc.dart';
+import '../bloc/medicine_event.dart';
 import '../widgets/medication_card.dart';
 
-class MedicationListScreen extends StatefulWidget {
-  const MedicationListScreen({super.key});
+class MedicineListScreen extends StatefulWidget {
+  const MedicineListScreen({super.key});
 
   @override
-  State<MedicationListScreen> createState() => _MedicationListScreenState();
+  State<MedicineListScreen> createState() => _MedicineListScreenState();
 }
 
-class _MedicationListScreenState extends State<MedicationListScreen> {
+class _MedicineListScreenState extends State<MedicineListScreen> {
   late DateTime _selectedDate;
   final ScrollController _scrollController = ScrollController();
 
@@ -30,8 +30,8 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
     if (authState is AuthAuthenticated) {
       if (authState.user.role == 'patient') {
         // Patient — always have their own ID, load immediately
-        context.read<MedicationBloc>().add(
-          LoadDailyMedications(authState.user.id, _selectedDate),
+        context.read<MedicineBloc>().add(
+          LoadDailyMedicinesEvent(authState.user.id, _selectedDate),
         );
       } else if (authState.user.role == 'caregiver') {
         // Caregiver — only load if dashboard is already ready,
@@ -39,8 +39,8 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
         try {
           final dashboardState = context.read<DashboardBloc>().state;
           if (dashboardState is DashboardLoaded) {
-            context.read<MedicationBloc>().add(
-              LoadDailyMedications(
+            context.read<MedicineBloc>().add(
+              LoadDailyMedicinesEvent(
                 dashboardState.summary.patientId,
                 _selectedDate,
               ),
@@ -74,8 +74,8 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
         } catch (_) {}
       }
     }
-    context.read<MedicationBloc>().add(
-      LoadDailyMedications(patientId ?? '', date),
+    context.read<MedicineBloc>().add(
+      LoadDailyMedicinesEvent(patientId ?? '', date),
     );
   }
 
@@ -113,9 +113,9 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
           _buildDateScroller(),
           const SizedBox(height: 16),
           Expanded(
-            child: BlocConsumer<MedicationBloc, MedicationState>(
+            child: BlocConsumer<MedicineBloc, MedicineState>(
               listener: (context, state) {
-                if (state is MedicationLoaded) {
+                if (state is MedicineLoaded) {
                   // Sync local date state if it was updated from outside (e.g. Nav bar tap)
                   if (_selectedDate.year != state.selectedDate.year ||
                       _selectedDate.month != state.selectedDate.month ||
@@ -138,14 +138,14 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                       }
                     }
                   }
-                } else if (state is MedicationError) {
+                } else if (state is MedicineError) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(state.message),
                       backgroundColor: Colors.red,
                     ),
                   );
-                } else if (state is MedicationOperationSuccess) {
+                } else if (state is MedicineOperationSuccess) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(state.message),
@@ -155,27 +155,27 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                 }
               },
               builder: (context, state) {
-                if (state is MedicationLoading) {
+                if (state is MedicineLoading) {
                   return const Center(child: CircularProgressIndicator());
-                } else if (state is MedicationLoaded) {
-                  if (state.medications.isEmpty) {
+                } else if (state is MedicineLoaded) {
+                  if (state.medicines.isEmpty) {
                     return _buildEmptyState();
                   }
                   return ListView.builder(
-                    itemCount: state.medications.length,
+                    itemCount: state.medicines.length,
                     itemBuilder: (context, index) {
-                      final medication = state.medications[index];
+                      final medication = state.medicines[index];
                       return MedicationCard(
                         medication: medication,
                         onTap: () {
                           // Push to detail screen, passing the bloc as extra
                           context.push(
                             '/medication/detail/${medication.id}',
-                            extra: context.read<MedicationBloc>(),
+                            extra: context.read<MedicineBloc>(),
                           );
                         },
                         onMarkAsTaken: () {
-                          context.read<MedicationBloc>().add(
+                          context.read<MedicineBloc>().add(
                             MarkAsTakenEvent(
                               id: medication.id,
                               date: _selectedDate,
@@ -185,7 +185,7 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
                       );
                     },
                   );
-                } else if (state is MedicationError) {
+                } else if (state is MedicineError) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
@@ -208,20 +208,20 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
         ],
       ),
       floatingActionButton: isCaregiver
-          ? BlocBuilder<MedicationBloc, MedicationState>(
+          ? BlocBuilder<MedicineBloc, MedicineState>(
               builder: (context, medicationState) {
                 return FloatingActionButton(
                   onPressed: () {
                     String? currentPatientId;
 
-                    if (medicationState is MedicationLoaded) {
+                    if (medicationState is MedicineLoaded) {
                       currentPatientId = medicationState.patientId;
                     }
 
                     context.push(
                       '/medication/form?patientId=$currentPatientId',
                       extra: context
-                          .read<MedicationBloc>(), // Temiz ve tek bir nesne!
+                          .read<MedicineBloc>(), // Temiz ve tek bir nesne!
                     );
                   },
                   backgroundColor: Theme.of(context).primaryColor,
@@ -238,11 +238,8 @@ class _MedicationListScreenState extends State<MedicationListScreen> {
       return BlocListener<DashboardBloc, DashboardState>(
         listener: (context, state) {
           if (state is DashboardLoaded) {
-            context.read<MedicationBloc>().add(
-              LoadDailyMedications(
-                state.summary.patientId,
-                _selectedDate,
-              ),
+            context.read<MedicineBloc>().add(
+              LoadDailyMedicinesEvent(state.summary.patientId, _selectedDate),
             );
           }
         },
