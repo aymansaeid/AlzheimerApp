@@ -73,12 +73,12 @@ class PatientDashboardView extends StatelessWidget {
             } else if (state is PatientDashboardLoaded) {
               final dashboard = state.dashboardData;
 
-              // Sorting today's medicines: pending (status == 0) first, taken/others after.
+              // Sorting today's medicines: un-taken first, taken (status == 1) last. Within both, sort by schedule time.
               final sortedMedicines =
                   List<MedicineLogModel>.from(dashboard.todayMedicines)
                     ..sort((a, b) {
-                      if (a.status == 0 && b.status != 0) return -1;
-                      if (a.status != 0 && b.status == 0) return 1;
+                      if (a.status == 1 && b.status != 1) return 1;
+                      if (a.status != 1 && b.status == 1) return -1;
                       return a.scheduledAt.compareTo(b.scheduledAt);
                     });
 

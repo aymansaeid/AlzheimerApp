@@ -164,23 +164,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     MarkAsTakenEvent event,
     Emitter<MedicineState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is MedicineLoaded) {
-      // Optimistic UI update: status = 1 (Taken)
-      final updatedList = currentState.medicines.map((m) {
-        if (m.id == event.id) {
-          return m.copyWith(status: 1, takenAt: DateTime.now());
-        }
-        return m;
-      }).toList();
-      emit(
-        MedicineLoaded(
-          medicines: updatedList,
-          selectedDate: currentState.selectedDate,
-          patientId: currentState.patientId,
-        ),
-      );
-    }
+
 
     final result = await markMedicineAsTaken(event.id, 1);
 

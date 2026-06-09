@@ -167,10 +167,16 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
                   if (state.medicines.isEmpty) {
                     return const MedicineEmptyState();
                   }
+                  final sortedMedicines = List.from(state.medicines)
+                    ..sort((a, b) {
+                      if (a.status == 1 && b.status != 1) return 1;
+                      if (a.status != 1 && b.status == 1) return -1;
+                      return a.scheduledAt.compareTo(b.scheduledAt);
+                    });
                   return ListView.builder(
-                    itemCount: state.medicines.length,
+                    itemCount: sortedMedicines.length,
                     itemBuilder: (context, index) {
-                      final medication = state.medicines[index];
+                      final medication = sortedMedicines[index];
                       return MedicationCard(
                         medication: medication,
                         onTap: () {
