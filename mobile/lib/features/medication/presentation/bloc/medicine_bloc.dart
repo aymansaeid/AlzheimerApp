@@ -194,6 +194,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
         }
       },
       (_) {
+        emit(const MedicineOperationSuccess("İlaç alındı olarak işaretlendi."));
         if (_currentPatientId != null) {
           add(
             LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),

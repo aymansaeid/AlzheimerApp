@@ -7,6 +7,9 @@ import '../bloc/medicine_event.dart';
 import '../bloc/medicine_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
+import '../widgets/days_selector.dart';
+import '../widgets/date_picker_group.dart';
+import '../widgets/times_selector.dart';
 
 class MedicineFormScreen extends StatefulWidget {
   final String? medicationId;
@@ -200,11 +203,31 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _buildDaysSelector(),
+                DaysSelector(
+                  selectedDays: _selectedDays,
+                  onChanged: (days) {
+                    setState(() {
+                      _selectedDays = days;
+                    });
+                  },
+                ),
                 const SizedBox(height: 24),
 
                 // Date Picker
-                _buildDateSelector(),
+                DatePickerGroup(
+                  startDate: _startDate,
+                  endDate: _endDate,
+                  onStartDateChanged: (date) {
+                    setState(() {
+                      _startDate = date;
+                    });
+                  },
+                  onEndDateChanged: (date) {
+                    setState(() {
+                      _endDate = date;
+                    });
+                  },
+                ),
                 const SizedBox(height: 24),
 
                 // Time Picker
@@ -217,7 +240,15 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _buildTimesSelector(isEditing),
+                TimesSelector(
+                  selectedTimes: _selectedTimes,
+                  isEditing: isEditing,
+                  onChanged: (times) {
+                    setState(() {
+                      _selectedTimes = times;
+                    });
+                  },
+                ),
                 const SizedBox(height: 40),
 
                 // Save Button
@@ -248,228 +279,6 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildDaysSelector() {
-    const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-    return Wrap(
-      spacing: 8,
-      children: List.generate(7, (index) {
-        final dayValue = index + 1;
-        final isSelected = _selectedDays.contains(dayValue);
-        return FilterChip(
-          label: Text(days[index]),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              if (selected) {
-                _selectedDays.add(dayValue);
-              } else {
-                _selectedDays.remove(dayValue);
-              }
-            });
-          },
-          selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-          checkmarkColor: Theme.of(context).colorScheme.primary,
-        );
-      }),
-    );
-  }
-
-  Widget _buildDateSelector() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildDatePicker(
-            label: 'Başlangıç',
-            date: _startDate,
-            onChanged: (date) {
-              if (date != null) {
-                setState(() => _startDate = date);
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildDatePicker(
-            label: 'Bitiş (Opsiyonel)',
-            date: _endDate,
-            onChanged: (date) {
-              setState(() => _endDate = date);
-            },
-            isOptional: true,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDatePicker({
-    required String label,
-    required DateTime? date,
-    required ValueChanged<DateTime?> onChanged,
-    bool isOptional = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            if (isOptional && date != null)
-              GestureDetector(
-                onTap: () => onChanged(null),
-                child: const Icon(Icons.close, size: 16, color: Colors.red),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: date ?? DateTime.now(),
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2030),
-              builder: (context, child) {
-                return Theme(
-                  data: Theme.of(context).copyWith(
-                    colorScheme: ColorScheme.light(
-                      primary: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  child: child!,
-                );
-              },
-            );
-            if (picked != null) {
-              onChanged(picked);
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(16),
-              color: Colors.white,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  date != null
-                      ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}'
-                      : 'Seçiniz',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: date != null ? Colors.black87 : Colors.grey.shade600,
-                  ),
-                ),
-                Icon(
-                  Icons.calendar_today,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimesSelector(bool isEditing) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ..._selectedTimes.asMap().entries.map((entry) {
-          final index = entry.key;
-          final time = entry.value;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final picked = await showTimePicker(
-                        context: context,
-                        initialTime: time,
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          _selectedTimes[index] = picked;
-                        });
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.white,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            time.format(context),
-                            style: const TextStyle(fontSize: 18),
-                          ),
-                          Icon(
-                            Icons.access_time,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (!isEditing && _selectedTimes.length > 1) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.remove_circle_outline,
-                      color: Colors.red,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _selectedTimes.removeAt(index);
-                      });
-                    },
-                  ),
-                ],
-              ],
-            ),
-          );
-        }),
-        if (!isEditing)
-          TextButton.icon(
-            onPressed: () {
-              setState(() {
-                _selectedTimes.add(const TimeOfDay(hour: 8, minute: 0));
-              });
-            },
-            icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
-            label: Text(
-              'Saat Ekle',
-              style: TextStyle(color: Theme.of(context).colorScheme.primary),
-            ),
-          ),
-      ],
     );
   }
 
