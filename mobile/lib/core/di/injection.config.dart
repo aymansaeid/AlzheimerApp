@@ -93,6 +93,8 @@ import '../../features/onboarding/presentation/bloc/caregiver_setup/caregiver_se
     as _i454;
 import '../../features/onboarding/presentation/bloc/patient_setup/patient_setup_bloc.dart'
     as _i1068;
+import '../../features/patient/data/datasources/patient_remote_data_source.dart'
+    as _i1012;
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
@@ -125,6 +127,9 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i107.AuthRemoteDataSource>(
       () => _i107.AuthRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i1012.PatientRemoteDataSource>(
+      () => _i1012.PatientRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i640.MedicineLogRemoteDataSource>(
       () => _i640.MedicineLogRemoteDataSourceImpl(gh<_i361.Dio>()),
