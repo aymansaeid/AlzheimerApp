@@ -13,6 +13,15 @@ class PatientSelector extends StatelessWidget {
     required this.onPatientSelected,
   });
 
+  String _getInitials(String fullName) {
+    if (fullName.trim().isEmpty) return '?';
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length > 1) {
+      return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -72,11 +81,14 @@ class PatientSelector extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            patient.patientId == '1' ||
-                                    patient.patientId == 'patient_1'
-                                ? '👴'
-                                : '👵',
-                            style: const TextStyle(fontSize: 20),
+                            _getInitials(patient.fullName),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Colors.white
+                                  : theme.colorScheme.primary,
+                            ),
                           ),
                         ),
                       ),

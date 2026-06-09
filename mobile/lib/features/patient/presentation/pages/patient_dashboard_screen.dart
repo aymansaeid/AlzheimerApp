@@ -3,7 +3,7 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/section_title.dart';
 import '../../../../core/widgets/avatar_circle.dart';
 
-class PatientHomeScreen extends StatelessWidget {
+class PatientDashboardScreen extends StatelessWidget {
   final String patientName;
   final String greeting;
   final String dateString;
@@ -13,7 +13,7 @@ class PatientHomeScreen extends StatelessWidget {
   final ValueChanged<String> onMedicationTaken;
   final ValueChanged<String> onMemoryPersonTapped;
 
-  const PatientHomeScreen({
+  const PatientDashboardScreen({
     super.key,
     this.patientName = 'Ahmet Bey',
     this.greeting = 'Günaydın,',
@@ -86,8 +86,6 @@ class PatientHomeScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   const SectionTitle(text: 'Sevdiklerin'),
                   _buildMemoryGrid(theme, constraints),
-                  const SizedBox(height: 20),
-                  _buildDailyStatus(theme),
                 ],
               ),
             );
@@ -281,37 +279,6 @@ class PatientHomeScreen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildDailyStatus(ThemeData theme) {
-    return AppCard(
-      color: theme.colorScheme.secondary.withValues(alpha: 0.1),
-      child: Row(
-        children: [
-          const Text('☀', style: TextStyle(fontSize: 24)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Bugün nasılsın?',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.secondary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Günlük ruh halini takipçilerinle paylaş',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: theme.colorScheme.secondary),
-        ],
-      ),
     );
   }
 }

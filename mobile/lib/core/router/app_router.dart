@@ -7,7 +7,7 @@ import 'package:mobile/features/caregiver/presentation/pages/caregiver_dashboard
 import 'package:mobile/features/caregiver/presentation/widgets/caregiver_layout.dart';
 import 'package:mobile/features/geofence/presentation/pages/geofence_alert_screen.dart';
 import 'package:mobile/features/memory/presentation/pages/memory_module_screen.dart';
-import 'package:mobile/features/patient/presentation/pages/patient_home_screen.dart';
+import 'package:mobile/features/patient/presentation/pages/patient_dashboard_screen.dart';
 import 'package:mobile/features/patient/presentation/widgets/patient_layout.dart';
 import 'package:mobile/features/care_network/presentation/pages/care_network_screen.dart';
 import 'package:mobile/features/care_network/presentation/pages/user_detail_screen.dart';
@@ -30,19 +30,26 @@ final appRouter = GoRouter(
   refreshListenable: GoRouterRefreshStream(getIt<AuthBloc>().stream),
   redirect: (context, state) {
     final authState = getIt<AuthBloc>().state;
-    final isGoingToLogin = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+    final isGoingToLogin =
+        state.matchedLocation == '/login' ||
+        state.matchedLocation == '/register';
 
     if (authState is AuthUnauthenticated && !isGoingToLogin) {
       return '/login';
     }
 
     if (authState is AuthAuthenticated) {
-      final isAtAuthPage = isGoingToLogin || state.matchedLocation == '/splash' || state.matchedLocation == '/';
+      final isAtAuthPage =
+          isGoingToLogin ||
+          state.matchedLocation == '/splash' ||
+          state.matchedLocation == '/';
       if (isAtAuthPage) {
         if (authState.user.role == 'patient') {
           return authState.isSetupComplete ? '/patient/home' : '/patient_setup';
         } else {
-          return authState.isSetupComplete ? '/caregiver/dashboard' : '/caregiver_setup';
+          return authState.isSetupComplete
+              ? '/caregiver/dashboard'
+              : '/caregiver_setup';
         }
       }
     }
@@ -112,7 +119,7 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/patient/home',
               name: 'patient_home',
-              builder: (context, state) => PatientHomeScreen(
+              builder: (context, state) => PatientDashboardScreen(
                 onSosPressed: () {},
                 onMedicationTaken: (_) {},
                 onMemoryPersonTapped: (_) {},
