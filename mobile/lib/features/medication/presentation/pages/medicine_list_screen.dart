@@ -219,29 +219,31 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
           ),
         ],
       ),
-      floatingActionButton: isCaregiver
-          ? BlocBuilder<MedicineBloc, MedicineState>(
-              builder: (context, medicationState) {
-                return FloatingActionButton(
-                  onPressed: () {
-                    String? currentPatientId;
+      floatingActionButton: !isCaregiver
+          ? null
+          : Builder(
+              builder: (context) {
+                final state = context.watch<DashboardBloc>().state;
 
-                    if (medicationState is MedicineLoaded) {
-                      currentPatientId = medicationState.patientId;
-                    }
+                final isAdmin =
+                    state is DashboardLoaded && state.isCurrentPatientAdmin;
+
+                if (!isAdmin) return const SizedBox.shrink();
+
+                return FloatingActionButton(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: const Icon(Icons.add, color: Colors.white),
+                  onPressed: () {
+                    final currentPatientId = state.summary.patientId;
 
                     context.push(
                       '/medication/form?patientId=$currentPatientId',
-                      extra: context
-                          .read<MedicineBloc>(), // Temiz ve tek bir nesne!
+                      extra: context.read<MedicineBloc>(),
                     );
                   },
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: const Icon(Icons.add, color: Colors.white),
                 );
               },
-            )
-          : null,
+            ),
     );
 
     // For caregivers, wrap with BlocListener to auto-load medications

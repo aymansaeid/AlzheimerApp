@@ -26,10 +26,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<ResetDashboard>(_onResetDashboard);
   }
 
-  void _onResetDashboard(
-    ResetDashboard event,
-    Emitter<DashboardState> emit,
-  ) {
+  void _onResetDashboard(ResetDashboard event, Emitter<DashboardState> emit) {
     emit(DashboardInitial());
   }
 
@@ -76,7 +73,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         }
 
         // 3. Select the patient ID dynamically: use selected patient or default to the first one in the list
-        final String targetPatientId = localPatientId ?? patients.first.patientId;
+        final String targetPatientId =
+            localPatientId ?? patients.first.patientId;
 
         // Update class level loader ID to reflect targetPatientId if it was resolved from default first index
         _currentlyLoadingPatientId = targetPatientId;
@@ -90,8 +88,23 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         summaryResult.fold(
           (failure) =>
               emit(DashboardError(failure.message, patients: patients)),
-          (summary) =>
-              emit(DashboardLoaded(summary: summary, patients: patients)),
+          (summary) {
+            final currentPatient = patients.cast<FollowedPatient?>().firstWhere(
+              (p) => p?.patientId == targetPatientId,
+              orElse: () => null,
+            );
+
+            final isAdmin = currentPatient?.isPrimaryAdmin ?? false;
+
+            // Hesaplanan değer, temiz bir şekilde paketlenip State'e verilir.
+            emit(
+              DashboardLoaded(
+                summary: summary,
+                patients: patients,
+                isCurrentPatientAdmin: isAdmin,
+              ),
+            );
+          },
         );
       },
     );

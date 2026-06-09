@@ -175,6 +175,15 @@ class PatientDashboardView extends StatelessWidget {
   }
 
   Widget _buildHeader(ThemeData theme, String patientName) {
+    String getInitials(String fullName) {
+      if (fullName.trim().isEmpty) return '?';
+      final parts = fullName.trim().split(RegExp(r'\s+'));
+      if (parts.length > 1) {
+        return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+      }
+      return parts[0][0].toUpperCase();
+    }
+
     return Row(
       children: [
         Expanded(
@@ -188,7 +197,7 @@ class PatientDashboardView extends StatelessWidget {
             ],
           ),
         ),
-        const AvatarCircle(initials: '👴', size: 56),
+        AvatarCircle(initials: getInitials(patientName), size: 56),
       ],
     );
   }

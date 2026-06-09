@@ -24,11 +24,16 @@ class DashboardLoading extends DashboardState {
 class DashboardLoaded extends DashboardState {
   final DashboardSummary summary;
   final List<FollowedPatient> patients;
+  final bool isCurrentPatientAdmin;
 
-  const DashboardLoaded({required this.summary, required this.patients});
+  const DashboardLoaded({
+    required this.summary,
+    required this.patients,
+    required this.isCurrentPatientAdmin,
+  });
 
   @override
-  List<Object?> get props => [summary, patients];
+  List<Object?> get props => [summary, patients, isCurrentPatientAdmin];
 }
 
 class DashboardNoPatients extends DashboardState {}
