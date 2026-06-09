@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile/core/di/injection.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/medicine_log.dart';
 
 class MedicationCard extends StatelessWidget {
@@ -20,6 +23,14 @@ class MedicationCard extends StatelessWidget {
     final isPending = medication.status == 0;
     final isTaken = medication.status == 1;
     final isMissed = medication.status == 2;
+
+    // Parse scheduled time and convert to local time
+    final scheduledLocal = medication.scheduledAt.toLocal();
+    final isFuture = scheduledLocal.isAfter(DateTime.now());
+
+    // Role Check via AuthBloc
+    final authState = getIt<AuthBloc>().state;
+    final isPatient = authState is AuthAuthenticated && authState.user.role == 'patient';
 
     return Card(
       elevation: 2,
@@ -99,29 +110,58 @@ class MedicationCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (isPending)
-                    ElevatedButton.icon(
-                      onPressed: onMarkAsTaken,
-                      icon: const Icon(Icons.check, size: 16, color: Colors.white),
-                      label: const Text(
-                        'Alındı Yap',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  if (isPending) ...[
+                    if (isPatient)
+                      ElevatedButton.icon(
+                        onPressed: isFuture ? null : onMarkAsTaken,
+                        icon: const Icon(Icons.check, size: 16, color: Colors.white),
+                        label: Text(
+                          isFuture ? 'Saati Gelmedi' : 'Alındı Yap',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          disabledBackgroundColor: Colors.grey.shade300,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Bekliyor',
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    )
-                  else if (isTaken)
+                      )
+                  ] else if (isTaken)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,

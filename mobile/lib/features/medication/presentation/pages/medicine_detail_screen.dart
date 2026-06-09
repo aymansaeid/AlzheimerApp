@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_state.dart';
@@ -8,7 +7,9 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/medicine_log.dart';
 import '../bloc/medicine_bloc.dart';
-import '../bloc/medicine_event.dart';
+import '../widgets/medicine_info_chip.dart';
+import '../widgets/medicine_status_info_card.dart';
+import '../widgets/medicine_detail_action_buttons.dart';
 
 class MedicineDetailScreen extends StatelessWidget {
   final String medicationId;
@@ -45,6 +46,10 @@ class MedicineDetailScreen extends StatelessWidget {
             }
 
             final timeStr = DateFormat('HH:mm').format(medication.scheduledAt);
+
+            // Calculate isFuture exactly once
+            final scheduledLocal = medication.scheduledAt.toLocal();
+            final isFuture = scheduledLocal.isAfter(DateTime.now());
 
             return SafeArea(
               child: Column(
@@ -94,65 +99,24 @@ class MedicineDetailScreen extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              _buildInfoChip(
-                                context,
-                                Icons.science,
-                                'Dozaj',
-                                medication.dosage,
+                              MedicineInfoChip(
+                                icon: Icons.science,
+                                label: 'Dozaj',
+                                value: medication.dosage,
                               ),
-                              _buildInfoChip(
-                                context,
-                                Icons.access_time,
-                                'Saat',
-                                timeStr,
+                              MedicineInfoChip(
+                                icon: Icons.access_time,
+                                label: 'Saat',
+                                value: timeStr,
                               ),
                             ],
                           ),
                           const SizedBox(height: 32),
 
                           // Status Info Card
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'Durum Bilgisi',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  medication.status == 0
-                                      ? 'İlaç henüz alınmadı. Alındı olarak işaretlemek için aşağıdaki butonu kullanabilirsiniz.'
-                                      : medication.status == 1
-                                      ? 'İlaç alındı. Alınma zamanı: ${medication.takenAt != null ? DateFormat('HH:mm').format(medication.takenAt!) : '-'}'
-                                      : 'İlaç saati geçirildi (Kaçırıldı).',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[700],
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          MedicineStatusInfoCard(
+                            medication: medication,
+                            isFuture: isFuture,
                           ),
                         ],
                       ),
@@ -162,13 +126,12 @@ class MedicineDetailScreen extends StatelessWidget {
                   // Bottom Action Buttons
                   Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: isPatient
-                        ? _buildPatientButton(
-                            context,
-                            medication,
-                            state.selectedDate,
-                          )
-                        : _buildCaregiverButtons(context, medication),
+                    child: MedicineDetailActionButtons(
+                      medication: medication,
+                      isPatient: isPatient,
+                      isFuture: isFuture,
+                      selectedDate: state.selectedDate,
+                    ),
                   ),
                 ],
               ),
@@ -178,185 +141,6 @@ class MedicineDetailScreen extends StatelessWidget {
           }
           return const Center(child: Text('Veri bulunamadı.'));
         },
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: Theme.of(context).primaryColor, size: 28),
-          const SizedBox(height: 8),
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPatientButton(
-    BuildContext context,
-    MedicineLog medication,
-    DateTime selectedDate,
-  ) {
-    final today = DateTime.now();
-    final isToday =
-        selectedDate.year == today.year &&
-        selectedDate.month == today.month &&
-        selectedDate.day == today.day;
-
-    if (!isToday) {
-      return const SizedBox.shrink();
-    }
-
-    final isTaken = medication.status == 1;
-
-    return SizedBox(
-      width: double.infinity,
-      height: 64, // Large, accessible button
-      child: ElevatedButton(
-        onPressed: isTaken
-            ? null
-            : () {
-                context.read<MedicineBloc>().add(
-                  MarkAsTakenEvent(id: medication.id, date: DateTime.now()),
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('İlaç alındı olarak işaretlendi!'),
-                  ),
-                );
-                context.pop();
-              },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.purpleAccent,
-          disabledBackgroundColor: Colors.grey[300],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 4,
-        ),
-        child: Text(
-          isTaken ? 'Zaten Alındı' : 'İlacımı Aldım',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCaregiverButtons(BuildContext context, MedicineLog medication) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (medication.medicineId.isNotEmpty)
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                context.push(
-                  '/medication/form?id=${medication.medicineId}',
-                  extra: context.read<MedicineBloc>(),
-                );
-              },
-              icon: const Icon(Icons.edit, color: Colors.white),
-              label: const Text(
-                'Planlamayı Düzenle',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
-          ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              _showDeleteConfirmation(context, medication);
-            },
-            icon: const Icon(Icons.delete, color: Colors.red),
-            label: const Text(
-              'Planlamayı Sil',
-              style: TextStyle(
-                color: Colors.red,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.red, width: 2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showDeleteConfirmation(BuildContext context, MedicineLog medication) {
-    final bloc = context.read<MedicineBloc>();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('İlacı Sil'),
-        content: const Text(
-          'Bu ilacı (ve planlamasını) silmek istediğinize emin misiniz?',
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Delete schedule by using medicineId
-              final idToDelete = medication.medicineId.isNotEmpty
-                  ? medication.medicineId
-                  : medication.id;
-              bloc.add(DeleteMedicineEvent(idToDelete));
-              Navigator.pop(dialogContext);
-              context.pop(); // Go back to list
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Sil', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
