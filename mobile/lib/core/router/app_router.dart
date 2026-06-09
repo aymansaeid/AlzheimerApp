@@ -121,7 +121,7 @@ final appRouter = GoRouter(
               name: 'patient_home',
               builder: (context, state) => PatientDashboardScreen(
                 onSosPressed: () {},
-                onMedicationTaken: (_) {},
+                onMedicineTaken: (_) {},
                 onMemoryPersonTapped: (_) {},
               ),
             ),

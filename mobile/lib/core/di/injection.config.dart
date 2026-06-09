@@ -101,6 +101,8 @@ import '../../features/patient/domain/repositories/patient_repository.dart'
     as _i233;
 import '../../features/patient/domain/usecases/get_patient_dashboard_usecase.dart'
     as _i647;
+import '../../features/patient/presentation/bloc/patient_dashboard_bloc.dart'
+    as _i490;
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
@@ -278,6 +280,9 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i411.CheckHasAdminUseCase>(),
         gh<_i470.GenerateInviteUseCase>(),
       ),
+    );
+    gh.factory<_i490.PatientDashboardBloc>(
+      () => _i490.PatientDashboardBloc(gh<_i647.GetPatientDashboardUseCase>()),
     );
     gh.factory<_i1015.MedicineBloc>(
       () => _i1015.MedicineBloc(

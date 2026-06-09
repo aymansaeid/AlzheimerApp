@@ -33,14 +33,13 @@ class PatientLayout extends StatelessWidget {
             initialLocation: index == navigationShell.currentIndex,
           );
           if (index == 1) {
-            String? patientId;
             final authState = context.read<AuthBloc>().state;
             if (authState is AuthAuthenticated) {
-              patientId = authState.user.id;
+              final patientId = authState.user.id;
+              context.read<MedicineBloc>().add(
+                LoadDailyMedicinesEvent(patientId, DateTime.now()),
+              );
             }
-            context.read<MedicineBloc>().add(
-              LoadDailyMedicinesEvent(patientId ?? '', DateTime.now()),
-            );
           }
           /* BLoC Veri Tazeleme Örneği:
           if (index == 1) {

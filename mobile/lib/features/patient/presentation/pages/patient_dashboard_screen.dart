@@ -1,55 +1,49 @@
 import 'package:flutter/material.dart';
-import '../../../../core/widgets/app_card.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/di/injection.dart';
 import '../../../../core/widgets/section_title.dart';
 import '../../../../core/widgets/avatar_circle.dart';
+import '../bloc/patient_dashboard_bloc.dart';
+import '../widgets/loved_ones_grid.dart';
+import '../widgets/patient_medicine_card.dart';
 
 class PatientDashboardScreen extends StatelessWidget {
-  final String patientName;
-  final String greeting;
-  final String dateString;
-  final List<Map<String, dynamic>> medications;
-  final List<Map<String, dynamic>> memories;
   final VoidCallback onSosPressed;
-  final ValueChanged<String> onMedicationTaken;
+  final ValueChanged<String> onMedicineTaken;
   final ValueChanged<String> onMemoryPersonTapped;
 
   const PatientDashboardScreen({
     super.key,
-    this.patientName = 'Ahmet Bey',
-    this.greeting = 'Günaydın,',
-    this.dateString = 'Pazartesi, 12 Mayıs 2026',
-    this.medications = const [
-      {'name': 'Donepezil 10mg', 'time': 'Sabah 08:00', 'isTaken': true},
-      {'name': 'Memantin 20mg', 'time': 'Akşam 20:00', 'isTaken': false},
-    ],
-    this.memories = const [
-      {
-        'emoji': '👩',
-        'name': 'Fatma',
-        'relation': 'Eşi',
-        'color': Color(0xFFE1F5EE),
-      },
-      {
-        'emoji': '👦',
-        'name': 'Mehmet',
-        'relation': 'Oğlu',
-        'color': Color(0xFFE6F1FB),
-      },
-      {
-        'emoji': '👧',
-        'name': 'Zeynep',
-        'relation': 'Kızı',
-        'color': Color(0xFFFAECE7),
-      },
-      {
-        'emoji': '👨',
-        'name': 'Ali',
-        'relation': 'Kardeşi',
-        'color': Color(0xFFFAEEDA),
-      },
-    ],
     required this.onSosPressed,
-    required this.onMedicationTaken,
+    required this.onMedicineTaken,
+    required this.onMemoryPersonTapped,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          getIt<PatientDashboardBloc>()..add(const LoadPatientDashboardEvent()),
+      child: PatientDashboardView(
+        onSosPressed: onSosPressed,
+        onMedicineTaken: onMedicineTaken,
+        onMemoryPersonTapped: onMemoryPersonTapped,
+      ),
+    );
+  }
+}
+
+class PatientDashboardView extends StatelessWidget {
+  final VoidCallback onSosPressed;
+  final ValueChanged<String> onMedicineTaken;
+  final ValueChanged<String> onMemoryPersonTapped;
+
+  const PatientDashboardView({
+    super.key,
+    required this.onSosPressed,
+    required this.onMedicineTaken,
     required this.onMemoryPersonTapped,
   });
 
@@ -59,59 +53,166 @@ class PatientDashboardScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 8),
-                  _buildHeader(theme),
-                  const SizedBox(height: 20),
-                  _buildSOSButton(theme),
-                  const SizedBox(height: 20),
-                  const SectionTitle(text: 'Bugünkü İlaçlar'),
-                  ...medications.map(
-                    (m) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _buildMedicationCard(
-                        theme,
-                        name: m['name'],
-                        time: m['time'],
-                        isTaken: m['isTaken'],
+        child: BlocBuilder<PatientDashboardBloc, PatientDashboardState>(
+          builder: (context, state) {
+            if (state is PatientDashboardLoading ||
+                state is PatientDashboardInitial) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is PatientDashboardError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: theme.colorScheme.error,
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      Text(
+                        state.message,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          context.read<PatientDashboardBloc>().add(
+                            const LoadPatientDashboardEvent(),
+                          );
+                        },
+                        child: const Text('Tekrar Dene'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  const SectionTitle(text: 'Sevdiklerin'),
-                  _buildMemoryGrid(theme, constraints),
-                ],
-              ),
-            );
+                ),
+              );
+            } else if (state is PatientDashboardLoaded) {
+              final dashboard = state.dashboardData;
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        _buildHeader(theme, dashboard.patientName),
+                        const SizedBox(height: 20),
+                        _buildSOSButton(theme),
+                        const SizedBox(height: 20),
+                        const SectionTitle(text: 'Bugünkü İlaçlar'),
+                        if (dashboard.todayMedicines.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20.0),
+                            child: Center(
+                              child: Text(
+                                'Bugün için planlanmış ilaç yok.',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ...dashboard.todayMedicines.map(
+                            (m) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: PatientMedicineCard(
+                                name: m.dosage.isNotEmpty
+                                    ? '${m.medicineName} ${m.dosage}'
+                                    : m.medicineName,
+                                time: _formatTime(m.scheduledAt),
+                                isTaken: m.status == 1, // 1 = Taken
+                                onMedicineTaken: onMedicineTaken,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 20),
+                        const SectionTitle(text: 'Sevdiklerin'),
+                        if (dashboard.lovedOnes.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20.0),
+                            child: Center(
+                              child: Text(
+                                'Henüz eklenmiş bir yakınınız yok.',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          LovedOnesGrid(
+                            lovedOnes: dashboard.lovedOnes,
+                            constraints: constraints,
+                            onMemoryPersonTapped: onMemoryPersonTapped,
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }
+            return const SizedBox();
           },
         ),
       ),
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
+  Widget _buildHeader(ThemeData theme, String patientName) {
     return Row(
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(greeting, style: theme.textTheme.bodyMedium),
+              Text(_getGreeting(), style: theme.textTheme.bodyMedium),
               Text(patientName, style: theme.textTheme.headlineLarge),
               const SizedBox(height: 4),
-              Text(dateString, style: theme.textTheme.bodySmall),
+              Text(_getDateString(), style: theme.textTheme.bodySmall),
             ],
           ),
         ),
         const AvatarCircle(initials: '👴', size: 56),
       ],
     );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Günaydın,';
+    } else if (hour < 18) {
+      return 'Tünaydın,';
+    } else {
+      return 'İyi akşamlar,';
+    }
+  }
+
+  String _getDateString() {
+    final now = DateTime.now();
+    try {
+      initializeDateFormatting('tr_TR', null);
+      final formatter = DateFormat('EEEE, d MMMM yyyy', 'tr_TR');
+      return formatter.format(now);
+    } catch (_) {
+      final formatter = DateFormat('EEEE, d MMMM yyyy');
+      return formatter.format(now);
+    }
+  }
+
+  String _formatTime(DateTime time) {
+    final localTime = time.toLocal();
+    final hour = localTime.hour.toString().padLeft(2, '0');
+    final minute = localTime.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   Widget _buildSOSButton(ThemeData theme) {
@@ -144,141 +245,6 @@ class PatientDashboardScreen extends StatelessWidget {
         ),
         label: const Text('Acil Durum'),
       ),
-    );
-  }
-
-  Widget _buildMedicationCard(
-    ThemeData theme, {
-    required String name,
-    required String time,
-    required bool isTaken,
-  }) {
-    return AppCard(
-      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(
-              child: Text('💊', style: TextStyle(fontSize: 20)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(time, style: theme.textTheme.bodySmall),
-              ],
-            ),
-          ),
-          isTaken
-              ? Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.check,
-                        size: 14,
-                        color: theme.colorScheme.onPrimary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Alındı',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ElevatedButton(
-                  onPressed: () => onMedicationTaken(name),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    minimumSize: Size.zero,
-                  ),
-                  child: const Text('Aldım'),
-                ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMemoryGrid(ThemeData theme, BoxConstraints constraints) {
-    int crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.4,
-      ),
-      itemCount: memories.length,
-      itemBuilder: (context, i) {
-        final p = memories[i];
-        return AppCard(
-          padding: EdgeInsets.zero,
-          onTap: () => onMemoryPersonTapped(p['name']),
-          child: Column(
-            children: [
-              Expanded(
-                child: Container(
-                  color: p['color'],
-                  child: Center(
-                    child: Text(
-                      p['emoji'],
-                      style: const TextStyle(fontSize: 32),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        p['name'],
-                        style: theme.textTheme.labelLarge,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(p['relation'], style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
