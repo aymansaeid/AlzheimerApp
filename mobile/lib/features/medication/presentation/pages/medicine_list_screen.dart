@@ -105,7 +105,7 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
 
     Widget scaffold = Scaffold(
       appBar: AppBar(
-        title: const Text('İlaçlarım'),
+        title: Text(isCaregiver ? 'İlaçlar' : 'İlaçlarım'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,

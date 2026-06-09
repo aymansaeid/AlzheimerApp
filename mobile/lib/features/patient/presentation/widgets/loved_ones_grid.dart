@@ -14,6 +14,15 @@ class LovedOnesGrid extends StatelessWidget {
     required this.onMemoryPersonTapped,
   });
 
+  String _getInitials(String fullName) {
+    if (fullName.trim().isEmpty) return '?';
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length > 1) {
+      return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -40,9 +49,17 @@ class LovedOnesGrid extends StatelessWidget {
                 child: Container(
                   color: _getColor(i),
                   child: Center(
-                    child: Text(
-                      _getEmoji(p.relationshipType),
-                      style: const TextStyle(fontSize: 32),
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                      foregroundColor: theme.colorScheme.primary,
+                      child: Text(
+                        _getInitials(p.fullName),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -68,26 +85,6 @@ class LovedOnesGrid extends StatelessWidget {
         );
       },
     );
-  }
-
-  String _getEmoji(String relationshipType) {
-    final rel = relationshipType.toLowerCase();
-    if (rel.contains('eş') || rel.contains('wife') || rel.contains('spouse')) {
-      return '👩';
-    } else if (rel.contains('oğul') || rel.contains('son')) {
-      return '👦';
-    } else if (rel.contains('kız') || rel.contains('daughter')) {
-      return '👧';
-    } else if (rel.contains('kardeş') || rel.contains('brother') || rel.contains('sister')) {
-      return '👨';
-    } else if (rel.contains('torun') || rel.contains('grand')) {
-      return '👶';
-    } else if (rel.contains('bakıcı') || rel.contains('caregiver') || rel.contains('nurse') || rel.contains('hemşire')) {
-      return '🧑‍⚕️';
-    } else if (rel.contains('doktor') || rel.contains('doctor')) {
-      return '👨‍⚕️';
-    }
-    return '👤';
   }
 
   Color _getColor(int index) {

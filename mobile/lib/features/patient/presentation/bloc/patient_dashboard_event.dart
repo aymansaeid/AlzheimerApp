@@ -10,3 +10,13 @@ abstract class PatientDashboardEvent extends Equatable {
 class LoadPatientDashboardEvent extends PatientDashboardEvent {
   const LoadPatientDashboardEvent();
 }
+
+class DashboardMedicineTakenEvent extends PatientDashboardEvent {
+  final String logId;
+  final int status;
+
+  const DashboardMedicineTakenEvent(this.logId, this.status);
+
+  @override
+  List<Object?> get props => [logId, status];
+}

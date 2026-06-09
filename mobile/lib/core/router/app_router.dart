@@ -119,11 +119,7 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/patient/home',
               name: 'patient_home',
-              builder: (context, state) => PatientDashboardScreen(
-                onSosPressed: () {},
-                onMedicineTaken: (_) {},
-                onMemoryPersonTapped: (_) {},
-              ),
+              builder: (context, state) => const PatientDashboardScreen(),
             ),
           ],
         ),

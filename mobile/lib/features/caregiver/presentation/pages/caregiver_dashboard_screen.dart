@@ -115,11 +115,14 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                       // Safety Status Widget
                       SafetyStatusCard(
                         patientName: () {
-                          final targetId = activePatientId ?? state.summary.patientId;
+                          final targetId =
+                              activePatientId ?? state.summary.patientId;
                           for (final p in state.patients) {
                             if (p.patientId == targetId) return p.fullName;
                           }
-                          return state.patients.isNotEmpty ? state.patients.first.fullName : '';
+                          return state.patients.isNotEmpty
+                              ? state.patients.first.fullName
+                              : '';
                         }(),
                       ),
                       const SizedBox(height: 24),
@@ -127,7 +130,11 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                       const SectionTitle(text: 'Günlük İlaç Uyumu'),
                       const SizedBox(height: 12),
                       // Günlük İlaçlar Özeti (Medication Compliance Card)
-                      _buildMedicationComplianceCard(context, theme, state.summary),
+                      _buildMedicationComplianceCard(
+                        context,
+                        theme,
+                        state.summary,
+                      ),
                     ] else if (state is DashboardError)
                       _buildErrorView(theme, state.message),
                   ],
@@ -140,12 +147,17 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, ThemeData theme, DashboardState state) {
+  Widget _buildHeader(
+    BuildContext context,
+    ThemeData theme,
+    DashboardState state,
+  ) {
     // Dynamically show notification badge if patient has unread alerts
     final bool hasAlerts =
         state is DashboardLoaded && state.summary.unreadAlertCount > 0;
-    final int alertCount =
-        state is DashboardLoaded ? state.summary.unreadAlertCount : 0;
+    final int alertCount = state is DashboardLoaded
+        ? state.summary.unreadAlertCount
+        : 0;
 
     return Row(
       children: [
@@ -160,7 +172,10 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Merhaba,', style: theme.textTheme.bodyMedium),
-                  Text('$caregiverName 👋', style: theme.textTheme.headlineLarge),
+                  Text(
+                    '$caregiverName 👋',
+                    style: theme.textTheme.headlineLarge,
+                  ),
                 ],
               );
             },
@@ -253,9 +268,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(

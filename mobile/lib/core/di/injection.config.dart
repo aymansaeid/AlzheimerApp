@@ -275,14 +275,17 @@ extension GetItInjectableX on _i174.GetIt {
         transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
       ),
     );
+    gh.factory<_i490.PatientDashboardBloc>(
+      () => _i490.PatientDashboardBloc(
+        gh<_i647.GetPatientDashboardUseCase>(),
+        gh<_i669.MarkMedicineAsTakenUseCase>(),
+      ),
+    );
     gh.factory<_i1068.PatientSetupBloc>(
       () => _i1068.PatientSetupBloc(
         gh<_i411.CheckHasAdminUseCase>(),
         gh<_i470.GenerateInviteUseCase>(),
       ),
-    );
-    gh.factory<_i490.PatientDashboardBloc>(
-      () => _i490.PatientDashboardBloc(gh<_i647.GetPatientDashboardUseCase>()),
     );
     gh.factory<_i1015.MedicineBloc>(
       () => _i1015.MedicineBloc(

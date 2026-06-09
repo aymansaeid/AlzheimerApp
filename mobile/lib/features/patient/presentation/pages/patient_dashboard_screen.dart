@@ -5,47 +5,26 @@ import 'package:intl/intl.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/widgets/section_title.dart';
 import '../../../../core/widgets/avatar_circle.dart';
+import '../../../medication/data/models/medicine_log_model.dart';
 import '../bloc/patient_dashboard_bloc.dart';
 import '../widgets/loved_ones_grid.dart';
-import '../widgets/patient_medicine_card.dart';
+import '../widgets/patient_medication_card.dart';
 
 class PatientDashboardScreen extends StatelessWidget {
-  final VoidCallback onSosPressed;
-  final ValueChanged<String> onMedicineTaken;
-  final ValueChanged<String> onMemoryPersonTapped;
-
-  const PatientDashboardScreen({
-    super.key,
-    required this.onSosPressed,
-    required this.onMedicineTaken,
-    required this.onMemoryPersonTapped,
-  });
+  const PatientDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
           getIt<PatientDashboardBloc>()..add(const LoadPatientDashboardEvent()),
-      child: PatientDashboardView(
-        onSosPressed: onSosPressed,
-        onMedicineTaken: onMedicineTaken,
-        onMemoryPersonTapped: onMemoryPersonTapped,
-      ),
+      child: const PatientDashboardView(),
     );
   }
 }
 
 class PatientDashboardView extends StatelessWidget {
-  final VoidCallback onSosPressed;
-  final ValueChanged<String> onMedicineTaken;
-  final ValueChanged<String> onMemoryPersonTapped;
-
-  const PatientDashboardView({
-    super.key,
-    required this.onSosPressed,
-    required this.onMedicineTaken,
-    required this.onMemoryPersonTapped,
-  });
+  const PatientDashboardView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -94,69 +73,98 @@ class PatientDashboardView extends StatelessWidget {
             } else if (state is PatientDashboardLoaded) {
               final dashboard = state.dashboardData;
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 8),
-                        _buildHeader(theme, dashboard.patientName),
-                        const SizedBox(height: 20),
-                        _buildSOSButton(theme),
-                        const SizedBox(height: 20),
-                        const SectionTitle(text: 'Bugünkü İlaçlar'),
-                        if (dashboard.todayMedicines.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20.0),
-                            child: Center(
-                              child: Text(
-                                'Bugün için planlanmış ilaç yok.',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          ...dashboard.todayMedicines.map(
-                            (m) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: PatientMedicineCard(
-                                name: m.dosage.isNotEmpty
-                                    ? '${m.medicineName} ${m.dosage}'
-                                    : m.medicineName,
-                                time: _formatTime(m.scheduledAt),
-                                isTaken: m.status == 1, // 1 = Taken
-                                onMedicineTaken: onMedicineTaken,
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 20),
-                        const SectionTitle(text: 'Sevdiklerin'),
-                        if (dashboard.lovedOnes.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20.0),
-                            child: Center(
-                              child: Text(
-                                'Henüz eklenmiş bir yakınınız yok.',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          LovedOnesGrid(
-                            lovedOnes: dashboard.lovedOnes,
-                            constraints: constraints,
-                            onMemoryPersonTapped: onMemoryPersonTapped,
-                          ),
-                      ],
-                    ),
+              // Sorting today's medicines: pending (status == 0) first, taken/others after.
+              final sortedMedicines =
+                  List<MedicineLogModel>.from(dashboard.todayMedicines)
+                    ..sort((a, b) {
+                      if (a.status == 0 && b.status != 0) return -1;
+                      if (a.status != 0 && b.status == 0) return 1;
+                      return a.scheduledAt.compareTo(b.scheduledAt);
+                    });
+
+              final now = DateTime.now();
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  context.read<PatientDashboardBloc>().add(
+                    LoadPatientDashboardEvent(),
                   );
                 },
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          _buildHeader(theme, dashboard.patientName),
+                          const SizedBox(height: 20),
+                          _buildSOSButton(theme),
+                          const SizedBox(height: 20),
+                          const SectionTitle(text: 'Bugünkü İlaçlar'),
+                          if (sortedMedicines.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 20.0,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Bugün için planlanmış ilaç yok.',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            ...sortedMedicines.map((m) {
+                              final scheduledLocal = m.scheduledAt.toLocal();
+                              final isFuture = scheduledLocal.isAfter(now);
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: PatientMedicationCard(
+                                  name: m.medicineName,
+                                  time: _formatTime(m.scheduledAt),
+                                  isTaken: m.status == 1,
+                                  isFuture: isFuture,
+                                  onMarkAsTaken: () {
+                                    context.read<PatientDashboardBloc>().add(
+                                      DashboardMedicineTakenEvent(m.id, 1),
+                                    );
+                                  },
+                                ),
+                              );
+                            }),
+                          const SizedBox(height: 20),
+                          const SectionTitle(text: 'Sevdiklerin'),
+                          if (dashboard.lovedOnes.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 20.0,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Henüz eklenmiş bir yakınınız yok.',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            LovedOnesGrid(
+                              lovedOnes: dashboard.lovedOnes,
+                              constraints: constraints,
+                              onMemoryPersonTapped: (_) {},
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               );
             }
             return const SizedBox();
@@ -219,7 +227,7 @@ class PatientDashboardView extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: onSosPressed,
+        onPressed: () {},
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.colorScheme.error,
           foregroundColor: theme.colorScheme.onError,
