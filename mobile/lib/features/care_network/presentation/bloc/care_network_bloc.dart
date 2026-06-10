@@ -6,14 +6,13 @@ import '../../domain/usecases/get_care_team_usecase.dart';
 import '../../domain/usecases/generate_invite_usecase.dart';
 import '../../domain/usecases/remove_team_member_usecase.dart';
 import '../../domain/usecases/leave_team_usecase.dart';
-import '../../../caregiver/domain/usecases/get_followed_patients.dart';
+import '../../../caregiver/domain/entities/followed_patient.dart';
 import '../../domain/entities/care_team_member.dart';
 import '../../../onboarding/domain/usecases/accept_invite_usecase.dart';
 import '../../domain/usecases/transfer_admin_usecase.dart';
 
 @injectable
 class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
-  final GetFollowedPatients getFollowedPatients;
   final GetCareTeamUseCase getCareTeamUseCase;
   final GenerateInviteUseCase generateInviteUseCase;
   final RemoveTeamMemberUseCase removeTeamMemberUseCase;
@@ -22,9 +21,9 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
   final TransferAdminUseCase transferAdminUseCase;
 
   String? _currentUserId;
+  List<FollowedPatient> _patients = [];
 
   CareNetworkBloc({
-    required this.getFollowedPatients,
     required this.getCareTeamUseCase,
     required this.generateInviteUseCase,
     required this.removeTeamMemberUseCase,
@@ -48,65 +47,58 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     _currentUserId = event.currentUserId;
     emit(CareNetworkLoading());
 
-    final patientsResult = await getFollowedPatients();
+    _patients = event.patients;
 
-    await patientsResult.fold(
-      (failure) async {
-        emit(_errorState(failure.message));
-      },
-      (patients) async {
-        if (patients.isEmpty) {
-          emit(CareNetworkEmpty());
-          return;
-        }
+    if (_patients.isEmpty) {
+      emit(CareNetworkEmpty());
+      return;
+    }
 
-        final Map<String, List<CareTeamMember>> patientTeams = {};
-        final Map<String, bool> isAdminForPatient = {};
-        String? errorMessage;
+    final Map<String, List<CareTeamMember>> patientTeams = {};
+    final Map<String, bool> isAdminForPatient = {};
+    String? errorMessage;
 
-        final futures = patients.map((patient) async {
-          final teamResult = await getCareTeamUseCase(patient.patientId);
-          teamResult.fold(
-            (failure) {
-              errorMessage = failure.message;
-            },
-            (team) {
-              patientTeams[patient.patientId] = team;
+    final futures = _patients.map((patient) async {
+      final teamResult = await getCareTeamUseCase(patient.patientId);
+      teamResult.fold(
+        (failure) {
+          errorMessage = failure.message;
+        },
+        (team) {
+          patientTeams[patient.patientId] = team;
 
-              // Check if current user is admin
-              bool isCurrentUserAdmin = patient.isPrimaryAdmin;
-              final currentUserId = event.currentUserId;
-              for (final member in team) {
-                if (member.id == currentUserId) {
-                  final normalizedRole = member.role.toLowerCase();
-                  if (normalizedRole == 'admin' ||
-                      normalizedRole == 'primaryadmin' ||
-                      normalizedRole == 'isPrimaryAdmin') {
-                    isCurrentUserAdmin = true;
-                  }
-                  break;
-                }
+          // Check if current user is admin
+          bool isCurrentUserAdmin = patient.isPrimaryAdmin;
+          final currentUserId = event.currentUserId;
+          for (final member in team) {
+            if (member.id == currentUserId) {
+              final normalizedRole = member.role.toLowerCase();
+              if (normalizedRole == 'admin' ||
+                  normalizedRole == 'primaryadmin' ||
+                  normalizedRole == 'isprimaryadmin') {
+                isCurrentUserAdmin = true;
               }
-              isAdminForPatient[patient.patientId] = isCurrentUserAdmin;
-            },
-          );
-        }).toList();
+              break;
+            }
+          }
+          isAdminForPatient[patient.patientId] = isCurrentUserAdmin;
+        },
+      );
+    }).toList();
 
-        await Future.wait(futures);
+    await Future.wait(futures);
 
-        if (errorMessage != null && patientTeams.isEmpty) {
-          emit(_errorState(errorMessage!));
-        } else {
-          emit(
-            CareNetworkLoaded(
-              patients: patients,
-              patientTeams: patientTeams,
-              isAdminForPatient: isAdminForPatient,
-            ),
-          );
-        }
-      },
-    );
+    if (errorMessage != null && patientTeams.isEmpty) {
+      emit(_errorState(errorMessage!));
+    } else {
+      emit(
+        CareNetworkLoaded(
+          patients: _patients,
+          patientTeams: patientTeams,
+          isAdminForPatient: isAdminForPatient,
+        ),
+      );
+    }
   }
 
   Future<void> _onGenerateInviteClicked(
@@ -146,7 +138,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
         },
         (_) async {
           emit(const CareNetworkActionSuccess('Üye başarıyla çıkarıldı.'));
-          add(FetchCareNetwork(_currentUserId ?? ''));
+          add(FetchCareNetwork(_currentUserId ?? '', patients: _patients));
         },
       );
     }
@@ -163,11 +155,11 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     result.fold(
       (failure) {
         emit(_errorState(failure.message));
-        add(FetchCareNetwork(_currentUserId ?? ''));
+        add(FetchCareNetwork(_currentUserId ?? '', patients: _patients));
       },
       (_) {
         emit(const CareNetworkActionSuccess('Takımdan başarıyla ayrıldınız.'));
-        add(FetchCareNetwork(_currentUserId ?? ''));
+        add(FetchCareNetwork(_currentUserId ?? '', patients: _patients));
       },
     );
   }
@@ -188,19 +180,19 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
   ) async {
     emit(CareNetworkLoading());
 
-    final result = await acceptInviteUseCase(event.inviteCode, event.relationship);
-
-    result.fold(
-      (failure) => emit(_errorState(failure.message)),
-      (success) {
-        if (success) {
-          emit(CareNetworkJoinSuccess());
-          add(FetchCareNetwork(_currentUserId ?? ''));
-        } else {
-          emit(_errorState('Davet kodu kabul edilemedi.'));
-        }
-      },
+    final result = await acceptInviteUseCase(
+      event.inviteCode,
+      event.relationship,
     );
+
+    result.fold((failure) => emit(_errorState(failure.message)), (success) {
+      if (success) {
+        emit(CareNetworkJoinSuccess());
+        add(FetchCareNetwork(_currentUserId ?? '', patients: _patients));
+      } else {
+        emit(_errorState('Davet kodu kabul edilemedi.'));
+      }
+    });
   }
 
   Future<void> _onTransferAdminClicked(
@@ -209,15 +201,15 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
   ) async {
     emit(CareNetworkLoading());
 
-    final result = await transferAdminUseCase(event.patientId, event.newAdminId);
-
-    result.fold(
-      (failure) => emit(_errorState(failure.message)),
-      (_) {
-        emit(const CareNetworkActionSuccess('Yöneticilik devredildi.'));
-        add(FetchCareNetwork(_currentUserId ?? ''));
-      },
+    final result = await transferAdminUseCase(
+      event.patientId,
+      event.newAdminId,
     );
+
+    result.fold((failure) => emit(_errorState(failure.message)), (_) {
+      emit(const CareNetworkActionSuccess('Yöneticilik devredildi.'));
+      add(FetchCareNetwork(_currentUserId ?? '', patients: _patients));
+    });
   }
 
   CareNetworkError _errorState(String message) {
@@ -230,6 +222,6 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
         isAdminForPatient: loadedState.isAdminForPatient,
       );
     }
-    return CareNetworkError(message);
+    return CareNetworkError(message, patients: _patients);
   }
 }

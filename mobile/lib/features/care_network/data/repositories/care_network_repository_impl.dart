@@ -40,7 +40,6 @@ class CareNetworkRepositoryImpl implements CareNetworkRepository {
   Future<Either<Failure, void>> removeTeamMember(String patientId, String followerId) async {
     try {
       await remoteDataSource.removeTeamMember(patientId, followerId);
-      _onNetworkChangedController.add(null);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

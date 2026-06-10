@@ -16,13 +16,17 @@ class UserDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    final bloc = extra?['bloc'] as CareNetworkBloc?;
     return Scaffold(
       appBar: AppBar(title: const Text('Bağlantı Detayı')),
       body: BlocBuilder<CareNetworkBloc, CareNetworkState>(
+        bloc: bloc,
         builder: (context, state) {
           if (state is CareNetworkLoaded) {
             // Find user specifically in the team of patientId
-            final targetTeam = (patientId != null && state.patientTeams.containsKey(patientId))
+            final targetTeam =
+                (patientId != null && state.patientTeams.containsKey(patientId))
                 ? state.patientTeams[patientId]!
                 : state.patientTeams.values.expand((team) => team).toList();
 
@@ -61,11 +65,14 @@ class UserDetailScreen extends StatelessWidget {
                 }
               }
             }
-            final bool isCurrentUserAdmin = resolvedPatientId != null && (state.isAdminForPatient[resolvedPatientId] ?? false);
+            final bool isCurrentUserAdmin =
+                resolvedPatientId != null &&
+                (state.isAdminForPatient[resolvedPatientId] ?? false);
 
             // Resolve isMe dynamically
             final authState = context.read<AuthBloc>().state;
-            final bool isMe = authState is AuthAuthenticated && authState.user.id == user.id;
+            final bool isMe =
+                authState is AuthAuthenticated && authState.user.id == user.id;
 
             return SafeArea(
               child: SizedBox(
@@ -89,8 +96,11 @@ class UserDetailScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed: () =>
-                                _showTransferAdminConfirmDialog(context, resolvedPatientId!, user.fullName),
+                            onPressed: () => _showTransferAdminConfirmDialog(
+                              context,
+                              resolvedPatientId!,
+                              user.fullName,
+                            ),
                             icon: const Icon(Icons.admin_panel_settings),
                             label: const Text(
                               'Yönetici Yap',
@@ -113,8 +123,11 @@ class UserDetailScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed: () =>
-                                _showRemoveDialog(context, resolvedPatientId!, user.fullName),
+                            onPressed: () => _showRemoveDialog(
+                              context,
+                              resolvedPatientId!,
+                              user.fullName,
+                            ),
                             child: const Text(
                               'Bağlantıyı Kes',
                               style: TextStyle(
@@ -137,7 +150,11 @@ class UserDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showRemoveDialog(BuildContext context, String patientId, String fullName) {
+  void _showRemoveDialog(
+    BuildContext context,
+    String patientId,
+    String fullName,
+  ) {
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -157,10 +174,9 @@ class UserDetailScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext); // Close dialog
-                context.read<CareNetworkBloc>().add(RemoveMemberClicked(
-                      patientId: patientId,
-                      followerId: userId,
-                    ));
+                context.read<CareNetworkBloc>().add(
+                  RemoveMemberClicked(patientId: patientId, followerId: userId),
+                );
                 context.pop(); // Go back to network list
               },
               child: Text(
@@ -199,11 +215,11 @@ class UserDetailScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pop(dialogContext); // Close dialog
                 context.read<CareNetworkBloc>().add(
-                      TransferAdminClicked(
-                        patientId: patientId,
-                        newAdminId: userId,
-                      ),
-                    );
+                  TransferAdminClicked(
+                    patientId: patientId,
+                    newAdminId: userId,
+                  ),
+                );
                 context.pop(); // Go back to network list
               },
               child: const Text('Onayla'),

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../caregiver/domain/entities/followed_patient.dart';
 
 abstract class CareNetworkEvent extends Equatable {
   const CareNetworkEvent();
@@ -9,11 +10,12 @@ abstract class CareNetworkEvent extends Equatable {
 
 class FetchCareNetwork extends CareNetworkEvent {
   final String currentUserId;
+  final List<FollowedPatient> patients;
 
-  const FetchCareNetwork(this.currentUserId);
+  const FetchCareNetwork(this.currentUserId, {required this.patients});
 
   @override
-  List<Object?> get props => [currentUserId];
+  List<Object?> get props => [currentUserId, patients];
 }
 
 class GenerateInviteClicked extends CareNetworkEvent {
@@ -29,7 +31,10 @@ class RemoveMemberClicked extends CareNetworkEvent {
   final String patientId;
   final String followerId;
 
-  const RemoveMemberClicked({required this.patientId, required this.followerId});
+  const RemoveMemberClicked({
+    required this.patientId,
+    required this.followerId,
+  });
 
   @override
   List<Object?> get props => [patientId, followerId];
@@ -50,7 +55,10 @@ class AcceptInviteClicked extends CareNetworkEvent {
   final String inviteCode;
   final String relationship;
 
-  const AcceptInviteClicked({required this.inviteCode, required this.relationship});
+  const AcceptInviteClicked({
+    required this.inviteCode,
+    required this.relationship,
+  });
 
   @override
   List<Object?> get props => [inviteCode, relationship];
@@ -60,9 +68,11 @@ class TransferAdminClicked extends CareNetworkEvent {
   final String patientId;
   final String newAdminId;
 
-  const TransferAdminClicked({required this.patientId, required this.newAdminId});
+  const TransferAdminClicked({
+    required this.patientId,
+    required this.newAdminId,
+  });
 
   @override
   List<Object?> get props => [patientId, newAdminId];
 }
-

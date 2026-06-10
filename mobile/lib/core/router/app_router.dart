@@ -20,11 +20,11 @@ import 'package:mobile/features/onboarding/presentation/pages/patient_setup_scre
 import 'package:mobile/features/onboarding/presentation/pages/caregiver_setup_screen.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mobile/features/care_network/presentation/bloc/care_network_bloc.dart';
-import 'package:mobile/features/care_network/presentation/bloc/care_network_event.dart';
 import 'package:mobile/core/router/go_router_refresh_stream.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
+
+import '../../features/care_network/presentation/bloc/care_network_bloc.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -112,7 +112,8 @@ final appRouter = GoRouter(
                   name: 'patient_medication_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final initialMedicineJson = state.extra as Map<String, dynamic>?;
+                    final initialMedicineJson =
+                        state.extra as Map<String, dynamic>?;
                     return MedicineDetailScreen(
                       medicationId: id,
                       initialMedicineJson: initialMedicineJson,
@@ -128,7 +129,8 @@ final appRouter = GoRouter(
                     final patientId = authState is AuthAuthenticated
                         ? authState.user.id
                         : '';
-                    final initialMedicineJson = state.extra as Map<String, dynamic>?;
+                    final initialMedicineJson =
+                        state.extra as Map<String, dynamic>?;
                     return MedicineFormScreen(
                       medicationId: id,
                       patientId: patientId,
@@ -164,10 +166,6 @@ final appRouter = GoRouter(
     // Caregiver StatefulShellRoute
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
-        final authState = context.read<AuthBloc>().state;
-        final currentUserId = authState is AuthAuthenticated
-            ? authState.user.id
-            : '';
         return MultiBlocProvider(
           providers: [
             BlocProvider(create: (_) => getIt<MedicineBloc>()),
@@ -175,11 +173,7 @@ final appRouter = GoRouter(
               create: (_) =>
                   getIt<DashboardBloc>()..add(const LoadDashboard(null)),
             ),
-            BlocProvider(
-              create: (_) =>
-                  getIt<CareNetworkBloc>()
-                    ..add(FetchCareNetwork(currentUserId)),
-            ),
+            BlocProvider(create: (_) => getIt<CareNetworkBloc>()),
           ],
           child: CaregiverLayout(navigationShell: navigationShell),
         );
@@ -206,7 +200,8 @@ final appRouter = GoRouter(
                   name: 'caregiver_medication_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final initialMedicineJson = state.extra as Map<String, dynamic>?;
+                    final initialMedicineJson =
+                        state.extra as Map<String, dynamic>?;
                     return MedicineDetailScreen(
                       medicationId: id,
                       initialMedicineJson: initialMedicineJson,
@@ -220,7 +215,8 @@ final appRouter = GoRouter(
                     final id = state.uri.queryParameters['id'];
                     final patientId =
                         state.uri.queryParameters['patientId'] ?? '';
-                    final initialMedicineJson = state.extra as Map<String, dynamic>?;
+                    final initialMedicineJson =
+                        state.extra as Map<String, dynamic>?;
                     return MedicineFormScreen(
                       medicationId: id,
                       patientId: patientId,

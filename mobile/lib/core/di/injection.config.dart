@@ -268,7 +268,6 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.factory<_i100.CareNetworkBloc>(
       () => _i100.CareNetworkBloc(
-        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
         getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
         generateInviteUseCase: gh<_i417.GenerateInviteUseCase>(),
         removeTeamMemberUseCase: gh<_i477.RemoveTeamMemberUseCase>(),

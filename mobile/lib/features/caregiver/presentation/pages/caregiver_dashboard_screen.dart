@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/di/injection.dart';
 import '../../../../core/widgets/section_title.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/followed_patient.dart';
+import '../../domain/usecases/get_followed_patients.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../widgets/patient_selector.dart';
 import '../widgets/safety_status_card.dart';
@@ -24,7 +26,6 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<DashboardBloc>().add(const LoadDashboard(null));
   }
 
   @override
@@ -65,6 +66,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                 context.read<DashboardBloc>().add(
                   LoadDashboard(_selectedPatientId),
                 );
+                getIt<GetFollowedPatients>().call();
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),

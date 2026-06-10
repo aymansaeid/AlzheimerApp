@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/di/injection.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/care_network_bloc.dart';
@@ -14,13 +15,32 @@ import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart
 import 'package:mobile/features/care_network/domain/entities/care_team_member.dart';
 import 'package:mobile/features/caregiver/domain/entities/followed_patient.dart';
 
-
 class CareNetworkScreen extends StatelessWidget {
   const CareNetworkScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const CareNetworkView();
+    final authState = context.read<AuthBloc>().state;
+    final String? currentUserId = authState is AuthAuthenticated
+        ? authState.user.id
+        : null;
+
+    final dashboardState = context.read<DashboardBloc>().state;
+    List<FollowedPatient> patients = [];
+    if (dashboardState is DashboardLoaded) {
+      patients = dashboardState.patients;
+    } else if (dashboardState is DashboardLoading) {
+      patients = dashboardState.patients ?? [];
+    } else if (dashboardState is DashboardError) {
+      patients = dashboardState.patients ?? [];
+    }
+
+    return BlocProvider(
+      create: (context) =>
+          getIt<CareNetworkBloc>()
+            ..add(FetchCareNetwork(currentUserId ?? '', patients: patients)),
+      child: const CareNetworkView(),
+    );
   }
 }
 
@@ -34,7 +54,6 @@ class CareNetworkView extends StatelessWidget {
     final String? currentUserId = authState is AuthAuthenticated
         ? authState.user.id
         : null;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bağlantılar Ağı'),
@@ -42,7 +61,10 @@ class CareNetworkView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.add_link),
             tooltip: 'Yeni Hastaya Bağlan',
-            onPressed: () => _showJoinPatientDialog(context, context.read<CareNetworkBloc>()),
+            onPressed: () => _showJoinPatientDialog(
+              context,
+              context.read<CareNetworkBloc>(),
+            ),
           ),
         ],
       ),
@@ -55,8 +77,6 @@ class CareNetworkView extends StatelessWidget {
                 backgroundColor: Colors.green,
               ),
             );
-            // Sync DashboardBloc to reload the followed patients list
-            context.read<DashboardBloc>().add(const LoadDashboard(null));
           } else if (state is CareNetworkJoinSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -64,8 +84,6 @@ class CareNetworkView extends StatelessWidget {
                 backgroundColor: Colors.green,
               ),
             );
-            // Sync DashboardBloc to reload the followed patients list
-            context.read<DashboardBloc>().add(const LoadDashboard(null));
           } else if (state is CareNetworkEmpty) {
             context.read<DashboardBloc>().add(ResetDashboard());
             context.read<MedicineBloc>().add(ResetMedications());
@@ -102,7 +120,21 @@ class CareNetworkView extends StatelessWidget {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
-                        context.read<CareNetworkBloc>().add(FetchCareNetwork(currentUserId ?? ''));
+                        final dbState = context.read<DashboardBloc>().state;
+                        List<FollowedPatient> dbPatients = [];
+                        if (dbState is DashboardLoaded) {
+                          dbPatients = dbState.patients;
+                        } else if (dbState is DashboardLoading) {
+                          dbPatients = dbState.patients ?? [];
+                        } else if (dbState is DashboardError) {
+                          dbPatients = dbState.patients ?? [];
+                        }
+                        context.read<CareNetworkBloc>().add(
+                          FetchCareNetwork(
+                            currentUserId ?? '',
+                            patients: dbPatients,
+                          ),
+                        );
                       },
                       child: const Text('Tekrar Dene'),
                     ),
@@ -149,7 +181,18 @@ class CareNetworkView extends StatelessWidget {
   }) {
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<CareNetworkBloc>().add(FetchCareNetwork(currentUserId ?? ''));
+        final dbState = context.read<DashboardBloc>().state;
+        List<FollowedPatient> dbPatients = [];
+        if (dbState is DashboardLoaded) {
+          dbPatients = dbState.patients;
+        } else if (dbState is DashboardLoading) {
+          dbPatients = dbState.patients ?? [];
+        } else if (dbState is DashboardError) {
+          dbPatients = dbState.patients ?? [];
+        }
+        context.read<CareNetworkBloc>().add(
+          FetchCareNetwork(currentUserId ?? '', patients: dbPatients),
+        );
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16.0),
@@ -181,10 +224,12 @@ class CareNetworkView extends StatelessWidget {
               member.fullName,
             ),
             onMemberTapped: (member) {
+              final bloc = context.read<CareNetworkBloc>();
               context.pushNamed(
                 'user_detail',
                 pathParameters: {'id': member.id},
                 queryParameters: {'patientId': patient.patientId},
+                extra: {'bloc': bloc},
               );
             },
           );
@@ -235,7 +280,8 @@ class CareNetworkView extends StatelessWidget {
                         children: [
                           Text(
                             'Aile Üyesi Daveti',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
@@ -248,19 +294,29 @@ class CareNetworkView extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Center(
                               child: Text(
                                 state.generatedCode!,
-                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 4,
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
                               ),
                             ),
@@ -328,13 +384,19 @@ class CareNetworkView extends StatelessWidget {
     );
   }
 
-  void _showLeaveConfirmDialog(BuildContext context, String patientId, String patientName) {
+  void _showLeaveConfirmDialog(
+    BuildContext context,
+    String patientId,
+    String patientName,
+  ) {
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Takımdan Ayrıl'),
-          content: Text('$patientName adlı hastanın takip ekibinden ayrılmak istediğinize emin misiniz?'),
+          content: Text(
+            '$patientName adlı hastanın takip ekibinden ayrılmak istediğinize emin misiniz?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -347,7 +409,9 @@ class CareNetworkView extends StatelessWidget {
               ),
               onPressed: () {
                 Navigator.pop(dialogContext);
-                context.read<CareNetworkBloc>().add(LeaveTeamClicked(patientId));
+                context.read<CareNetworkBloc>().add(
+                  LeaveTeamClicked(patientId),
+                );
               },
               child: const Text('Evet, Ayrıl'),
             ),
@@ -368,7 +432,9 @@ class CareNetworkView extends StatelessWidget {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Kişiyi Çıkar'),
-          content: Text('$followerName adlı üyeyi takip ekibinden çıkarmak istediğinize emin misiniz?'),
+          content: Text(
+            '$followerName adlı üyeyi takip ekibinden çıkarmak istediğinize emin misiniz?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -395,8 +461,6 @@ class CareNetworkView extends StatelessWidget {
       },
     );
   }
-
-
 
   void _showJoinPatientDialog(BuildContext context, CareNetworkBloc bloc) {
     final formKey = GlobalKey<FormState>();
@@ -451,8 +515,9 @@ class CareNetworkView extends StatelessWidget {
                         textCapitalization: TextCapitalization.characters,
                         inputFormatters: [
                           TextInputFormatter.withFunction(
-                            (oldVal, newVal) =>
-                                newVal.copyWith(text: newVal.text.toUpperCase()),
+                            (oldVal, newVal) => newVal.copyWith(
+                              text: newVal.text.toUpperCase(),
+                            ),
                           ),
                         ],
                         decoration: InputDecoration(
@@ -507,10 +572,12 @@ class CareNetworkView extends StatelessWidget {
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       Navigator.pop(dialogContext);
-                      bloc.add(AcceptInviteClicked(
-                        inviteCode: codeController.text.trim(),
-                        relationship: selectedRelationship,
-                      ));
+                      bloc.add(
+                        AcceptInviteClicked(
+                          inviteCode: codeController.text.trim(),
+                          relationship: selectedRelationship,
+                        ),
+                      );
                     }
                   },
                   child: const Text('Bağlan'),
