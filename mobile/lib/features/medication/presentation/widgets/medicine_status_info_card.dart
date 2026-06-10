@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile/core/di/injection.dart';
-import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/medicine_log.dart';
 
 class MedicineStatusInfoCard extends StatelessWidget {
   final MedicineLog medication;
   final bool isFuture;
+  final bool isPatient;
 
   const MedicineStatusInfoCard({
     super.key,
     required this.medication,
     required this.isFuture,
+    required this.isPatient,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Role check to customize status text
-    final authState = getIt<AuthBloc>().state;
-    final isPatient = authState is AuthAuthenticated && authState.user.role == 'patient';
+    // Role check via constructor parameter
 
     return Container(
       width: double.infinity,

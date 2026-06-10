@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/di/injection.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/care_network_bloc.dart';
@@ -21,10 +20,7 @@ class CareNetworkScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => getIt<CareNetworkBloc>()..add(FetchCareNetwork()),
-      child: const CareNetworkView(),
-    );
+    return const CareNetworkView();
   }
 }
 
@@ -106,7 +102,7 @@ class CareNetworkView extends StatelessWidget {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
-                        context.read<CareNetworkBloc>().add(FetchCareNetwork());
+                        context.read<CareNetworkBloc>().add(FetchCareNetwork(currentUserId ?? ''));
                       },
                       child: const Text('Tekrar Dene'),
                     ),
@@ -153,7 +149,7 @@ class CareNetworkView extends StatelessWidget {
   }) {
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<CareNetworkBloc>().add(FetchCareNetwork());
+        context.read<CareNetworkBloc>().add(FetchCareNetwork(currentUserId ?? ''));
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16.0),
@@ -188,7 +184,7 @@ class CareNetworkView extends StatelessWidget {
               context.pushNamed(
                 'user_detail',
                 pathParameters: {'id': member.id},
-                extra: context.read<CareNetworkBloc>(),
+                queryParameters: {'patientId': patient.patientId},
               );
             },
           );

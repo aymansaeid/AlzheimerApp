@@ -7,7 +7,14 @@ abstract class CareNetworkEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class FetchCareNetwork extends CareNetworkEvent {}
+class FetchCareNetwork extends CareNetworkEvent {
+  final String currentUserId;
+
+  const FetchCareNetwork(this.currentUserId);
+
+  @override
+  List<Object?> get props => [currentUserId];
+}
 
 class GenerateInviteClicked extends CareNetworkEvent {
   final String patientId;

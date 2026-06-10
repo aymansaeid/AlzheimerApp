@@ -28,7 +28,7 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
     super.initState();
     _selectedDate = DateTime.now();
 
-    final authState = getIt<AuthBloc>().state;
+    final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       if (authState.user.role == 'patient') {
         // Patient — always have their own ID, load immediately
@@ -63,7 +63,7 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
   /// Resolves the patientId from available state and dispatches LoadDailyMedications.
   void _loadMedicationsForDate(DateTime date) {
     String? patientId;
-    final authState = getIt<AuthBloc>().state;
+    final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       if (authState.user.role == 'patient') {
         patientId = authState.user.id;
@@ -96,12 +96,13 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine user role
-    final authState = getIt<AuthBloc>().state;
-    bool isCaregiver = false;
-    if (authState is AuthAuthenticated) {
-      isCaregiver = authState.user.role == 'caregiver';
-    }
+    return BlocBuilder<AuthBloc, AuthState>(
+      bloc: getIt<AuthBloc>(),
+      builder: (context, authState) {
+        bool isCaregiver = false;
+        if (authState is AuthAuthenticated) {
+          isCaregiver = authState.user.role == 'caregiver';
+        }
 
     Widget scaffold = Scaffold(
       appBar: AppBar(
@@ -179,11 +180,18 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
                       final medication = sortedMedicines[index];
                       return MedicationCard(
                         medication: medication,
+                        isPatient: !isCaregiver,
                         onTap: () {
-                          // Push to detail screen, passing the bloc as extra
-                          context.push(
-                            '/medication/detail/${medication.id}',
-                            extra: context.read<MedicineBloc>(),
+                          // Push to detail screen
+                          final routeName = isCaregiver ? 'caregiver_medication_detail' : 'patient_medication_detail';
+                          final patientId = state.patientId ?? '';
+                          context.pushNamed(
+                            routeName,
+                            pathParameters: {'id': medication.id},
+                            queryParameters: {
+                              if (isCaregiver) 'patientId': patientId,
+                              'date': _selectedDate.toIso8601String(),
+                            },
                           );
                         },
                         onMarkAsTaken: () {
@@ -235,10 +243,12 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
                   child: const Icon(Icons.add, color: Colors.white),
                   onPressed: () {
                     final currentPatientId = state.summary.patientId;
-
-                    context.push(
-                      '/medication/form?patientId=$currentPatientId',
-                      extra: context.read<MedicineBloc>(),
+                    context.pushNamed(
+                      'caregiver_medication_form',
+                      queryParameters: {
+                        'patientId': currentPatientId,
+                        'date': _selectedDate.toIso8601String(),
+                      },
                     );
                   },
                 );
@@ -269,5 +279,7 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
     }
 
     return scaffold;
+      },
+    );
   }
 }

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile/core/di/injection.dart';
-import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/medicine_log.dart';
 
 class MedicationCard extends StatelessWidget {
   final MedicineLog medication;
   final VoidCallback onTap;
   final VoidCallback? onMarkAsTaken;
+  final bool isPatient;
 
   const MedicationCard({
     super.key,
     required this.medication,
     required this.onTap,
     this.onMarkAsTaken,
+    required this.isPatient,
   });
 
   @override
@@ -28,9 +27,7 @@ class MedicationCard extends StatelessWidget {
     final scheduledLocal = medication.scheduledAt.toLocal();
     final isFuture = scheduledLocal.isAfter(DateTime.now());
 
-    // Role Check via AuthBloc
-    final authState = getIt<AuthBloc>().state;
-    final isPatient = authState is AuthAuthenticated && authState.user.role == 'patient';
+    // Role Check via constructor parameter
 
     return Card(
       elevation: 2,

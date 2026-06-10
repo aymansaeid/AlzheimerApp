@@ -10,8 +10,9 @@ import '../widgets/user_detail_card.dart';
 
 class UserDetailScreen extends StatelessWidget {
   final String userId;
+  final String? patientId;
 
-  const UserDetailScreen({super.key, required this.userId});
+  const UserDetailScreen({super.key, required this.userId, this.patientId});
 
   @override
   Widget build(BuildContext context) {
@@ -20,9 +21,12 @@ class UserDetailScreen extends StatelessWidget {
       body: BlocBuilder<CareNetworkBloc, CareNetworkState>(
         builder: (context, state) {
           if (state is CareNetworkLoaded) {
-            // Find user safely across all teams
-            final allUsers = state.patientTeams.values.expand((team) => team).toList();
-            final userIndex = allUsers.indexWhere((u) => u.id == userId);
+            // Find user specifically in the team of patientId
+            final targetTeam = (patientId != null && state.patientTeams.containsKey(patientId))
+                ? state.patientTeams[patientId]!
+                : state.patientTeams.values.expand((team) => team).toList();
+
+            final userIndex = targetTeam.indexWhere((u) => u.id == userId);
 
             if (userIndex == -1) {
               return Center(
@@ -44,18 +48,20 @@ class UserDetailScreen extends StatelessWidget {
               );
             }
 
-            final user = allUsers[userIndex];
+            final user = targetTeam[userIndex];
             final theme = Theme.of(context);
 
             // Find patient ID for this user
-            String? patientId;
-            for (final entry in state.patientTeams.entries) {
-              if (entry.value.any((u) => u.id == userId)) {
-                patientId = entry.key;
-                break;
+            String? resolvedPatientId = patientId;
+            if (resolvedPatientId == null) {
+              for (final entry in state.patientTeams.entries) {
+                if (entry.value.any((u) => u.id == userId)) {
+                  resolvedPatientId = entry.key;
+                  break;
+                }
               }
             }
-            final bool isCurrentUserAdmin = patientId != null && (state.isAdminForPatient[patientId] ?? false);
+            final bool isCurrentUserAdmin = resolvedPatientId != null && (state.isAdminForPatient[resolvedPatientId] ?? false);
 
             // Resolve isMe dynamically
             final authState = context.read<AuthBloc>().state;
@@ -84,7 +90,7 @@ class UserDetailScreen extends StatelessWidget {
                               ),
                             ),
                             onPressed: () =>
-                                _showTransferAdminConfirmDialog(context, patientId!, user.fullName),
+                                _showTransferAdminConfirmDialog(context, resolvedPatientId!, user.fullName),
                             icon: const Icon(Icons.admin_panel_settings),
                             label: const Text(
                               'Yönetici Yap',
@@ -108,7 +114,7 @@ class UserDetailScreen extends StatelessWidget {
                               ),
                             ),
                             onPressed: () =>
-                                _showRemoveDialog(context, patientId!, user.fullName),
+                                _showRemoveDialog(context, resolvedPatientId!, user.fullName),
                             child: const Text(
                               'Bağlantıyı Kes',
                               style: TextStyle(

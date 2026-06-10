@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -11,8 +12,12 @@ import '../datasources/follower_remote_data_source.dart';
 class FollowerRepositoryImpl implements FollowerRepository {
   final FollowerRemoteDataSource remoteDataSource;
   final FlutterSecureStorage secureStorage;
+  final StreamController<void> _onInviteAcceptedController = StreamController<void>.broadcast();
 
   FollowerRepositoryImpl(this.remoteDataSource, this.secureStorage);
+
+  @override
+  Stream<void> get onInviteAccepted => _onInviteAcceptedController.stream;
 
   @override
   Future<Either<Failure, bool>> checkHasAdmin(String patientId) async {
@@ -57,6 +62,7 @@ class FollowerRepositoryImpl implements FollowerRepository {
       if (result) {
         // Save connection state locally to dynamically manage mock caregiver dashboard redirects
         await secureStorage.write(key: 'has_accepted_invite', value: 'true');
+        _onInviteAcceptedController.add(null);
       }
       return Right(result);
     } on ServerException catch (e) {

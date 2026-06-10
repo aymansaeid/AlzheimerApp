@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import '../../domain/entities/followed_patient.dart';
 import '../../domain/usecases/get_dashboard_summary.dart';
 import '../../domain/usecases/get_followed_patients.dart';
+import '../../../care_network/domain/repositories/care_network_repository.dart';
+import '../../../onboarding/domain/repositories/follower_repository.dart';
 import 'dashboard_event.dart';
 import 'dashboard_state.dart';
 
@@ -13,17 +16,38 @@ export 'dashboard_state.dart';
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final GetFollowedPatients getFollowedPatients;
   final GetDashboardSummary getDashboardSummary;
+  final CareNetworkRepository careNetworkRepository;
+  final FollowerRepository followerRepository;
 
   // Track the target patient ID currently being loaded
   String? _currentlyLoadingPatientId;
+  StreamSubscription? _networkSubscription;
+  StreamSubscription? _inviteSubscription;
 
   DashboardBloc({
     required this.getFollowedPatients,
     required this.getDashboardSummary,
+    required this.careNetworkRepository,
+    required this.followerRepository,
   }) : super(DashboardInitial()) {
     on<LoadDashboard>(_onLoadDashboard);
     on<SelectPatient>(_onSelectPatient);
     on<ResetDashboard>(_onResetDashboard);
+
+    _networkSubscription = careNetworkRepository.onNetworkChanged.listen((_) {
+      add(const LoadDashboard(null));
+    });
+
+    _inviteSubscription = followerRepository.onInviteAccepted.listen((_) {
+      add(const LoadDashboard(null));
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _networkSubscription?.cancel();
+    _inviteSubscription?.cancel();
+    return super.close();
   }
 
   void _onResetDashboard(ResetDashboard event, Emitter<DashboardState> emit) {

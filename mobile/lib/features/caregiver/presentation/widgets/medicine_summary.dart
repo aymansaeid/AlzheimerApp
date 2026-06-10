@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../medication/domain/entities/medicine.dart';
-import '../../../medication/presentation/bloc/medicine_bloc.dart';
 
 class MedicineSummary extends StatelessWidget {
   final List<Medicine> medicines;
@@ -63,9 +61,12 @@ class MedicineSummary extends StatelessWidget {
           child: InkWell(
             onTap: () {
               context.pushNamed(
-                'medication_detail',
+                'caregiver_medication_detail',
                 pathParameters: {'id': med.id},
-                extra: context.read<MedicineBloc>(),
+                queryParameters: {
+                  'patientId': med.patientId,
+                  'date': DateTime.now().toIso8601String(),
+                },
               );
             },
             borderRadius: BorderRadius.circular(16),

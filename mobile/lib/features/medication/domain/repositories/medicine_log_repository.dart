@@ -3,6 +3,7 @@ import '../../../../core/errors/failures.dart';
 import '../../data/models/medicine_log_model.dart';
 
 abstract class MedicineLogRepository {
+  Stream<void> get onMedicineLogsChanged;
   Future<Either<Failure, List<MedicineLogModel>>> getDailyLogs(
     String patientId,
     DateTime date,

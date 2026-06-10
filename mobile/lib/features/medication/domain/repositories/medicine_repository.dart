@@ -3,6 +3,7 @@ import '../../../../core/errors/failures.dart';
 import '../entities/medicine.dart';
 
 abstract class MedicineRepository {
+  Stream<void> get onMedicinesChanged;
   Future<Either<Failure, Medicine>> addMedicine(Medicine medicine);
   Future<Either<Failure, List<Medicine>>> getMedicines(String patientId);
   Future<Either<Failure, Medicine>> updateMedicine(Medicine medicine);

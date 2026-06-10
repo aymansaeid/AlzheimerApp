@@ -91,6 +91,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     await _logoutUseCase();
+
     emit(AuthUnauthenticated());
   }
 

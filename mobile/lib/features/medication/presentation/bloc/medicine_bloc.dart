@@ -1,14 +1,14 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
-import 'package:mobile/core/di/injection.dart';
-import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/usecases/add_medicine_usecase.dart';
 import '../../domain/usecases/delete_medicine_usecase.dart';
 import '../../domain/usecases/get_daily_logs_usecase.dart';
 import '../../domain/usecases/mark_medicine_as_taken_usecase.dart';
 import '../../domain/usecases/update_medicine_usecase.dart';
+import '../../domain/repositories/medicine_repository.dart';
+import '../../domain/repositories/medicine_log_repository.dart';
 import 'medicine_event.dart';
 import 'medicine_state.dart';
 
@@ -19,9 +19,13 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
   final UpdateMedicineUseCase updateMedicine;
   final DeleteMedicineUseCase deleteMedicine;
   final MarkMedicineAsTakenUseCase markMedicineAsTaken;
+  final MedicineRepository medicineRepository;
+  final MedicineLogRepository medicineLogRepository;
 
   DateTime _currentSelectedDate = DateTime.now();
   String? _currentPatientId;
+  StreamSubscription? _medicinesSubscription;
+  StreamSubscription? _medicineLogsSubscription;
 
   MedicineBloc({
     required this.getDailyLogsUseCase,
@@ -29,6 +33,8 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     required this.updateMedicine,
     required this.deleteMedicine,
     required this.markMedicineAsTaken,
+    required this.medicineRepository,
+    required this.medicineLogRepository,
   }) : super(MedicineInitial()) {
     on<LoadDailyMedicinesEvent>(_onLoadDailyMedications);
     on<AddMedicineEvent>(_onAddMedicine);
@@ -36,6 +42,28 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     on<DeleteMedicineEvent>(_onDeleteMedicine);
     on<MarkAsTakenEvent>(_onMarkAsTaken);
     on<ResetMedications>(_onResetMedications);
+
+    _medicinesSubscription = medicineRepository.onMedicinesChanged.listen((_) {
+      if (_currentPatientId != null) {
+        add(LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate));
+      }
+    });
+
+    _medicineLogsSubscription = medicineLogRepository.onMedicineLogsChanged
+        .listen((_) {
+          if (_currentPatientId != null) {
+            add(
+              LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
+            );
+          }
+        });
+  }
+
+  @override
+  Future<void> close() {
+    _medicinesSubscription?.cancel();
+    _medicineLogsSubscription?.cancel();
+    return super.close();
   }
 
   void _onResetMedications(
@@ -56,14 +84,6 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     String patientId = event.patientId;
     if (patientId.isEmpty) {
       patientId = _currentPatientId ?? '';
-    }
-
-    if (patientId.isEmpty) {
-      // Fallback: If logged-in user is a patient, use their own ID
-      final authState = getIt<AuthBloc>().state;
-      if (authState is AuthAuthenticated && authState.user.role == 'patient') {
-        patientId = authState.user.id;
-      }
     }
 
     if (patientId.isEmpty) {
@@ -164,8 +184,6 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     MarkAsTakenEvent event,
     Emitter<MedicineState> emit,
   ) async {
-
-
     final result = await markMedicineAsTaken(event.id, 1);
 
     result.fold(

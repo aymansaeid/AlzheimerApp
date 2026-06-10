@@ -204,12 +204,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i754.TransferAdminUseCase>(
       () => _i754.TransferAdminUseCase(gh<_i83.CareNetworkRepository>()),
     );
-    gh.factory<_i844.DashboardBloc>(
-      () => _i844.DashboardBloc(
-        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
-        getDashboardSummary: gh<_i1051.GetDashboardSummary>(),
-      ),
-    );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),
     );
@@ -224,6 +218,14 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i647.GetPatientDashboardUseCase>(
       () => _i647.GetPatientDashboardUseCase(gh<_i233.PatientRepository>()),
+    );
+    gh.factory<_i844.DashboardBloc>(
+      () => _i844.DashboardBloc(
+        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
+        getDashboardSummary: gh<_i1051.GetDashboardSummary>(),
+        careNetworkRepository: gh<_i83.CareNetworkRepository>(),
+        followerRepository: gh<_i1019.FollowerRepository>(),
+      ),
     );
     gh.lazySingleton<_i702.AcceptInviteUseCase>(
       () => _i702.AcceptInviteUseCase(gh<_i1019.FollowerRepository>()),
@@ -294,6 +296,8 @@ extension GetItInjectableX on _i174.GetIt {
         updateMedicine: gh<_i310.UpdateMedicineUseCase>(),
         deleteMedicine: gh<_i886.DeleteMedicineUseCase>(),
         markMedicineAsTaken: gh<_i669.MarkMedicineAsTakenUseCase>(),
+        medicineRepository: gh<_i185.MedicineRepository>(),
+        medicineLogRepository: gh<_i1048.MedicineLogRepository>(),
       ),
     );
     return this;

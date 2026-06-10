@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../bloc/medicine_bloc.dart';
 import '../bloc/medicine_event.dart';
+import '../bloc/medicine_state.dart';
 import '../../domain/entities/medicine_log.dart';
 
 class MedicineDetailActionButtons extends StatelessWidget {
@@ -95,9 +96,17 @@ class MedicineDetailActionButtons extends StatelessWidget {
             height: 60,
             child: ElevatedButton.icon(
               onPressed: () {
-                context.push(
-                  '/medication/form?id=${medication.medicineId}',
-                  extra: context.read<MedicineBloc>(),
+                final state = context.read<MedicineBloc>().state;
+                final patientId = state is MedicineLoaded
+                    ? state.patientId ?? ''
+                    : '';
+                context.pushNamed(
+                  'caregiver_medication_form',
+                  queryParameters: {
+                    'id': medication.medicineId,
+                    'patientId': patientId,
+                    'date': selectedDate.toIso8601String(),
+                  },
                 );
               },
               icon: const Icon(Icons.edit, color: Colors.white),

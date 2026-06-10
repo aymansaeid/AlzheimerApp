@@ -56,4 +56,3 @@ class MarkAsTakenEvent extends MedicineEvent {
 }
 
 class ResetMedications extends MedicineEvent {}
-

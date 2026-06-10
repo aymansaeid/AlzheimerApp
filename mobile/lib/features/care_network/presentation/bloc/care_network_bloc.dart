@@ -8,9 +8,6 @@ import '../../domain/usecases/remove_team_member_usecase.dart';
 import '../../domain/usecases/leave_team_usecase.dart';
 import '../../../caregiver/domain/usecases/get_followed_patients.dart';
 import '../../domain/entities/care_team_member.dart';
-import '../../../auth/presentation/bloc/auth_bloc.dart';
-import '../../../auth/presentation/bloc/auth_state.dart';
-import '../../../../core/di/injection.dart';
 import '../../../onboarding/domain/usecases/accept_invite_usecase.dart';
 import '../../domain/usecases/transfer_admin_usecase.dart';
 
@@ -23,6 +20,8 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
   final LeaveTeamUseCase leaveTeamUseCase;
   final AcceptInviteUseCase acceptInviteUseCase;
   final TransferAdminUseCase transferAdminUseCase;
+
+  String? _currentUserId;
 
   CareNetworkBloc({
     required this.getFollowedPatients,
@@ -46,6 +45,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     FetchCareNetwork event,
     Emitter<CareNetworkState> emit,
   ) async {
+    _currentUserId = event.currentUserId;
     emit(CareNetworkLoading());
 
     final patientsResult = await getFollowedPatients();
@@ -74,20 +74,17 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
               patientTeams[patient.patientId] = team;
 
               // Check if current user is admin
-              final authState = getIt<AuthBloc>().state;
               bool isCurrentUserAdmin = patient.isPrimaryAdmin;
-              if (authState is AuthAuthenticated) {
-                final currentUserId = authState.user.id;
-                for (final member in team) {
-                  if (member.id == currentUserId) {
-                    final normalizedRole = member.role.toLowerCase();
-                    if (normalizedRole == 'admin' ||
-                        normalizedRole == 'primaryadmin' ||
-                        normalizedRole == 'isPrimaryAdmin') {
-                      isCurrentUserAdmin = true;
-                    }
-                    break;
+              final currentUserId = event.currentUserId;
+              for (final member in team) {
+                if (member.id == currentUserId) {
+                  final normalizedRole = member.role.toLowerCase();
+                  if (normalizedRole == 'admin' ||
+                      normalizedRole == 'primaryadmin' ||
+                      normalizedRole == 'isPrimaryAdmin') {
+                    isCurrentUserAdmin = true;
                   }
+                  break;
                 }
               }
               isAdminForPatient[patient.patientId] = isCurrentUserAdmin;
@@ -149,7 +146,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
         },
         (_) async {
           emit(const CareNetworkActionSuccess('Üye başarıyla çıkarıldı.'));
-          add(FetchCareNetwork());
+          add(FetchCareNetwork(_currentUserId ?? ''));
         },
       );
     }
@@ -166,11 +163,11 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     result.fold(
       (failure) {
         emit(_errorState(failure.message));
-        add(FetchCareNetwork());
+        add(FetchCareNetwork(_currentUserId ?? ''));
       },
       (_) {
         emit(const CareNetworkActionSuccess('Takımdan başarıyla ayrıldınız.'));
-        add(FetchCareNetwork());
+        add(FetchCareNetwork(_currentUserId ?? ''));
       },
     );
   }
@@ -198,7 +195,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
       (success) {
         if (success) {
           emit(CareNetworkJoinSuccess());
-          add(FetchCareNetwork());
+          add(FetchCareNetwork(_currentUserId ?? ''));
         } else {
           emit(_errorState('Davet kodu kabul edilemedi.'));
         }
@@ -218,7 +215,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
       (failure) => emit(_errorState(failure.message)),
       (_) {
         emit(const CareNetworkActionSuccess('Yöneticilik devredildi.'));
-        add(FetchCareNetwork());
+        add(FetchCareNetwork(_currentUserId ?? ''));
       },
     );
   }

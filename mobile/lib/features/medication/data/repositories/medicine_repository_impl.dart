@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -10,14 +11,19 @@ import '../models/medicine_model.dart';
 @LazySingleton(as: MedicineRepository)
 class MedicineRepositoryImpl implements MedicineRepository {
   final MedicineRemoteDataSource remoteDataSource;
+  final StreamController<void> _onMedicinesChangedController = StreamController<void>.broadcast();
 
   MedicineRepositoryImpl(this.remoteDataSource);
+
+  @override
+  Stream<void> get onMedicinesChanged => _onMedicinesChangedController.stream;
 
   @override
   Future<Either<Failure, Medicine>> addMedicine(Medicine medicine) async {
     try {
       final model = MedicineModel.fromEntity(medicine);
       final newMedicine = await remoteDataSource.addMedicine(model);
+      _onMedicinesChangedController.add(null);
       return Right(newMedicine);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -47,6 +53,7 @@ class MedicineRepositoryImpl implements MedicineRepository {
     try {
       final model = MedicineModel.fromEntity(medicine);
       final updatedMedicine = await remoteDataSource.updateMedicine(model);
+      _onMedicinesChangedController.add(null);
       return Right(updatedMedicine);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -59,6 +66,7 @@ class MedicineRepositoryImpl implements MedicineRepository {
   Future<Either<Failure, void>> deleteMedicine(String id) async {
     try {
       await remoteDataSource.deleteMedicine(id);
+      _onMedicinesChangedController.add(null);
       return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
