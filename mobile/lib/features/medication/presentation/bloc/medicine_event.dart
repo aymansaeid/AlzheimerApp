@@ -11,11 +11,16 @@ abstract class MedicineEvent extends Equatable {
 class LoadDailyMedicinesEvent extends MedicineEvent {
   final String patientId;
   final DateTime selectedDate;
+  final bool loadMedicinesList;
 
-  const LoadDailyMedicinesEvent(this.patientId, this.selectedDate);
+  const LoadDailyMedicinesEvent(
+    this.patientId,
+    this.selectedDate, {
+    this.loadMedicinesList = false,
+  });
 
   @override
-  List<Object?> get props => [patientId, selectedDate];
+  List<Object?> get props => [patientId, selectedDate, loadMedicinesList];
 }
 
 class AddMedicineEvent extends MedicineEvent {
@@ -65,4 +70,13 @@ class LoadMedicineDetailsEvent extends MedicineEvent {
 
   @override
   List<Object?> get props => [patientId, medicineId];
+}
+
+class LoadAllMedicinesEvent extends MedicineEvent {
+  final String patientId;
+
+  const LoadAllMedicinesEvent(this.patientId);
+
+  @override
+  List<Object?> get props => [patientId];
 }

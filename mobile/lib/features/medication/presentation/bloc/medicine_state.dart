@@ -29,7 +29,13 @@ class MedicineLoaded extends MedicineState {
   });
 
   @override
-  List<Object?> get props => [medicines, allMedicines, selectedDate, patientId, selectedMedicineDetails];
+  List<Object?> get props => [
+    medicines,
+    allMedicines,
+    selectedDate,
+    patientId,
+    selectedMedicineDetails,
+  ];
 }
 
 class MedicineDetailsLoaded extends MedicineState {
@@ -50,11 +56,25 @@ class MedicineError extends MedicineState {
   List<Object?> get props => [message];
 }
 
-class MedicineOperationSuccess extends MedicineState {
+class MedicineOperationSuccess extends MedicineLoaded {
   final String message;
 
-  const MedicineOperationSuccess(this.message);
+  const MedicineOperationSuccess(
+    this.message, {
+    required super.medicines,
+    super.allMedicines = const [],
+    required super.selectedDate,
+    super.patientId,
+    super.selectedMedicineDetails,
+  });
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [
+    message,
+    medicines,
+    allMedicines,
+    selectedDate,
+    patientId,
+    selectedMedicineDetails,
+  ];
 }

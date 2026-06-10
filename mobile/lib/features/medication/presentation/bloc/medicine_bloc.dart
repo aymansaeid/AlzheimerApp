@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:mobile/features/medication/domain/entities/medicine_log.dart';
 import '../../../../core/errors/failures.dart';
+import '../../domain/entities/medicine.dart';
 import '../../domain/usecases/add_medicine_usecase.dart';
 import '../../domain/usecases/delete_medicine_usecase.dart';
 import '../../domain/usecases/get_daily_logs_usecase.dart';
@@ -44,10 +45,17 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     on<MarkAsTakenEvent>(_onMarkAsTaken);
     on<ResetMedications>(_onResetMedications);
     on<LoadMedicineDetailsEvent>(_onLoadMedicineDetails);
+    on<LoadAllMedicinesEvent>(_onLoadAllMedicines);
 
     _medicinesSubscription = medicineRepository.onMedicinesChanged.listen((_) {
       if (_currentPatientId != null) {
-        add(LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate));
+        add(
+          LoadDailyMedicinesEvent(
+            _currentPatientId!,
+            _currentSelectedDate,
+            loadMedicinesList: true,
+          ),
+        );
       }
     });
 
@@ -55,7 +63,11 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
         .listen((_) {
           if (_currentPatientId != null) {
             add(
-              LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
+              LoadDailyMedicinesEvent(
+                _currentPatientId!,
+                _currentSelectedDate,
+                loadMedicinesList: false,
+              ),
             );
           }
         });
@@ -80,6 +92,12 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     LoadDailyMedicinesEvent event,
     Emitter<MedicineState> emit,
   ) async {
+    final currentState = state;
+    List<Medicine> currentAllMedicines = [];
+    if (currentState is MedicineLoaded) {
+      currentAllMedicines = currentState.allMedicines;
+    }
+
     emit(MedicineLoading());
     _currentSelectedDate = event.selectedDate;
 
@@ -99,24 +117,72 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
 
     _currentPatientId = patientId;
 
-    final logsResult = await getDailyLogsUseCase(patientId, event.selectedDate);
-    final medicinesResult = await medicineRepository.getMedicines(patientId);
+    if (event.loadMedicinesList) {
+      final logsResult = await getDailyLogsUseCase(
+        patientId,
+        event.selectedDate,
+      );
+      final medicinesResult = await medicineRepository.getMedicines(patientId);
 
-    logsResult.fold(
-      (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
-      (logs) {
-        medicinesResult.fold(
-          (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
-          (allMedicines) => emit(
-            MedicineLoaded(
-              medicines: logs,
-              allMedicines: allMedicines,
-              selectedDate: _currentSelectedDate,
-              patientId: _currentPatientId,
+      logsResult.fold(
+        (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
+        (logs) {
+          medicinesResult.fold(
+            (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
+            (allMedicines) => emit(
+              MedicineLoaded(
+                medicines: logs,
+                allMedicines: allMedicines,
+                selectedDate: _currentSelectedDate,
+                patientId: _currentPatientId,
+              ),
             ),
+          );
+        },
+      );
+    } else {
+      final logsResult = await getDailyLogsUseCase(
+        patientId,
+        event.selectedDate,
+      );
+      logsResult.fold(
+        (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
+        (logs) => emit(
+          MedicineLoaded(
+            medicines: logs,
+            allMedicines: currentAllMedicines,
+            selectedDate: _currentSelectedDate,
+            patientId: _currentPatientId,
           ),
-        );
-      },
+        ),
+      );
+    }
+  }
+
+  Future<void> _onLoadAllMedicines(
+    LoadAllMedicinesEvent event,
+    Emitter<MedicineState> emit,
+  ) async {
+    final currentState = state;
+    List<MedicineLog> currentLogs = [];
+    DateTime selectedDate = _currentSelectedDate;
+
+    if (currentState is MedicineLoaded) {
+      currentLogs = currentState.medicines;
+      selectedDate = currentState.selectedDate;
+    }
+
+    final result = await medicineRepository.getMedicines(event.patientId);
+    result.fold(
+      (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
+      (allMedicines) => emit(
+        MedicineLoaded(
+          medicines: currentLogs,
+          allMedicines: allMedicines,
+          selectedDate: selectedDate,
+          patientId: event.patientId,
+        ),
+      ),
     );
   }
 
@@ -124,6 +190,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     AddMedicineEvent event,
     Emitter<MedicineState> emit,
   ) async {
+    final currentState = state;
     emit(MedicineLoading());
 
     final result = await addMedicine(event.medication);
@@ -131,14 +198,30 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     result.fold(
       (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
       (_) {
-        emit(const MedicineOperationSuccess("Medication added successfully"));
-        if (_currentPatientId != null) {
-          add(
-            LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
-          );
-        } else {
-          emit(MedicineInitial());
+        List<MedicineLog> medicines = [];
+        List<Medicine> allMedicines = [];
+        DateTime selectedDate = _currentSelectedDate;
+        String? patientId = _currentPatientId;
+        Medicine? selectedMedicineDetails;
+
+        if (currentState is MedicineLoaded) {
+          medicines = currentState.medicines;
+          allMedicines = currentState.allMedicines;
+          selectedDate = currentState.selectedDate;
+          patientId = currentState.patientId;
+          selectedMedicineDetails = currentState.selectedMedicineDetails;
         }
+
+        emit(
+          MedicineOperationSuccess(
+            "Medication added successfully",
+            medicines: medicines,
+            allMedicines: allMedicines,
+            selectedDate: selectedDate,
+            patientId: patientId,
+            selectedMedicineDetails: selectedMedicineDetails,
+          ),
+        );
       },
     );
   }
@@ -147,6 +230,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     UpdateMedicineEvent event,
     Emitter<MedicineState> emit,
   ) async {
+    final currentState = state;
     emit(MedicineLoading());
 
     final result = await updateMedicine(event.medication);
@@ -154,14 +238,30 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     result.fold(
       (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
       (_) {
-        emit(const MedicineOperationSuccess("Medication updated successfully"));
-        if (_currentPatientId != null) {
-          add(
-            LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
-          );
-        } else {
-          emit(MedicineInitial());
+        List<MedicineLog> medicines = [];
+        List<Medicine> allMedicines = [];
+        DateTime selectedDate = _currentSelectedDate;
+        String? patientId = _currentPatientId;
+        Medicine? selectedMedicineDetails;
+
+        if (currentState is MedicineLoaded) {
+          medicines = currentState.medicines;
+          allMedicines = currentState.allMedicines;
+          selectedDate = currentState.selectedDate;
+          patientId = currentState.patientId;
+          selectedMedicineDetails = currentState.selectedMedicineDetails;
         }
+
+        emit(
+          MedicineOperationSuccess(
+            "Medication updated successfully",
+            medicines: medicines,
+            allMedicines: allMedicines,
+            selectedDate: selectedDate,
+            patientId: patientId,
+            selectedMedicineDetails: selectedMedicineDetails,
+          ),
+        );
       },
     );
   }
@@ -170,6 +270,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     DeleteMedicineEvent event,
     Emitter<MedicineState> emit,
   ) async {
+    final currentState = state;
     emit(MedicineLoading());
 
     final result = await deleteMedicine(event.id);
@@ -177,14 +278,30 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     result.fold(
       (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
       (_) {
-        emit(const MedicineOperationSuccess("Medication deleted successfully"));
-        if (_currentPatientId != null) {
-          add(
-            LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
-          );
-        } else {
-          emit(MedicineInitial());
+        List<MedicineLog> medicines = [];
+        List<Medicine> allMedicines = [];
+        DateTime selectedDate = _currentSelectedDate;
+        String? patientId = _currentPatientId;
+        Medicine? selectedMedicineDetails;
+
+        if (currentState is MedicineLoaded) {
+          medicines = currentState.medicines;
+          allMedicines = currentState.allMedicines;
+          selectedDate = currentState.selectedDate;
+          patientId = currentState.patientId;
+          selectedMedicineDetails = currentState.selectedMedicineDetails;
         }
+
+        emit(
+          MedicineOperationSuccess(
+            "Medication deleted successfully",
+            medicines: medicines,
+            allMedicines: allMedicines,
+            selectedDate: selectedDate,
+            patientId: patientId,
+            selectedMedicineDetails: selectedMedicineDetails,
+          ),
+        );
       },
     );
   }
@@ -193,6 +310,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     MarkAsTakenEvent event,
     Emitter<MedicineState> emit,
   ) async {
+    final currentState = state;
     final result = await markMedicineAsTaken(event.id, 1);
 
     result.fold(
@@ -205,7 +323,30 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
         }
       },
       (_) {
-        emit(const MedicineOperationSuccess("İlaç alındı olarak işaretlendi."));
+        List<MedicineLog> medicines = [];
+        List<Medicine> allMedicines = [];
+        DateTime selectedDate = _currentSelectedDate;
+        String? patientId = _currentPatientId;
+        Medicine? selectedMedicineDetails;
+
+        if (currentState is MedicineLoaded) {
+          medicines = currentState.medicines;
+          allMedicines = currentState.allMedicines;
+          selectedDate = currentState.selectedDate;
+          patientId = currentState.patientId;
+          selectedMedicineDetails = currentState.selectedMedicineDetails;
+        }
+
+        emit(
+          MedicineOperationSuccess(
+            "İlaç alındı olarak işaretlendi.",
+            medicines: medicines,
+            allMedicines: allMedicines,
+            selectedDate: selectedDate,
+            patientId: patientId,
+            selectedMedicineDetails: selectedMedicineDetails,
+          ),
+        );
         if (_currentPatientId != null) {
           add(
             LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
@@ -238,12 +379,14 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
         try {
           final match = medicines.firstWhere((m) => m.id == event.medicineId);
           emit(MedicineDetailsLoaded(match));
-          emit(MedicineLoaded(
-            medicines: currentLogs,
-            selectedDate: selectedDate,
-            patientId: patientId,
-            selectedMedicineDetails: match,
-          ));
+          emit(
+            MedicineLoaded(
+              medicines: currentLogs,
+              selectedDate: selectedDate,
+              patientId: patientId,
+              selectedMedicineDetails: match,
+            ),
+          );
         } catch (_) {
           emit(const MedicineError('İlaç bulunamadı.'));
         }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/di/injection.dart';
+import 'package:mobile/features/medication/domain/entities/medicine.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_state.dart';
 import 'package:mobile/features/medication/data/models/medicine_model.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -29,29 +30,34 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
     super.initState();
     _selectedDate = DateTime.now();
 
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      if (authState.user.role == 'patient') {
-        // Patient — always have their own ID, load immediately
-        context.read<MedicineBloc>().add(
-          LoadDailyMedicinesEvent(authState.user.id, _selectedDate),
-        );
-      } else if (authState.user.role == 'caregiver') {
-        // Caregiver — only load if dashboard is already ready,
-        // otherwise BlocListener in build() will handle it
-        try {
-          final dashboardState = context.read<DashboardBloc>().state;
-          if (dashboardState is DashboardLoaded) {
-            context.read<MedicineBloc>().add(
-              LoadDailyMedicinesEvent(
-                dashboardState.summary.patientId,
-                _selectedDate,
-              ),
-            );
-          }
-        } catch (_) {}
-      }
-    }
+    //   final authState = context.read<AuthBloc>().state;
+    //   if (authState is AuthAuthenticated) {
+    //     if (authState.user.role == 'patient') {
+    //       // Patient — always have their own ID, load immediately
+    //       context.read<MedicineBloc>().add(
+    //         LoadDailyMedicinesEvent(
+    //           authState.user.id,
+    //           _selectedDate,
+    //           loadMedicinesList: true,
+    //         ),
+    //       );
+    //     } else if (authState.user.role == 'caregiver') {
+    //       // Caregiver — only load if dashboard is already ready,
+    //       // otherwise BlocListener in build() will handle it
+    //       try {
+    //         final dashboardState = context.read<DashboardBloc>().state;
+    //         if (dashboardState is DashboardLoaded) {
+    //           context.read<MedicineBloc>().add(
+    //             LoadDailyMedicinesEvent(
+    //               dashboardState.summary.patientId,
+    //               _selectedDate,
+    //               loadMedicinesList: true,
+    //             ),
+    //           );
+    //         }
+    //       } catch (_) {}
+    //     }
+    //   }
 
     // Jump to center roughly
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -169,57 +175,7 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
                       if (state.medicines.isEmpty) {
                         return const MedicineEmptyState();
                       }
-                      final sortedMedicines = List.from(state.medicines)
-                        ..sort((a, b) {
-                          if (a.status == 1 && b.status != 1) return 1;
-                          if (a.status != 1 && b.status == 1) return -1;
-                          return a.scheduledAt.compareTo(b.scheduledAt);
-                        });
-                      return ListView.builder(
-                        itemCount: sortedMedicines.length,
-                        itemBuilder: (context, index) {
-                          final medication = sortedMedicines[index];
-                          return MedicationCard(
-                            medication: medication,
-                            isPatient: !isCaregiver,
-                            onTap: () {
-                              // Push to detail screen
-                              final routeName = isCaregiver
-                                  ? 'caregiver_medication_detail'
-                                  : 'patient_medication_detail';
-                              final patientId = state.patientId ?? '';
-
-                              Map<String, dynamic>? medicineJson;
-                              try {
-                                final match = state.allMedicines.firstWhere(
-                                  (m) => m.id == medication.medicineId,
-                                );
-                                medicineJson = MedicineModel.fromEntity(
-                                  match,
-                                ).toJson();
-                              } catch (_) {}
-
-                              context.pushNamed(
-                                routeName,
-                                pathParameters: {'id': medication.id},
-                                queryParameters: {
-                                  if (isCaregiver) 'patientId': patientId,
-                                  'date': _selectedDate.toIso8601String(),
-                                },
-                                extra: medicineJson,
-                              );
-                            },
-                            onMarkAsTaken: () {
-                              context.read<MedicineBloc>().add(
-                                MarkAsTakenEvent(
-                                  id: medication.id,
-                                  date: _selectedDate,
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      );
+                      return _buildListBuilder(state, isCaregiver);
                     } else if (state is MedicineError) {
                       return Center(
                         child: Padding(
@@ -279,8 +235,10 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
               if (previous is DashboardLoaded && current is DashboardLoaded) {
                 return previous.summary.patientId != current.summary.patientId;
               }
-              // Eğer previous loaded değilse ama current loaded ise tetikle
-              return current is DashboardLoaded;
+              // Only trigger if previous was not loaded AND we don't have medicines loaded/loading already
+              return current is DashboardLoaded &&
+                  (context.read<MedicineBloc>().state is! MedicineLoaded) &&
+                  (context.read<MedicineBloc>().state is! MedicineLoading);
             },
             listener: (context, state) {
               if (state is DashboardLoaded) {
@@ -288,6 +246,7 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
                   LoadDailyMedicinesEvent(
                     state.summary.patientId,
                     _selectedDate,
+                    loadMedicinesList: true,
                   ),
                 );
               }
@@ -297,6 +256,88 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
         }
 
         return scaffold;
+      },
+    );
+  }
+
+  Widget _buildListBuilder(MedicineLoaded state, bool isCaregiver) {
+    final sortedMedicines = List.from(state.medicines)
+      ..sort((a, b) {
+        if (a.status == 1 && b.status != 1) return 1;
+        if (a.status != 1 && b.status == 1) return -1;
+        return a.scheduledAt.compareTo(b.scheduledAt);
+      });
+
+    return ListView.builder(
+      itemCount: sortedMedicines.length,
+      itemBuilder: (context, index) {
+        final medicationLog = sortedMedicines[index];
+
+        // Find matching medicine configuration to get updated name and dosage
+        Medicine? match;
+        try {
+          match = state.allMedicines.firstWhere(
+            (m) => m.id == medicationLog.medicineId,
+          );
+        } catch (_) {}
+
+        DateTime updatedScheduledAt = medicationLog.scheduledAt;
+        if (match != null) {
+          try {
+            final timeParts = match.scheduleTime.split(':');
+            if (timeParts.isNotEmpty) {
+              final hour = int.parse(timeParts[0]);
+              final minute = timeParts.length > 1 ? int.parse(timeParts[1]) : 0;
+              updatedScheduledAt = DateTime(
+                medicationLog.scheduledAt.year,
+                medicationLog.scheduledAt.month,
+                medicationLog.scheduledAt.day,
+                hour,
+                minute,
+              );
+            }
+          } catch (_) {}
+        }
+
+        final medication = match != null
+            ? medicationLog.copyWith(
+                medicineName: match.name,
+                dosage: match.dosage,
+                scheduledAt: updatedScheduledAt,
+              )
+            : medicationLog;
+
+        return MedicationCard(
+          medication: medication,
+          isPatient: !isCaregiver,
+          onTap: () {
+            // Push to detail screen
+            final routeName = isCaregiver
+                ? 'caregiver_medication_detail'
+                : 'patient_medication_detail';
+            final patientId = state.patientId ?? '';
+
+            Map<String, dynamic>? medicineJson;
+            if (match != null) {
+              medicineJson = MedicineModel.fromEntity(match).toJson();
+            }
+
+            context.pushNamed(
+              routeName,
+              pathParameters: {'id': medication.id},
+              queryParameters: {
+                if (isCaregiver) 'patientId': patientId,
+                'date': _selectedDate.toIso8601String(),
+              },
+              extra: medicineJson,
+            );
+          },
+          onMarkAsTaken: () {
+            context.read<MedicineBloc>().add(
+              MarkAsTakenEvent(id: medication.id, date: _selectedDate),
+            );
+          },
+        );
       },
     );
   }

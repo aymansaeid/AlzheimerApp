@@ -67,22 +67,37 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                   _medicine = state.medicine;
                 });
               } else if (state is MedicineLoaded) {
-                if (state.selectedMedicineDetails != null) {
-                  setState(() {
-                    _medicine = state.selectedMedicineDetails;
-                  });
-                } else if (_medicine == null) {
-                  final medication = state.medicines.cast<MedicineLog?>().firstWhere(
-                    (m) => m?.id == widget.medicationId,
-                    orElse: () => null,
+                try {
+                  final log = state.medicines.firstWhere(
+                    (m) => m.id == widget.medicationId,
                   );
-                  if (medication != null && medication.medicineId.isNotEmpty) {
-                    context.read<MedicineBloc>().add(
-                      LoadMedicineDetailsEvent(
-                        patientId: state.patientId ?? '',
-                        medicineId: medication.medicineId,
-                      ),
-                    );
+                  final match = state.allMedicines.firstWhere(
+                    (m) => m.id == log.medicineId,
+                  );
+                  setState(() {
+                    _medicine = match;
+                  });
+                } catch (_) {
+                  if (state.selectedMedicineDetails != null) {
+                    setState(() {
+                      _medicine = state.selectedMedicineDetails;
+                    });
+                  } else if (_medicine == null) {
+                    final medication = state.medicines
+                        .cast<MedicineLog?>()
+                        .firstWhere(
+                          (m) => m?.id == widget.medicationId,
+                          orElse: () => null,
+                        );
+                    if (medication != null &&
+                        medication.medicineId.isNotEmpty) {
+                      context.read<MedicineBloc>().add(
+                        LoadMedicineDetailsEvent(
+                          patientId: state.patientId ?? '',
+                          medicineId: medication.medicineId,
+                        ),
+                      );
+                    }
                   }
                 }
               }
@@ -105,29 +120,61 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                 if (medication == null && _medicine != null) {
                   // Reconstruct simple log helper from medicine details if needed
                   final timeParts = _medicine!.scheduleTime.split(':');
-                  final hour = timeParts.isNotEmpty ? (int.tryParse(timeParts[0]) ?? 8) : 8;
-                  final minute = timeParts.length > 1 ? (int.tryParse(timeParts[1]) ?? 0) : 0;
+                  final hour = timeParts.isNotEmpty
+                      ? (int.tryParse(timeParts[0]) ?? 8)
+                      : 8;
+                  final minute = timeParts.length > 1
+                      ? (int.tryParse(timeParts[1]) ?? 0)
+                      : 0;
                   medication = MedicineLog(
                     id: _medicine!.id,
                     medicineId: _medicine!.id,
                     medicineName: _medicine!.name,
                     dosage: _medicine!.dosage,
                     status: _medicine!.isTaken ? 1 : 0,
-                    scheduledAt: DateTime.now().copyWith(hour: hour, minute: minute),
+                    scheduledAt: DateTime.now().copyWith(
+                      hour: hour,
+                      minute: minute,
+                    ),
                   );
+                }
+
+                if (medication != null && _medicine != null) {
+                  try {
+                    final timeParts = _medicine!.scheduleTime.split(':');
+                    if (timeParts.isNotEmpty) {
+                      final hour = int.parse(timeParts[0]);
+                      final minute = timeParts.length > 1
+                          ? int.parse(timeParts[1])
+                          : 0;
+                      medication = medication.copyWith(
+                        scheduledAt: DateTime(
+                          medication.scheduledAt.year,
+                          medication.scheduledAt.month,
+                          medication.scheduledAt.day,
+                          hour,
+                          minute,
+                        ),
+                      );
+                    }
+                  } catch (_) {}
                 }
 
                 if (medication == null) {
                   return const Center(child: Text('İlaç kaydı bulunamadı.'));
                 }
 
-                final timeStr = DateFormat('HH:mm').format(medication.scheduledAt);
+                final timeStr = DateFormat(
+                  'HH:mm',
+                ).format(medication.scheduledAt);
 
                 // Calculate isFuture exactly once
                 final scheduledLocal = medication.scheduledAt.toLocal();
                 final isFuture = scheduledLocal.isAfter(DateTime.now());
 
-                final selectedDate = state is MedicineLoaded ? state.selectedDate : DateTime.now();
+                final selectedDate = state is MedicineLoaded
+                    ? state.selectedDate
+                    : DateTime.now();
 
                 return SafeArea(
                   child: Column(
@@ -147,7 +194,9 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.05),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       blurRadius: 15,
                                       spreadRadius: 5,
                                     ),
@@ -163,7 +212,7 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
 
                               // Name
                               Text(
-                                medication.medicineName,
+                                _medicine?.name ?? medication.medicineName,
                                 style: const TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
@@ -175,12 +224,14 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
 
                               // Info Chips
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   MedicineInfoChip(
                                     icon: Icons.science,
                                     label: 'Dozaj',
-                                    value: medication.dosage,
+                                    value:
+                                        _medicine?.dosage ?? medication.dosage,
                                   ),
                                   MedicineInfoChip(
                                     icon: Icons.access_time,
@@ -199,7 +250,8 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                               ),
 
                               // Instructions Card
-                              if (_medicine != null && _medicine!.instructions.isNotEmpty) ...[
+                              if (_medicine != null &&
+                                  _medicine!.instructions.isNotEmpty) ...[
                                 const SizedBox(height: 24),
                                 Container(
                                   width: double.infinity,
@@ -209,18 +261,26 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.05),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.05,
+                                        ),
                                         blurRadius: 15,
                                         spreadRadius: 2,
                                       ),
                                     ],
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
-                                          Icon(Icons.info_outline, color: Theme.of(context).primaryColor),
+                                          Icon(
+                                            Icons.info_outline,
+                                            color: Theme.of(
+                                              context,
+                                            ).primaryColor,
+                                          ),
                                           const SizedBox(width: 8),
                                           const Text(
                                             'Kullanım Talimatı',
