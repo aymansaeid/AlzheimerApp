@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/medicine.dart';
 import '../../domain/entities/medicine_log.dart';
 
 abstract class MedicineState extends Equatable {
