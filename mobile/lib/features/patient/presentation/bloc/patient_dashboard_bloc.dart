@@ -4,7 +4,6 @@ import 'package:mobile/features/medication/domain/usecases/mark_medicine_as_take
 import '../../domain/usecases/get_patient_dashboard_usecase.dart';
 import 'patient_dashboard_event.dart';
 import 'patient_dashboard_state.dart';
-
 export 'patient_dashboard_event.dart';
 export 'patient_dashboard_state.dart';
 

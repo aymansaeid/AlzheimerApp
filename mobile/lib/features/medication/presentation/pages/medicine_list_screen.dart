@@ -250,6 +250,13 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
     // once the DashboardBloc finishes loading the selected patient
     if (isCaregiver) {
       return BlocListener<DashboardBloc, DashboardState>(
+        listenWhen: (previous, current) {
+          if (previous is DashboardLoaded && current is DashboardLoaded) {
+            return previous.summary.patientId != current.summary.patientId;
+          }
+          // Eğer previous loaded değilse ama current loaded ise tetikle
+          return current is DashboardLoaded;
+        },
         listener: (context, state) {
           if (state is DashboardLoaded) {
             context.read<MedicineBloc>().add(

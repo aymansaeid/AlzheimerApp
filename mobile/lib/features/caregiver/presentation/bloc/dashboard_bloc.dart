@@ -117,7 +117,57 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     // If we are already loading or loaded this patient, ignore the click!
     if (_currentlyLoadingPatientId == event.patientId) return;
 
-    // Toggling selected patient reloads dashboard data
-    add(LoadDashboard(event.patientId));
+    _currentlyLoadingPatientId = event.patientId;
+
+    // Extract already loaded patients list from the current state
+    List<FollowedPatient>? existingPatients;
+    if (state is DashboardLoaded) {
+      existingPatients = (state as DashboardLoaded).patients;
+    } else if (state is DashboardLoading) {
+      existingPatients = (state as DashboardLoading).patients;
+    } else if (state is DashboardError) {
+      existingPatients = (state as DashboardError).patients;
+    }
+
+    // If patients list is null or empty, fallback to LoadDashboard
+    if (existingPatients == null || existingPatients.isEmpty) {
+      add(LoadDashboard(event.patientId));
+      return;
+    }
+
+    emit(
+      DashboardLoading(
+        patients: existingPatients,
+        loadingPatientId: event.patientId,
+      ),
+    );
+
+    // Fetch the selected patient's dashboard summary details directly
+    final summaryResult = await getDashboardSummary(event.patientId);
+
+    // RACE CONDITION CHECK: If target ID doesn't match the active ID anymore, exit immediately!
+    if (event.patientId != _currentlyLoadingPatientId) return;
+
+    summaryResult.fold(
+      (failure) =>
+          emit(DashboardError(failure.message, patients: existingPatients)),
+      (summary) {
+        final patients = existingPatients!;
+        final currentPatient = patients.cast<FollowedPatient?>().firstWhere(
+          (p) => p?.patientId == event.patientId,
+          orElse: () => null,
+        );
+
+        final isAdmin = currentPatient?.isPrimaryAdmin ?? false;
+
+        emit(
+          DashboardLoaded(
+            summary: summary,
+            patients: patients,
+            isCurrentPatientAdmin: isAdmin,
+          ),
+        );
+      },
+    );
   }
 }

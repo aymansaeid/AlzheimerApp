@@ -22,6 +22,12 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
   String? _selectedPatientId;
 
   @override
+  void initState() {
+    super.initState();
+    context.read<DashboardBloc>().add(const LoadDashboard(null));
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 

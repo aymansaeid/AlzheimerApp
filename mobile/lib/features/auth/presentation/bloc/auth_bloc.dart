@@ -10,7 +10,7 @@ import 'package:mobile/features/caregiver/domain/usecases/get_followed_patients.
 import 'package:mobile/features/onboarding/domain/usecases/check_has_admin_usecase.dart';
 import '../../domain/entities/user.dart';
 
-@lazySingleton
+@injectable
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase _loginUseCase;
   final RegisterUseCase _registerUseCase;
@@ -98,6 +98,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
+    if (state is AuthAuthenticated) return;
     final result = await _authRepository.checkAuthStatus();
     await result.fold(
       (failure) async => emit(AuthUnauthenticated()),

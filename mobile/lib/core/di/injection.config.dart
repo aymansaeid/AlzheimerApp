@@ -254,7 +254,7 @@ extension GetItInjectableX on _i174.GetIt {
       () =>
           _i669.MarkMedicineAsTakenUseCase(gh<_i1048.MedicineLogRepository>()),
     );
-    gh.lazySingleton<_i797.AuthBloc>(
+    gh.factory<_i797.AuthBloc>(
       () => _i797.AuthBloc(
         gh<_i188.LoginUseCase>(),
         gh<_i941.RegisterUseCase>(),

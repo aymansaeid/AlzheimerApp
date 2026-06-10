@@ -159,8 +159,7 @@ final appRouter = GoRouter(
         providers: [
           BlocProvider(create: (_) => getIt<MedicineBloc>()),
           BlocProvider(
-            create: (_) =>
-                getIt<DashboardBloc>()..add(const LoadDashboard(null)),
+            create: (_) => getIt<DashboardBloc>(),
           ),
         ],
         child: CaregiverLayout(navigationShell: navigationShell),
