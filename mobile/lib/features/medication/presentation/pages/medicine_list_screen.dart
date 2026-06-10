@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_state.dart';
+import 'package:mobile/features/medication/data/models/medicine_model.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../caregiver/presentation/bloc/dashboard_bloc.dart';
@@ -104,181 +105,198 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
           isCaregiver = authState.user.role == 'caregiver';
         }
 
-    Widget scaffold = Scaffold(
-      appBar: AppBar(
-        title: Text(isCaregiver ? 'İlaçlar' : 'İlaçlarım'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: false,
-      ),
-      body: Column(
-        children: [
-          DateSelectorBar(
-            selectedDate: _selectedDate,
-            onDateSelected: _onDateSelected,
-            scrollController: _scrollController,
+        Widget scaffold = Scaffold(
+          appBar: AppBar(
+            title: Text(isCaregiver ? 'İlaçlar' : 'İlaçlarım'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: false,
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: BlocConsumer<MedicineBloc, MedicineState>(
-              listener: (context, state) {
-                if (state is MedicineLoaded) {
-                  // Sync local date state if it was updated from outside (e.g. Nav bar tap)
-                  if (_selectedDate.year != state.selectedDate.year ||
-                      _selectedDate.month != state.selectedDate.month ||
-                      _selectedDate.day != state.selectedDate.day) {
-                    setState(() {
-                      _selectedDate = state.selectedDate;
-                    });
+          body: Column(
+            children: [
+              DateSelectorBar(
+                selectedDate: _selectedDate,
+                onDateSelected: _onDateSelected,
+                scrollController: _scrollController,
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: BlocConsumer<MedicineBloc, MedicineState>(
+                  listener: (context, state) {
+                    if (state is MedicineLoaded) {
+                      // Sync local date state if it was updated from outside (e.g. Nav bar tap)
+                      if (_selectedDate.year != state.selectedDate.year ||
+                          _selectedDate.month != state.selectedDate.month ||
+                          _selectedDate.day != state.selectedDate.day) {
+                        setState(() {
+                          _selectedDate = state.selectedDate;
+                        });
 
-                    // Attempt to scroll back to center (today) if needed
-                    final today = DateTime.now();
-                    if (state.selectedDate.year == today.year &&
-                        state.selectedDate.month == today.month &&
-                        state.selectedDate.day == today.day) {
-                      if (_scrollController.hasClients) {
-                        _scrollController.animateTo(
-                          15 * 60.0, // center index (15) * item width (60)
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
+                        // Attempt to scroll back to center (today) if needed
+                        final today = DateTime.now();
+                        if (state.selectedDate.year == today.year &&
+                            state.selectedDate.month == today.month &&
+                            state.selectedDate.day == today.day) {
+                          if (_scrollController.hasClients) {
+                            _scrollController.animateTo(
+                              15 * 60.0, // center index (15) * item width (60)
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        }
                       }
+                    } else if (state is MedicineError) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(state.message),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    } else if (state is MedicineOperationSuccess) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(state.message),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
                     }
-                  }
-                } else if (state is MedicineError) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.message),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                } else if (state is MedicineOperationSuccess) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.message),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              },
-              builder: (context, state) {
-                if (state is MedicineLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (state is MedicineLoaded) {
-                  if (state.medicines.isEmpty) {
-                    return const MedicineEmptyState();
-                  }
-                  final sortedMedicines = List.from(state.medicines)
-                    ..sort((a, b) {
-                      if (a.status == 1 && b.status != 1) return 1;
-                      if (a.status != 1 && b.status == 1) return -1;
-                      return a.scheduledAt.compareTo(b.scheduledAt);
-                    });
-                  return ListView.builder(
-                    itemCount: sortedMedicines.length,
-                    itemBuilder: (context, index) {
-                      final medication = sortedMedicines[index];
-                      return MedicationCard(
-                        medication: medication,
-                        isPatient: !isCaregiver,
-                        onTap: () {
-                          // Push to detail screen
-                          final routeName = isCaregiver ? 'caregiver_medication_detail' : 'patient_medication_detail';
-                          final patientId = state.patientId ?? '';
-                          context.pushNamed(
-                            routeName,
-                            pathParameters: {'id': medication.id},
-                            queryParameters: {
-                              if (isCaregiver) 'patientId': patientId,
-                              'date': _selectedDate.toIso8601String(),
+                  },
+                  builder: (context, state) {
+                    if (state is MedicineLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (state is MedicineLoaded) {
+                      if (state.medicines.isEmpty) {
+                        return const MedicineEmptyState();
+                      }
+                      final sortedMedicines = List.from(state.medicines)
+                        ..sort((a, b) {
+                          if (a.status == 1 && b.status != 1) return 1;
+                          if (a.status != 1 && b.status == 1) return -1;
+                          return a.scheduledAt.compareTo(b.scheduledAt);
+                        });
+                      return ListView.builder(
+                        itemCount: sortedMedicines.length,
+                        itemBuilder: (context, index) {
+                          final medication = sortedMedicines[index];
+                          return MedicationCard(
+                            medication: medication,
+                            isPatient: !isCaregiver,
+                            onTap: () {
+                              // Push to detail screen
+                              final routeName = isCaregiver
+                                  ? 'caregiver_medication_detail'
+                                  : 'patient_medication_detail';
+                              final patientId = state.patientId ?? '';
+
+                              Map<String, dynamic>? medicineJson;
+                              try {
+                                final match = state.allMedicines.firstWhere(
+                                  (m) => m.id == medication.medicineId,
+                                );
+                                medicineJson = MedicineModel.fromEntity(
+                                  match,
+                                ).toJson();
+                              } catch (_) {}
+
+                              context.pushNamed(
+                                routeName,
+                                pathParameters: {'id': medication.id},
+                                queryParameters: {
+                                  if (isCaregiver) 'patientId': patientId,
+                                  'date': _selectedDate.toIso8601String(),
+                                },
+                                extra: medicineJson,
+                              );
+                            },
+                            onMarkAsTaken: () {
+                              context.read<MedicineBloc>().add(
+                                MarkAsTakenEvent(
+                                  id: medication.id,
+                                  date: _selectedDate,
+                                ),
+                              );
                             },
                           );
                         },
-                        onMarkAsTaken: () {
-                          context.read<MedicineBloc>().add(
-                            MarkAsTakenEvent(
-                              id: medication.id,
-                              date: _selectedDate,
-                            ),
-                          );
-                        },
                       );
-                    },
-                  );
-                } else if (state is MedicineError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Text(
-                        state.message,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                    } else if (state is MedicineError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Text(
+                            state.message,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  );
-                }
-                return const Center(child: Text('Bir hata oluştu.'));
-              },
-            ),
+                      );
+                    }
+                    return const Center(child: Text('Bir hata oluştu.'));
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButton: !isCaregiver
-          ? null
-          : Builder(
-              builder: (context) {
-                final state = context.watch<DashboardBloc>().state;
+          floatingActionButton: !isCaregiver
+              ? null
+              : Builder(
+                  builder: (context) {
+                    final state = context.watch<DashboardBloc>().state;
 
-                final isAdmin =
-                    state is DashboardLoaded && state.isCurrentPatientAdmin;
+                    final isAdmin =
+                        state is DashboardLoaded && state.isCurrentPatientAdmin;
 
-                if (!isAdmin) return const SizedBox.shrink();
+                    if (!isAdmin) return const SizedBox.shrink();
 
-                return FloatingActionButton(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: const Icon(Icons.add, color: Colors.white),
-                  onPressed: () {
-                    final currentPatientId = state.summary.patientId;
-                    context.pushNamed(
-                      'caregiver_medication_form',
-                      queryParameters: {
-                        'patientId': currentPatientId,
-                        'date': _selectedDate.toIso8601String(),
+                    return FloatingActionButton(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      child: const Icon(Icons.add, color: Colors.white),
+                      onPressed: () {
+                        final currentPatientId = state.summary.patientId;
+                        context.pushNamed(
+                          'caregiver_medication_form',
+                          queryParameters: {
+                            'patientId': currentPatientId,
+                            'date': _selectedDate.toIso8601String(),
+                          },
+                        );
                       },
                     );
                   },
+                ),
+        );
+
+        // For caregivers, wrap with BlocListener to auto-load medications
+        // once the DashboardBloc finishes loading the selected patient
+        if (isCaregiver) {
+          return BlocListener<DashboardBloc, DashboardState>(
+            listenWhen: (previous, current) {
+              if (previous is DashboardLoaded && current is DashboardLoaded) {
+                return previous.summary.patientId != current.summary.patientId;
+              }
+              // Eğer previous loaded değilse ama current loaded ise tetikle
+              return current is DashboardLoaded;
+            },
+            listener: (context, state) {
+              if (state is DashboardLoaded) {
+                context.read<MedicineBloc>().add(
+                  LoadDailyMedicinesEvent(
+                    state.summary.patientId,
+                    _selectedDate,
+                  ),
                 );
-              },
-            ),
-    );
+              }
+            },
+            child: scaffold,
+          );
+        }
 
-    // For caregivers, wrap with BlocListener to auto-load medications
-    // once the DashboardBloc finishes loading the selected patient
-    if (isCaregiver) {
-      return BlocListener<DashboardBloc, DashboardState>(
-        listenWhen: (previous, current) {
-          if (previous is DashboardLoaded && current is DashboardLoaded) {
-            return previous.summary.patientId != current.summary.patientId;
-          }
-          // Eğer previous loaded değilse ama current loaded ise tetikle
-          return current is DashboardLoaded;
-        },
-        listener: (context, state) {
-          if (state is DashboardLoaded) {
-            context.read<MedicineBloc>().add(
-              LoadDailyMedicinesEvent(state.summary.patientId, _selectedDate),
-            );
-          }
-        },
-        child: scaffold,
-      );
-    }
-
-    return scaffold;
+        return scaffold;
       },
     );
   }

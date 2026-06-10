@@ -56,3 +56,13 @@ class MarkAsTakenEvent extends MedicineEvent {
 }
 
 class ResetMedications extends MedicineEvent {}
+
+class LoadMedicineDetailsEvent extends MedicineEvent {
+  final String patientId;
+  final String medicineId;
+
+  const LoadMedicineDetailsEvent({required this.patientId, required this.medicineId});
+
+  @override
+  List<Object?> get props => [patientId, medicineId];
+}

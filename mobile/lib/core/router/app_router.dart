@@ -2,7 +2,6 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile/features/auth/presentation/pages/login_screen.dart';
 import 'package:mobile/features/auth/presentation/pages/register_screen.dart';
 import 'package:mobile/features/auth/presentation/pages/splash_screen.dart';
-import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
 import 'package:mobile/features/profile/presentation/pages/profile_screen.dart';
 import 'package:mobile/features/caregiver/presentation/pages/caregiver_dashboard_screen.dart';
 import 'package:mobile/features/caregiver/presentation/widgets/caregiver_layout.dart';
@@ -113,19 +112,10 @@ final appRouter = GoRouter(
                   name: 'patient_medication_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final authState = context.read<AuthBloc>().state;
-                    final patientId = authState is AuthAuthenticated
-                        ? authState.user.id
-                        : '';
-                    final dateStr = state.uri.queryParameters['date'];
-                    final date = dateStr != null
-                        ? DateTime.parse(dateStr)
-                        : DateTime.now();
-                    return BlocProvider(
-                      create: (_) =>
-                          getIt<MedicineBloc>()
-                            ..add(LoadDailyMedicinesEvent(patientId, date)),
-                      child: MedicineDetailScreen(medicationId: id),
+                    final initialMedicineJson = state.extra as Map<String, dynamic>?;
+                    return MedicineDetailScreen(
+                      medicationId: id,
+                      initialMedicineJson: initialMedicineJson,
                     );
                   },
                 ),
@@ -138,18 +128,11 @@ final appRouter = GoRouter(
                     final patientId = authState is AuthAuthenticated
                         ? authState.user.id
                         : '';
-                    final dateStr = state.uri.queryParameters['date'];
-                    final date = dateStr != null
-                        ? DateTime.parse(dateStr)
-                        : DateTime.now();
-                    return BlocProvider(
-                      create: (_) =>
-                          getIt<MedicineBloc>()
-                            ..add(LoadDailyMedicinesEvent(patientId, date)),
-                      child: MedicineFormScreen(
-                        medicationId: id,
-                        patientId: patientId,
-                      ),
+                    final initialMedicineJson = state.extra as Map<String, dynamic>?;
+                    return MedicineFormScreen(
+                      medicationId: id,
+                      patientId: patientId,
+                      initialMedicineJson: initialMedicineJson,
                     );
                   },
                 ),
@@ -223,17 +206,10 @@ final appRouter = GoRouter(
                   name: 'caregiver_medication_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final patientId =
-                        state.uri.queryParameters['patientId'] ?? '';
-                    final dateStr = state.uri.queryParameters['date'];
-                    final date = dateStr != null
-                        ? DateTime.parse(dateStr)
-                        : DateTime.now();
-                    return BlocProvider(
-                      create: (_) =>
-                          getIt<MedicineBloc>()
-                            ..add(LoadDailyMedicinesEvent(patientId, date)),
-                      child: MedicineDetailScreen(medicationId: id),
+                    final initialMedicineJson = state.extra as Map<String, dynamic>?;
+                    return MedicineDetailScreen(
+                      medicationId: id,
+                      initialMedicineJson: initialMedicineJson,
                     );
                   },
                 ),
@@ -244,18 +220,11 @@ final appRouter = GoRouter(
                     final id = state.uri.queryParameters['id'];
                     final patientId =
                         state.uri.queryParameters['patientId'] ?? '';
-                    final dateStr = state.uri.queryParameters['date'];
-                    final date = dateStr != null
-                        ? DateTime.parse(dateStr)
-                        : DateTime.now();
-                    return BlocProvider(
-                      create: (_) =>
-                          getIt<MedicineBloc>()
-                            ..add(LoadDailyMedicinesEvent(patientId, date)),
-                      child: MedicineFormScreen(
-                        medicationId: id,
-                        patientId: patientId,
-                      ),
+                    final initialMedicineJson = state.extra as Map<String, dynamic>?;
+                    return MedicineFormScreen(
+                      medicationId: id,
+                      patientId: patientId,
+                      initialMedicineJson: initialMedicineJson,
                     );
                   },
                 ),

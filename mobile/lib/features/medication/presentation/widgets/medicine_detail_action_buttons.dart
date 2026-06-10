@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile/features/medication/data/models/medicine_model.dart';
 import '../bloc/medicine_bloc.dart';
 import '../bloc/medicine_event.dart';
 import '../bloc/medicine_state.dart';
@@ -100,6 +101,15 @@ class MedicineDetailActionButtons extends StatelessWidget {
                 final patientId = state is MedicineLoaded
                     ? state.patientId ?? ''
                     : '';
+
+                Map<String, dynamic>? medicineJson;
+                if (state is MedicineLoaded) {
+                  try {
+                    final match = state.allMedicines.firstWhere((m) => m.id == medication.medicineId);
+                    medicineJson = MedicineModel.fromEntity(match).toJson();
+                  } catch (_) {}
+                }
+
                 context.pushNamed(
                   'caregiver_medication_form',
                   queryParameters: {
@@ -107,6 +117,7 @@ class MedicineDetailActionButtons extends StatelessWidget {
                     'patientId': patientId,
                     'date': selectedDate.toIso8601String(),
                   },
+                  extra: medicineJson,
                 );
               },
               icon: const Icon(Icons.edit, color: Colors.white),

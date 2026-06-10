@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/features/medication/domain/entities/medicine_log.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/usecases/add_medicine_usecase.dart';
 import '../../domain/usecases/delete_medicine_usecase.dart';
@@ -42,6 +43,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     on<DeleteMedicineEvent>(_onDeleteMedicine);
     on<MarkAsTakenEvent>(_onMarkAsTaken);
     on<ResetMedications>(_onResetMedications);
+    on<LoadMedicineDetailsEvent>(_onLoadMedicineDetails);
 
     _medicinesSubscription = medicineRepository.onMedicinesChanged.listen((_) {
       if (_currentPatientId != null) {
@@ -97,17 +99,24 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
 
     _currentPatientId = patientId;
 
-    final result = await getDailyLogsUseCase(patientId, event.selectedDate);
+    final logsResult = await getDailyLogsUseCase(patientId, event.selectedDate);
+    final medicinesResult = await medicineRepository.getMedicines(patientId);
 
-    result.fold(
+    logsResult.fold(
       (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
-      (logs) => emit(
-        MedicineLoaded(
-          medicines: logs,
-          selectedDate: _currentSelectedDate,
-          patientId: _currentPatientId,
-        ),
-      ),
+      (logs) {
+        medicinesResult.fold(
+          (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
+          (allMedicines) => emit(
+            MedicineLoaded(
+              medicines: logs,
+              allMedicines: allMedicines,
+              selectedDate: _currentSelectedDate,
+              patientId: _currentPatientId,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -201,6 +210,42 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
           add(
             LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
           );
+        }
+      },
+    );
+  }
+
+  Future<void> _onLoadMedicineDetails(
+    LoadMedicineDetailsEvent event,
+    Emitter<MedicineState> emit,
+  ) async {
+    final currentState = state;
+    List<MedicineLog> currentLogs = [];
+    DateTime selectedDate = DateTime.now();
+    String? patientId = event.patientId;
+
+    if (currentState is MedicineLoaded) {
+      currentLogs = currentState.medicines;
+      selectedDate = currentState.selectedDate;
+      patientId = currentState.patientId;
+    }
+
+    emit(MedicineLoading());
+    final result = await medicineRepository.getMedicines(event.patientId);
+    result.fold(
+      (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
+      (medicines) {
+        try {
+          final match = medicines.firstWhere((m) => m.id == event.medicineId);
+          emit(MedicineDetailsLoaded(match));
+          emit(MedicineLoaded(
+            medicines: currentLogs,
+            selectedDate: selectedDate,
+            patientId: patientId,
+            selectedMedicineDetails: match,
+          ));
+        } catch (_) {
+          emit(const MedicineError('İlaç bulunamadı.'));
         }
       },
     );

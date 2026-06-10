@@ -28,7 +28,7 @@ class ProfileScreen extends StatelessWidget {
       ),
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
-          if (state is AuthLoading) {
+          if (state is AuthLoading || state is AuthUnauthenticated || state is AuthInitial) {
             return const Center(child: CircularProgressIndicator());
           }
 

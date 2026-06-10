@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/medicine.dart';
+import '../../data/models/medicine_model.dart';
 import '../bloc/medicine_bloc.dart';
 import '../bloc/medicine_event.dart';
 import '../bloc/medicine_state.dart';
@@ -14,8 +15,14 @@ import '../widgets/times_selector.dart';
 class MedicineFormScreen extends StatefulWidget {
   final String? medicationId;
   final String? patientId;
+  final Map<String, dynamic>? initialMedicineJson;
 
-  const MedicineFormScreen({super.key, this.medicationId, this.patientId});
+  const MedicineFormScreen({
+    super.key,
+    this.medicationId,
+    this.patientId,
+    this.initialMedicineJson,
+  });
 
   @override
   State<MedicineFormScreen> createState() => _MedicineFormScreenState();
@@ -41,43 +48,54 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
     _dosageController = TextEditingController();
     _instructionsController = TextEditingController();
 
-    if (widget.medicationId != null) {
-      final state = context.read<MedicineBloc>().state;
-      if (state is MedicineLoaded) {
-        try {
-          final existingLog = state.medicines.firstWhere(
-            (m) => m.medicineId == widget.medicationId || m.id == widget.medicationId,
-          );
-          _nameController.text = existingLog.medicineName;
-          _dosageController.text = existingLog.dosage;
-          _instructionsController.text = ''; // Instructions are not in JIT log
-          _selectedDays = [1, 2, 3, 4, 5, 6, 7];
-          _startDate = DateTime.now();
+    if (widget.initialMedicineJson != null) {
+      _populateFromValues(widget.initialMedicineJson!);
+    } else if (widget.medicationId != null && widget.patientId != null) {
+      context.read<MedicineBloc>().add(
+        LoadMedicineDetailsEvent(
+          patientId: widget.patientId!,
+          medicineId: widget.medicationId!,
+        ),
+      );
+    }
+  }
 
-          // Format time from scheduledAt
-          final hour = existingLog.scheduledAt.hour.toString().padLeft(2, '0');
-          final minute = existingLog.scheduledAt.minute.toString().padLeft(2, '0');
-          final timeStr = '$hour:$minute';
-          
-          _selectedTimes = [
-            TimeOfDay(hour: existingLog.scheduledAt.hour, minute: existingLog.scheduledAt.minute),
-          ];
+  void _populateFromValues(Map<String, dynamic> json) {
+    try {
+      final medicine = MedicineModel.fromJson(json);
+      _existingMedication = medicine;
+      _nameController.text = medicine.name;
+      _dosageController.text = medicine.dosage;
+      _instructionsController.text = medicine.instructions;
+      _selectedDays = List<int>.from(medicine.daysOfWeek);
+      _startDate = medicine.startDate;
+      _endDate = medicine.endDate;
 
-          _existingMedication = Medicine(
-            id: existingLog.medicineId.isNotEmpty ? existingLog.medicineId : existingLog.id,
-            patientId: widget.patientId ?? '',
-            creatorId: '',
-            name: existingLog.medicineName,
-            dosage: existingLog.dosage,
-            instructions: '',
-            scheduleTime: timeStr,
-            daysOfWeek: const [1, 2, 3, 4, 5, 6, 7],
-            startDate: DateTime.now(),
-            isActive: true,
-            isTaken: existingLog.status == 1,
-          );
-        } catch (_) {}
+      final timeParts = medicine.scheduleTime.split(':');
+      if (timeParts.isNotEmpty) {
+        final hour = int.tryParse(timeParts[0]) ?? 8;
+        final minute = timeParts.length > 1 ? (int.tryParse(timeParts[1]) ?? 0) : 0;
+        _selectedTimes = [TimeOfDay(hour: hour, minute: minute)];
       }
+    } catch (e) {
+      debugPrint('Error parsing initial medicine json: $e');
+    }
+  }
+
+  void _populateFromMedicine(Medicine medicine) {
+    _existingMedication = medicine;
+    _nameController.text = medicine.name;
+    _dosageController.text = medicine.dosage;
+    _instructionsController.text = medicine.instructions;
+    _selectedDays = List<int>.from(medicine.daysOfWeek);
+    _startDate = medicine.startDate;
+    _endDate = medicine.endDate;
+
+    final timeParts = medicine.scheduleTime.split(':');
+    if (timeParts.isNotEmpty) {
+      final hour = int.tryParse(timeParts[0]) ?? 8;
+      final minute = timeParts.length > 1 ? (int.tryParse(timeParts[1]) ?? 0) : 0;
+      _selectedTimes = [TimeOfDay(hour: hour, minute: minute)];
     }
   }
 
@@ -153,132 +171,149 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
   Widget build(BuildContext context) {
     final isEditing = widget.medicationId != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'İlacı Düzenle' : 'Yeni İlaç Ekle'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTextField(
-                  controller: _nameController,
-                  label: 'İlaç Adı',
-                  icon: Icons.medication,
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'İlaç adı boş olamaz'
-                      : null,
-                ),
-                const SizedBox(height: 20),
-                _buildTextField(
-                  controller: _dosageController,
-                  label: 'Dozaj (Örn: 10 mg, 1 Hap)',
-                  icon: Icons.science,
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Dozaj boş olamaz'
-                      : null,
-                ),
-                const SizedBox(height: 20),
-                _buildTextField(
-                  controller: _instructionsController,
-                  label: 'Talimatlar (Örn: Tok karnına)',
-                  icon: Icons.info,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
+    return BlocConsumer<MedicineBloc, MedicineState>(
+      listener: (context, state) {
+        if (state is MedicineDetailsLoaded) {
+          _populateFromMedicine(state.medicine);
+        } else if (state is MedicineError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is MedicineLoading;
 
-                // Days Picker
-                const Text(
-                  'Hangi Günler?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                DaysSelector(
-                  selectedDays: _selectedDays,
-                  onChanged: (days) {
-                    setState(() {
-                      _selectedDays = days;
-                    });
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // Date Picker
-                DatePickerGroup(
-                  startDate: _startDate,
-                  endDate: _endDate,
-                  onStartDateChanged: (date) {
-                    setState(() {
-                      _startDate = date;
-                    });
-                  },
-                  onEndDateChanged: (date) {
-                    setState(() {
-                      _endDate = date;
-                    });
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // Time Picker
-                const Text(
-                  'İlaç Saati',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TimesSelector(
-                  selectedTimes: _selectedTimes,
-                  isEditing: isEditing,
-                  onChanged: (times) {
-                    setState(() {
-                      _selectedTimes = times;
-                    });
-                  },
-                ),
-                const SizedBox(height: 40),
-
-                // Save Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: _saveForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: Text(
-                      isEditing ? 'Güncelle' : 'Kaydet',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(isEditing ? 'İlacı Düzenle' : 'Yeni İlaç Ekle'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
           ),
-        ),
-      ),
+          body: SafeArea(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTextField(
+                            controller: _nameController,
+                            label: 'İlaç Adı',
+                            icon: Icons.medication,
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'İlaç adı boş olamaz'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildTextField(
+                            controller: _dosageController,
+                            label: 'Dozaj (Örn: 10 mg, 1 Hap)',
+                            icon: Icons.science,
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Dozaj boş olamaz'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildTextField(
+                            controller: _instructionsController,
+                            label: 'Talimatlar (Örn: Tok karnına)',
+                            icon: Icons.info,
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Days Picker
+                          const Text(
+                            'Hangi Günler?',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          DaysSelector(
+                            selectedDays: _selectedDays,
+                            onChanged: (days) {
+                              setState(() {
+                                _selectedDays = days;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Date Picker
+                          DatePickerGroup(
+                            startDate: _startDate,
+                            endDate: _endDate,
+                            onStartDateChanged: (date) {
+                              setState(() {
+                                _startDate = date;
+                              });
+                            },
+                            onEndDateChanged: (date) {
+                              setState(() {
+                                _endDate = date;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Time Picker
+                          const Text(
+                            'İlaç Saati',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TimesSelector(
+                            selectedTimes: _selectedTimes,
+                            isEditing: isEditing,
+                            onChanged: (times) {
+                              setState(() {
+                                _selectedTimes = times;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 40),
+
+                          // Save Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 60,
+                            child: ElevatedButton(
+                              onPressed: _saveForm,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Text(
+                                isEditing ? 'Güncelle' : 'Kaydet',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        );
+      },
     );
   }
 
