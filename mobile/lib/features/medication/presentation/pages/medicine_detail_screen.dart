@@ -62,6 +62,9 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
           ),
           body: BlocConsumer<MedicineBloc, MedicineState>(
             listener: (context, state) {
+              if (ModalRoute.of(context)?.isCurrent == false) {
+                return;
+              }
               if (state is MedicineDetailsLoaded) {
                 setState(() {
                   _medicine = state.medicine;

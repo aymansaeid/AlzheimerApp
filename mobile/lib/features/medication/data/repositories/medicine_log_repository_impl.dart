@@ -10,12 +10,8 @@ import '../models/medicine_log_model.dart';
 @LazySingleton(as: MedicineLogRepository)
 class MedicineLogRepositoryImpl implements MedicineLogRepository {
   final MedicineLogRemoteDataSource remoteDataSource;
-  final StreamController<void> _onMedicineLogsChangedController = StreamController<void>.broadcast();
 
   MedicineLogRepositoryImpl(this.remoteDataSource);
-
-  @override
-  Stream<void> get onMedicineLogsChanged => _onMedicineLogsChangedController.stream;
 
   @override
   Future<Either<Failure, List<MedicineLogModel>>> getDailyLogs(
@@ -40,7 +36,6 @@ class MedicineLogRepositoryImpl implements MedicineLogRepository {
   ) async {
     try {
       await remoteDataSource.updateMedicineStatus(logId, status, note);
-      _onMedicineLogsChangedController.add(null);
       return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

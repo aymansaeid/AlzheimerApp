@@ -189,7 +189,7 @@ class MedicineDetailActionButtons extends StatelessWidget {
                   : medication.id;
               bloc.add(DeleteMedicineEvent(idToDelete));
               Navigator.pop(dialogContext);
-              context.pop(); // Go back to list
+              context.pop(true); // Go back to list with true
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Sil', style: TextStyle(color: Colors.white)),

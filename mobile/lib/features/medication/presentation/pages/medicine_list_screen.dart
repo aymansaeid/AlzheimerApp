@@ -212,15 +212,18 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
                     return FloatingActionButton(
                       backgroundColor: Theme.of(context).primaryColor,
                       child: const Icon(Icons.add, color: Colors.white),
-                      onPressed: () {
+                      onPressed: () async {
                         final currentPatientId = state.summary.patientId;
-                        context.pushNamed(
+                        final result = await context.pushNamed<bool>(
                           'caregiver_medication_form',
                           queryParameters: {
                             'patientId': currentPatientId,
                             'date': _selectedDate.toIso8601String(),
                           },
                         );
+                        if (result == true && context.mounted) {
+                          _loadMedicationsForDate(_selectedDate);
+                        }
                       },
                     );
                   },
@@ -310,7 +313,7 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
         return MedicationCard(
           medication: medication,
           isPatient: !isCaregiver,
-          onTap: () {
+          onTap: () async {
             // Push to detail screen
             final routeName = isCaregiver
                 ? 'caregiver_medication_detail'
@@ -322,7 +325,7 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
               medicineJson = MedicineModel.fromEntity(match).toJson();
             }
 
-            context.pushNamed(
+            final result = await context.pushNamed<bool>(
               routeName,
               pathParameters: {'id': medication.id},
               queryParameters: {
@@ -331,6 +334,9 @@ class _MedicineListScreenState extends State<MedicineListScreen> {
               },
               extra: medicineJson,
             );
+            if (result == true && context.mounted) {
+              _loadMedicationsForDate(_selectedDate);
+            }
           },
           onMarkAsTaken: () {
             context.read<MedicineBloc>().add(

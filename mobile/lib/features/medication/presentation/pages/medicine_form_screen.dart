@@ -40,7 +40,7 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
   Medicine? _existingMedication;
-  
+
   @override
   void initState() {
     super.initState();
@@ -74,7 +74,9 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
       final timeParts = medicine.scheduleTime.split(':');
       if (timeParts.isNotEmpty) {
         final hour = int.tryParse(timeParts[0]) ?? 8;
-        final minute = timeParts.length > 1 ? (int.tryParse(timeParts[1]) ?? 0) : 0;
+        final minute = timeParts.length > 1
+            ? (int.tryParse(timeParts[1]) ?? 0)
+            : 0;
         _selectedTimes = [TimeOfDay(hour: hour, minute: minute)];
       }
     } catch (e) {
@@ -94,7 +96,9 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
     final timeParts = medicine.scheduleTime.split(':');
     if (timeParts.isNotEmpty) {
       final hour = int.tryParse(timeParts[0]) ?? 8;
-      final minute = timeParts.length > 1 ? (int.tryParse(timeParts[1]) ?? 0) : 0;
+      final minute = timeParts.length > 1
+          ? (int.tryParse(timeParts[1]) ?? 0)
+          : 0;
       _selectedTimes = [TimeOfDay(hour: hour, minute: minute)];
     }
   }
@@ -162,8 +166,6 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
           context.read<MedicineBloc>().add(AddMedicineEvent(newMed));
         }
       }
-
-      context.pop();
     }
   }
 
@@ -176,13 +178,21 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
         if (state is MedicineDetailsLoaded) {
           _populateFromMedicine(state.medicine);
         } else if (state is MedicineError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        } else if (state is MedicineOperationSuccess) {
+          if (context.mounted && context.canPop()) {
+            context.pop(true);
+          }
         }
       },
       builder: (context, state) {
-        final isLoading = state is MedicineLoading;
+        final isLoadingDetails =
+            isEditing &&
+            _existingMedication == null &&
+            state is MedicineLoading;
+        final isSaving = state is MedicineLoading && !isLoadingDetails;
 
         return Scaffold(
           appBar: AppBar(
@@ -191,7 +201,7 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
             elevation: 0,
           ),
           body: SafeArea(
-            child: isLoading
+            child: isLoadingDetails
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(24.0),
@@ -289,22 +299,33 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
                             width: double.infinity,
                             height: 60,
                             child: ElevatedButton(
-                              onPressed: _saveForm,
+                              onPressed: isSaving ? null : _saveForm,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 elevation: 2,
                               ),
-                              child: Text(
-                                isEditing ? 'Güncelle' : 'Kaydet',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
+                              child: isSaving
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      isEditing ? 'Güncelle' : 'Kaydet',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],

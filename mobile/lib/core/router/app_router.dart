@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/features/auth/presentation/pages/login_screen.dart';
 import 'package:mobile/features/auth/presentation/pages/register_screen.dart';
@@ -168,7 +169,10 @@ final appRouter = GoRouter(
       builder: (context, state, navigationShell) {
         return MultiBlocProvider(
           providers: [
-            BlocProvider(create: (_) => getIt<MedicineBloc>()),
+            BlocProvider(
+              key: ValueKey('medicineBloc'),
+              create: (_) => getIt<MedicineBloc>(),
+            ),
             BlocProvider(
               create: (_) =>
                   getIt<DashboardBloc>()..add(const LoadDashboard(null)),

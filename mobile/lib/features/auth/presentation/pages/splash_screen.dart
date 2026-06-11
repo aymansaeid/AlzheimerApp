@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Alzheimer Takip',
+              'AlzCare',
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.primary,

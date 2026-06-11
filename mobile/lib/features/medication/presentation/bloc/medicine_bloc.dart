@@ -26,8 +26,6 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
 
   DateTime _currentSelectedDate = DateTime.now();
   String? _currentPatientId;
-  StreamSubscription? _medicinesSubscription;
-  StreamSubscription? _medicineLogsSubscription;
 
   MedicineBloc({
     required this.getDailyLogsUseCase,
@@ -46,39 +44,9 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     on<ResetMedications>(_onResetMedications);
     on<LoadMedicineDetailsEvent>(_onLoadMedicineDetails);
     on<LoadAllMedicinesEvent>(_onLoadAllMedicines);
-
-    _medicinesSubscription = medicineRepository.onMedicinesChanged.listen((_) {
-      if (_currentPatientId != null) {
-        add(
-          LoadDailyMedicinesEvent(
-            _currentPatientId!,
-            _currentSelectedDate,
-            loadMedicinesList: true,
-          ),
-        );
-      }
-    });
-
-    _medicineLogsSubscription = medicineLogRepository.onMedicineLogsChanged
-        .listen((_) {
-          if (_currentPatientId != null) {
-            add(
-              LoadDailyMedicinesEvent(
-                _currentPatientId!,
-                _currentSelectedDate,
-                loadMedicinesList: false,
-              ),
-            );
-          }
-        });
   }
 
-  @override
-  Future<void> close() {
-    _medicinesSubscription?.cancel();
-    _medicineLogsSubscription?.cancel();
-    return super.close();
-  }
+
 
   void _onResetMedications(
     ResetMedications event,
@@ -262,6 +230,11 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
             selectedMedicineDetails: selectedMedicineDetails,
           ),
         );
+        if (_currentPatientId != null) {
+          add(
+            LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
+          );
+        }
       },
     );
   }
