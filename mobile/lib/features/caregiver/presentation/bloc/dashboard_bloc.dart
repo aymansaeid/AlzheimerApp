@@ -96,9 +96,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           return;
         }
 
-        // 3. Select the patient ID dynamically: use selected patient or default to the first one in the list
+        // 3. Select the patient ID dynamically: check if the selected patient is still followed, otherwise fallback to the first one
+        final bool isStillFollowed = localPatientId != null &&
+            patients.any((p) => p.patientId == localPatientId);
         final String targetPatientId =
-            localPatientId ?? patients.first.patientId;
+            isStillFollowed ? localPatientId : patients.first.patientId;
 
         // Update class level loader ID to reflect targetPatientId if it was resolved from default first index
         _currentlyLoadingPatientId = targetPatientId;

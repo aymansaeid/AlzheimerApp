@@ -39,7 +39,26 @@ class CareNetworkScreen extends StatelessWidget {
       create: (context) =>
           getIt<CareNetworkBloc>()
             ..add(FetchCareNetwork(currentUserId ?? '', patients: patients)),
-      child: const CareNetworkView(),
+      child: BlocListener<DashboardBloc, DashboardState>(
+        listener: (context, state) {
+          if (state is DashboardLoaded) {
+            context.read<CareNetworkBloc>().add(
+                  FetchCareNetwork(
+                    currentUserId ?? '',
+                    patients: state.patients,
+                  ),
+                );
+          } else if (state is DashboardError && state.patients != null) {
+            context.read<CareNetworkBloc>().add(
+                  FetchCareNetwork(
+                    currentUserId ?? '',
+                    patients: state.patients!,
+                  ),
+                );
+          }
+        },
+        child: const CareNetworkView(),
+      ),
     );
   }
 }
@@ -181,18 +200,7 @@ class CareNetworkView extends StatelessWidget {
   }) {
     return RefreshIndicator(
       onRefresh: () async {
-        final dbState = context.read<DashboardBloc>().state;
-        List<FollowedPatient> dbPatients = [];
-        if (dbState is DashboardLoaded) {
-          dbPatients = dbState.patients;
-        } else if (dbState is DashboardLoading) {
-          dbPatients = dbState.patients ?? [];
-        } else if (dbState is DashboardError) {
-          dbPatients = dbState.patients ?? [];
-        }
-        context.read<CareNetworkBloc>().add(
-          FetchCareNetwork(currentUserId ?? '', patients: dbPatients),
-        );
+        context.read<DashboardBloc>().add(const LoadDashboard(null));
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16.0),
