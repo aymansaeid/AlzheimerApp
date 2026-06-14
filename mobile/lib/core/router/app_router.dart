@@ -170,6 +170,7 @@ final appRouter = GoRouter(
         return MultiBlocProvider(
           providers: [
             BlocProvider(
+              // key is needed to prevent bloc from being recreated when switching between branches
               key: ValueKey('medicineBloc'),
               create: (_) => getIt<MedicineBloc>(),
             ),
