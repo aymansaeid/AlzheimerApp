@@ -24,8 +24,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile/core/router/go_router_refresh_stream.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
-
 import '../../features/care_network/presentation/bloc/care_network_bloc.dart';
+import '../../features/location_tracking/presentation/pages/map_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -230,6 +230,15 @@ final appRouter = GoRouter(
                   },
                 ),
               ],
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/caregiver/map',
+              name: 'caregiver_map',
+              builder: (context, state) => const MapScreen(),
             ),
           ],
         ),

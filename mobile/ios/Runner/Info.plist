@@ -2,6 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UIBackgroundModes</key>
+	<array>
+    <string>location</string>
+    <string>fetch</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Uygulamayı kullanırken diğer kullanıcıları haritada görebilmeniz için konum izni vermeniz gerekmektedir.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Arka planda da konumunuzun güncellenmesi ve arkadaşlarınızın sizi takip edebilmesi için bu izin gereklidir.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

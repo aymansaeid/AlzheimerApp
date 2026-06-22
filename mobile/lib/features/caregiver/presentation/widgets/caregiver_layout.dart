@@ -20,6 +20,7 @@ class CaregiverLayout extends StatelessWidget {
         items: const [
           AppNavItem(icon: Icons.dashboard_rounded, label: 'Özet'),
           AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlar'),
+          AppNavItem(icon: Icons.map_rounded, label: 'Konum'),
           AppNavItem(icon: Icons.warning_rounded, label: 'Uyarılar'),
           AppNavItem(icon: Icons.people_rounded, label: 'Ağım'),
           AppNavItem(icon: Icons.person, label: 'Profil'),
