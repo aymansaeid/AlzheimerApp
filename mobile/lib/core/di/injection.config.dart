@@ -266,16 +266,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i411.CheckHasAdminUseCase>(),
       ),
     );
-    gh.factory<_i100.CareNetworkBloc>(
-      () => _i100.CareNetworkBloc(
-        getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
-        generateInviteUseCase: gh<_i417.GenerateInviteUseCase>(),
-        removeTeamMemberUseCase: gh<_i477.RemoveTeamMemberUseCase>(),
-        leaveTeamUseCase: gh<_i1027.LeaveTeamUseCase>(),
-        acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
-        transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
-      ),
-    );
     gh.factory<_i490.PatientDashboardBloc>(
       () => _i490.PatientDashboardBloc(
         gh<_i647.GetPatientDashboardUseCase>(),
@@ -297,6 +287,16 @@ extension GetItInjectableX on _i174.GetIt {
         markMedicineAsTaken: gh<_i669.MarkMedicineAsTakenUseCase>(),
         medicineRepository: gh<_i185.MedicineRepository>(),
         medicineLogRepository: gh<_i1048.MedicineLogRepository>(),
+      ),
+    );
+    gh.factory<_i100.CareNetworkBloc>(
+      () => _i100.CareNetworkBloc(
+        getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
+        generateInviteUseCase: gh<_i417.GenerateInviteUseCase>(),
+        removeTeamMemberUseCase: gh<_i477.RemoveTeamMemberUseCase>(),
+        leaveTeamUseCase: gh<_i1027.LeaveTeamUseCase>(),
+        acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
+        transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
       ),
     );
     return this;
