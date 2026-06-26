@@ -9,8 +9,11 @@ import 'core/router/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await dotenv.load(fileName: ".env");
+  
   configureDependencies();
+
   runApp(const AlzheimerApp());
 }
 
