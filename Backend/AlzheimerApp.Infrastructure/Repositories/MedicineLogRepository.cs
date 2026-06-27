@@ -62,4 +62,20 @@ public class MedicineLogRepository : IMedicineLogRepository
             .Where(ml => ml.ScheduledAt.Date == targetDate)
             .ToListAsync();
     }
+    public async Task<List<MedicineLog>> GetFuturePendingLogsByMedicineIdAsync(Guid medicineId, DateTime fromDate)
+    {
+     
+        return await _context.MedicineLogs
+            .Where(ml => ml.MedicineId == medicineId
+                      && ml.Status == Domain.Enums.MedicineStatus.Pending
+                      && ml.ScheduledAt >= fromDate)
+            .ToListAsync();
+    }
+
+    public async Task RemoveRangeAsync(IEnumerable<MedicineLog> logs)
+    {
+        _context.MedicineLogs.RemoveRange(logs);
+        await _context.SaveChangesAsync();
+    }
+
 }

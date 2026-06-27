@@ -66,6 +66,7 @@ public class MedicineLogService : IMedicineLogService
             MedicineId = l.MedicineId,
             MedicineName = l.Medicine?.Name ?? "Unknown Medicine",
             Dosage = l.Medicine?.Dosage ?? "",
+            Instructions = l.Medicine?.Instructions,
             Status = l.Status,
             ScheduledAt = l.ScheduledAt,
             TakenAt = l.TakenAt,

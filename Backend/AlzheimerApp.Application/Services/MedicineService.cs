@@ -9,9 +9,12 @@ public class MedicineService : IMedicineService
 {
     private readonly IMedicineRepository _medicineRepository;
 
-    public MedicineService(IMedicineRepository medicineRepository)
+    private readonly IMedicineLogRepository _logRepository;
+
+    public MedicineService(IMedicineRepository medicineRepository, IMedicineLogRepository logRepository)
     {
         _medicineRepository = medicineRepository;
+        _logRepository = logRepository;
     }
 
     public async Task<MedicineResponse> AddMedicineAsync(MedicineRequest request)
@@ -32,7 +35,6 @@ public class MedicineService : IMedicineService
         };
 
         var savedEntity = await _medicineRepository.AddAsync(medicine);
-
         return MapToResponse(savedEntity);
     }
 
@@ -42,7 +44,6 @@ public class MedicineService : IMedicineService
         return medicines.Select(MapToResponse).ToList();
     }
 
-    // A private helper method to keep our code DRY (Don't Repeat Yourself)
     private MedicineResponse MapToResponse(Medicine medicine)
     {
         return new MedicineResponse
@@ -73,12 +74,25 @@ public class MedicineService : IMedicineService
         medicine.IsActive = request.IsActive;
 
         await _medicineRepository.UpdateAsync(medicine);
+
+        var futureLogs = await _logRepository.GetFuturePendingLogsByMedicineIdAsync(id, DateTime.UtcNow);
+        if (futureLogs.Any())
+        {
+            await _logRepository.RemoveRangeAsync(futureLogs);
+        }
     }
 
     public async Task DeleteMedicineAsync(Guid id)
     {
         var medicine = await _medicineRepository.GetByIdAsync(id);
         if (medicine == null) throw new Exception("Medicine not found.");
+
+        var futureLogs = await _logRepository.GetFuturePendingLogsByMedicineIdAsync(id, DateTime.UtcNow);
+
+        if (futureLogs.Any())
+        {
+            await _logRepository.RemoveRangeAsync(futureLogs);
+        }
 
         await _medicineRepository.DeleteAsync(medicine);
     }
