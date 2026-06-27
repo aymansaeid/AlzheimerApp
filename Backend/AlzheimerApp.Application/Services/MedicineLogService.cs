@@ -19,43 +19,48 @@ public class MedicineLogService : IMedicineLogService
 
     public async Task<List<MedicineLogResponse>> GetDailyLogsAsync(Guid patientId, DateTime date)
     {
-        var logs = await _logRepository.GetLogsByPatientAndDateAsync(patientId, date);
+        // 1. O gün için veritabanında HALİHAZIRDA var olan logları getir
+        var existingLogs = await _logRepository.GetLogsByPatientAndDateAsync(patientId, date);
 
-        // 👉 LAZY SMART-GENERATION LOGIC
-        // If no logs exist for today, check if they have medicines scheduled for this day of the week!
-        if (!logs.Any())
+        // 2. Hastanın aktif olan tüm ilaçlarını getir
+        var activeMeds = await _medicineRepository.GetActiveMedicinesByPatientIdAsync(patientId);
+
+        // C# DayOfWeek 0 (Pazar) ile 6 (Cumartesi) arasıdır. string'e çeviriyoruz.
+        string currentDayNum = ((int)date.DayOfWeek).ToString();
+
+        // 3. SADECE bugün içilmesi gereken ilaçları filtrele
+        var medsForToday = activeMeds.Where(m => m.DaysOfWeek.Contains(currentDayNum)).ToList();
+
+        // 4. JIT LOGIC DÜZELTMESİ: Bugün içilmesi gereken ama loglarda OLMAYAN ilaçları bul
+        var existingLogMedicineIds = existingLogs.Select(l => l.MedicineId).ToHashSet();
+        var missingMeds = medsForToday.Where(m => !existingLogMedicineIds.Contains(m.Id)).ToList();
+
+        // 5. Eğer eksik ilaç varsa, SADECE onları üret
+        if (missingMeds.Any())
         {
-            var activeMeds = await _medicineRepository.GetActiveMedicinesByPatientIdAsync(patientId);
+            var newLogs = new List<MedicineLog>();
 
-            // C# DayOfWeek ranges from 0 (Sunday) to 6 (Saturday). We convert it to a string.
-            string currentDayNum = ((int)date.DayOfWeek).ToString();
-
-            // Find medicines where "DaysOfWeek" (e.g., "1,3,5") contains today's number
-            var medsForToday = activeMeds.Where(m => m.DaysOfWeek.Contains(currentDayNum)).ToList();
-
-            if (medsForToday.Any())
+            foreach (var med in missingMeds)
             {
-                var newLogs = new List<MedicineLog>();
-
-                foreach (var med in medsForToday)
+                newLogs.Add(new MedicineLog
                 {
-                    newLogs.Add(new MedicineLog
-                    {
-                        MedicineId = med.Id,
-                        PatientId = patientId,
-                        Status = MedicineStatus.Pending,
-                        // Combine today's Date with the Medicine's specific Time
-                        ScheduledAt = date.Date.Add(med.ScheduleTime),
-                        Medicine = med // Attach for the mapping below
-                    });
-                }
-
-                await _logRepository.AddRangeAsync(newLogs);
-                logs = newLogs; // Return the newly generated logs
+                    MedicineId = med.Id,
+                    PatientId = patientId,
+                    Status = MedicineStatus.Pending,
+                    ScheduledAt = date.Date.Add(med.ScheduleTime),
+                    Medicine = med // Aşağıdaki mapleme için referansı ekle
+                });
             }
+
+            // Yeni üretilenleri veritabanına kaydet
+            await _logRepository.AddRangeAsync(newLogs);
+
+            // Mevcut listeye yeni üretilenleri de ekle ki ekrana hepsi gitsin
+            existingLogs.AddRange(newLogs);
         }
 
-        return logs.Select(l => new MedicineLogResponse
+        // 6. Artık existingLogs hem eskileri hem yenileri içeriyor, frontend'e gönder
+        return existingLogs.Select(l => new MedicineLogResponse
         {
             Id = l.Id,
             MedicineId = l.MedicineId,
@@ -86,13 +91,12 @@ public class MedicineLogService : IMedicineLogService
 
     public async Task MarkOverdueLogsAsMissedAsync()
     {
-        // We consider a medicine "Missed" if its scheduled date was strictly BEFORE today.
-        // (So yesterday's un-clicked medicines will be swept up).
+        // "Missed" sayılması için ScheduledAt değerinin dünden önce olması gerekir
         var startOfToday = DateTime.UtcNow.Date;
 
         var overdueLogs = await _logRepository.GetPendingLogsBeforeAsync(startOfToday);
 
-        if (!overdueLogs.Any()) return; // Nothing to update!
+        if (!overdueLogs.Any()) return; // Güncellenecek bir şey yok
 
         foreach (var log in overdueLogs)
         {
@@ -100,7 +104,7 @@ public class MedicineLogService : IMedicineLogService
             log.Note = "System Auto-Update: Patient did not confirm taking this medication.";
         }
 
-        // Save all changes to PostgreSQL in one massive transaction
+        // Değişiklikleri PostgreSQL'e tek seferde kaydet
         await _logRepository.UpdateRangeAsync(overdueLogs);
     }
 }
