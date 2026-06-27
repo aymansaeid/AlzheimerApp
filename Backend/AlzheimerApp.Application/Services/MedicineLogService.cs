@@ -28,10 +28,13 @@ public class MedicineLogService : IMedicineLogService
         // C# DayOfWeek 0 (Pazar) ile 6 (Cumartesi) arasıdır. string'e çeviriyoruz.
         string currentDayNum = ((int)date.DayOfWeek).ToString();
 
-        // 3. SADECE bugün içilmesi gereken ilaçları filtrele
-        var medsForToday = activeMeds.Where(m => m.DaysOfWeek.Contains(currentDayNum)).ToList();
+        // 3. TARİH FİLTRESİ EKLENDİ: Hem gün eşleşmeli hem de sorgulanan tarih ilacın Start/End tarihleri arasında olmalı!
+        var medsForToday = activeMeds.Where(m => m.DaysOfWeek.Contains(currentDayNum)
+                                            && date.Date >= m.StartDate.Date
+                                            && date.Date <= (m.EndDate?.Date ?? DateTime.MaxValue))
+                                   .ToList();
 
-        // 4. JIT LOGIC DÜZELTMESİ: Bugün içilmesi gereken ama loglarda OLMAYAN ilaçları bul
+        // 4. JIT LOGIC: Bugün içilmesi gereken ama loglarda OLMAYAN ilaçları bul
         var existingLogMedicineIds = existingLogs.Select(l => l.MedicineId).ToHashSet();
         var missingMeds = medsForToday.Where(m => !existingLogMedicineIds.Contains(m.Id)).ToList();
 
@@ -48,7 +51,7 @@ public class MedicineLogService : IMedicineLogService
                     PatientId = patientId,
                     Status = MedicineStatus.Pending,
                     ScheduledAt = date.Date.Add(med.ScheduleTime),
-                    Medicine = med // Aşağıdaki mapleme için referansı ekle
+                    Medicine = med
                 });
             }
 
@@ -92,12 +95,10 @@ public class MedicineLogService : IMedicineLogService
 
     public async Task MarkOverdueLogsAsMissedAsync()
     {
-        // "Missed" sayılması için ScheduledAt değerinin dünden önce olması gerekir
         var startOfToday = DateTime.UtcNow.Date;
-
         var overdueLogs = await _logRepository.GetPendingLogsBeforeAsync(startOfToday);
 
-        if (!overdueLogs.Any()) return; // Güncellenecek bir şey yok
+        if (!overdueLogs.Any()) return;
 
         foreach (var log in overdueLogs)
         {
@@ -105,7 +106,6 @@ public class MedicineLogService : IMedicineLogService
             log.Note = "System Auto-Update: Patient did not confirm taking this medication.";
         }
 
-        // Değişiklikleri PostgreSQL'e tek seferde kaydet
         await _logRepository.UpdateRangeAsync(overdueLogs);
     }
 }

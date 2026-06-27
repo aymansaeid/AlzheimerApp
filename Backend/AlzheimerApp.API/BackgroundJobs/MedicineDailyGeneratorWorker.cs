@@ -30,21 +30,18 @@ public class MedicineDailyGeneratorWorker : BackgroundService
                 _logger.LogError(ex, "CRITICAL ERROR: Midnight Sweeper failed to generate logs.");
             }
 
-            // 👉 THE CLOCK: Calculate the exact time until the next 00:01 AM (UTC)
             var now = DateTime.UtcNow;
-            var nextRunTime = now.Date.AddDays(1).AddMinutes(1); // 1 minute past midnight tomorrow
+            var nextRunTime = now.Date.AddDays(1).AddMinutes(1);
             var delay = nextRunTime - now;
 
             _logger.LogInformation($"Midnight Sweeper sleeping for {delay.TotalHours:F2} hours. Next run at {nextRunTime} UTC.");
 
-            // Put the worker to sleep until tomorrow night
             await Task.Delay(delay, stoppingToken);
         }
     }
 
     private async Task GenerateGlobalLogsForTodayAsync(CancellationToken stoppingToken)
     {
-        // 1. Open a secure dependency injection scope
         using var scope = _scopeFactory.CreateScope();
         var medicineRepo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
         var logRepo = scope.ServiceProvider.GetRequiredService<IMedicineLogRepository>();
@@ -54,19 +51,19 @@ public class MedicineDailyGeneratorWorker : BackgroundService
 
         _logger.LogInformation($"Running Global Generation for {today:yyyy-MM-dd} (Day {currentDayNum})...");
 
-        // 2. Fetch the entire system state
         var allActiveMeds = await medicineRepo.GetAllActiveMedicinesAsync();
         var existingLogs = await logRepo.GetAllLogsByDateAsync(today);
 
-        // Map existing logs to a HashSet for lightning-fast O(1) lookups
         var existingMedicineIds = existingLogs.Select(l => l.MedicineId).ToHashSet();
 
-        // 3. Filter only medicines scheduled for today's day of the week
-        var medsForToday = allActiveMeds.Where(m => m.DaysOfWeek.Contains(currentDayNum)).ToList();
+        // 3. TARİH FİLTRESİ EKLENDİ: Gece yarısı üretimi yapılırken de ilacın tarih sınırlarına bakılıyor!
+        var medsForToday = allActiveMeds.Where(m => m.DaysOfWeek.Contains(currentDayNum)
+                                                && today >= m.StartDate.Date
+                                                && today <= (m.EndDate?.Date ?? DateTime.MaxValue))
+                                       .ToList();
 
         var newLogs = new List<MedicineLog>();
 
-        // 4. Generate logs ONLY if they don't already exist
         foreach (var med in medsForToday)
         {
             if (!existingMedicineIds.Contains(med.Id))
@@ -81,7 +78,6 @@ public class MedicineDailyGeneratorWorker : BackgroundService
             }
         }
 
-        // 5. Bulk Save to PostgreSQL
         if (newLogs.Any())
         {
             await logRepo.AddRangeAsync(newLogs);
