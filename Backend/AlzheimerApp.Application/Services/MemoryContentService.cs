@@ -1,4 +1,5 @@
-﻿using AlzheimerApp.Application.DTOs.MemoryContents;
+﻿using AlzheimerApp.Application.DTOs;
+using AlzheimerApp.Application.DTOs.MemoryContents;
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
@@ -31,29 +32,57 @@ public class MemoryContentService : IMemoryContentService
         };
 
         var savedEntity = await _contentRepository.AddAsync(memoryContent);
-
         return MapToResponse(savedEntity);
     }
 
-    public async Task<List<MemoryContentResponse>> GetPatientContentAsync(Guid patientId)
+    public async Task<List<MemoryContentResponse>> GetPatientContentAsync(Guid patientId, Guid? uploaderId = null, string? personName = null, int? contentType = null)
     {
-        var contents = await _contentRepository.GetActiveContentByPatientIdAsync(patientId);
+        var contents = await _contentRepository.GetActiveContentByPatientIdAsync(patientId, uploaderId, personName, contentType);
         return contents.Select(MapToResponse).ToList();
     }
 
-    private MemoryContentResponse MapToResponse(MemoryContent content)
+    public async Task<PagedResponse<MemoryProfileResponse>> GetPaginatedMemoryProfilesAsync(Guid patientId, int page, int pageSize)
     {
-        return new MemoryContentResponse
+        var allContents = await _contentRepository.GetActiveContentByPatientIdAsync(patientId);
+
+        var groupedProfiles = allContents
+            .GroupBy(c => new { c.PersonName, c.Relationship, c.UploadedBy })
+            .ToList();
+
+        var totalCount = groupedProfiles.Count;
+        var pagedGroups = groupedProfiles
+            .OrderBy(g => g.Key.PersonName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var items = pagedGroups.Select(g => {
+            var latestVoice = g.Where(x => (int)x.ContentType == 1)
+                               .OrderByDescending(x => x.CreatedAt)
+                               .FirstOrDefault();
+
+            var coverPhoto = g.Where(x => (int)x.ContentType == 0)
+                              .OrderByDescending(x => x.CreatedAt)
+                              .FirstOrDefault()?.FileUrl ?? g.FirstOrDefault()?.FileUrl;
+
+            return new MemoryProfileResponse
+            {
+                PersonName = string.IsNullOrWhiteSpace(g.Key.PersonName) ? "Bilinmiyor" : g.Key.PersonName,
+                Relationship = string.IsNullOrWhiteSpace(g.Key.Relationship) ? "" : g.Key.Relationship,
+                UploaderId = g.Key.UploadedBy,
+                CoverPhotoUrl = coverPhoto,
+                MemoryCount = g.Count(),
+                LatestVoiceRecordUrl = latestVoice?.FileUrl,
+                LatestVoiceRecordText = latestVoice?.Description ?? latestVoice?.Title
+            };
+        }).ToList();
+
+        return new PagedResponse<MemoryProfileResponse>
         {
-            Id = content.Id,
-            PatientId = content.PatientId,
-            ContentType = content.ContentType,
-            Title = content.Title,
-            Description = content.Description,
-            FileUrl = content.FileUrl,
-            PersonName = content.PersonName,
-            Relationship = content.Relationship,
-            CreatedAt = content.CreatedAt
+            Items = items,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
         };
     }
 
@@ -79,5 +108,21 @@ public class MemoryContentService : IMemoryContentService
         if (content == null) throw new Exception("Memory content not found.");
 
         await _contentRepository.DeleteAsync(content);
+    }
+
+    private MemoryContentResponse MapToResponse(MemoryContent content)
+    {
+        return new MemoryContentResponse
+        {
+            Id = content.Id,
+            PatientId = content.PatientId,
+            ContentType = content.ContentType,
+            Title = content.Title,
+            Description = content.Description,
+            FileUrl = content.FileUrl,
+            PersonName = content.PersonName,
+            Relationship = content.Relationship,
+            CreatedAt = content.CreatedAt
+        };
     }
 }
