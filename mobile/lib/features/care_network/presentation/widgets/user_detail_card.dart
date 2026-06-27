@@ -5,11 +5,16 @@ class UserDetailCard extends StatelessWidget {
   final CareTeamMember user;
   final bool isMe;
 
-  const UserDetailCard({
-    super.key,
-    required this.user,
-    required this.isMe,
-  });
+  const UserDetailCard({super.key, required this.user, required this.isMe});
+
+  String _getInitials(String fullName) {
+    if (fullName.trim().isEmpty) return '?';
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length > 1) {
+      return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +33,12 @@ class UserDetailCard extends StatelessWidget {
           ),
           child: Center(
             child: Text(
-              user.avatarUrl ?? (user.role == 'Admin' ? '👩‍⚕️' : '👨'),
-              style: const TextStyle(fontSize: 64),
+              _getInitials(user.fullName),
+              style: TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
             ),
           ),
         ),
@@ -50,12 +59,15 @@ class UserDetailCard extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        if (user.relationshipType != null && user.relationshipType!.isNotEmpty) ...[
+        if (user.relationshipType != null &&
+            user.relationshipType!.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.3),
+              color: theme.colorScheme.secondaryContainer.withValues(
+                alpha: 0.3,
+              ),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(

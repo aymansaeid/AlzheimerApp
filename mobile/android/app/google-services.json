@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "511431808324",
+    "project_id": "alz-care-mobile",
+    "storage_bucket": "alz-care-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:511431808324:android:2171244e67013a2da6f311",
+        "android_client_info": {
+          "package_name": "com.example.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKkqmyeS6FfkR6lPF73xwFYmrTm35eJ58"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

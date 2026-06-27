@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/features/auth/presentation/pages/login_screen.dart';
 import 'package:mobile/features/auth/presentation/pages/register_screen.dart';
@@ -7,15 +8,14 @@ import 'package:mobile/features/caregiver/presentation/pages/caregiver_dashboard
 import 'package:mobile/features/caregiver/presentation/widgets/caregiver_layout.dart';
 import 'package:mobile/features/geofence/presentation/pages/geofence_alert_screen.dart';
 import 'package:mobile/features/memory/presentation/pages/memory_module_screen.dart';
-import 'package:mobile/features/patient/presentation/pages/patient_home_screen.dart';
+import 'package:mobile/features/patient/presentation/pages/patient_dashboard_screen.dart';
 import 'package:mobile/features/patient/presentation/widgets/patient_layout.dart';
 import 'package:mobile/features/care_network/presentation/pages/care_network_screen.dart';
 import 'package:mobile/features/care_network/presentation/pages/user_detail_screen.dart';
-import 'package:mobile/features/care_network/presentation/bloc/care_network_bloc.dart';
-import 'package:mobile/features/medication/presentation/pages/medication_list_screen.dart';
-import 'package:mobile/features/medication/presentation/pages/medication_detail_screen.dart';
-import 'package:mobile/features/medication/presentation/pages/medication_form_screen.dart';
-import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
+import 'package:mobile/features/medication/presentation/pages/medicine_list_screen.dart';
+import 'package:mobile/features/medication/presentation/pages/medicine_detail_screen.dart';
+import 'package:mobile/features/medication/presentation/pages/medicine_form_screen.dart';
+import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart';
 import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
 import 'package:mobile/features/onboarding/presentation/pages/patient_setup_screen.dart';
 import 'package:mobile/features/onboarding/presentation/pages/caregiver_setup_screen.dart';
@@ -24,25 +24,33 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile/core/router/go_router_refresh_stream.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
+import '../../features/care_network/presentation/bloc/care_network_bloc.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
   refreshListenable: GoRouterRefreshStream(getIt<AuthBloc>().stream),
   redirect: (context, state) {
     final authState = getIt<AuthBloc>().state;
-    final isGoingToLogin = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+    final isGoingToLogin =
+        state.matchedLocation == '/login' ||
+        state.matchedLocation == '/register';
 
     if (authState is AuthUnauthenticated && !isGoingToLogin) {
       return '/login';
     }
 
     if (authState is AuthAuthenticated) {
-      final isAtAuthPage = isGoingToLogin || state.matchedLocation == '/splash' || state.matchedLocation == '/';
+      final isAtAuthPage =
+          isGoingToLogin ||
+          state.matchedLocation == '/splash' ||
+          state.matchedLocation == '/';
       if (isAtAuthPage) {
         if (authState.user.role == 'patient') {
           return authState.isSetupComplete ? '/patient/home' : '/patient_setup';
         } else {
-          return authState.isSetupComplete ? '/caregiver/dashboard' : '/caregiver_setup';
+          return authState.isSetupComplete
+              ? '/caregiver/dashboard'
+              : '/caregiver_setup';
         }
       }
     }
@@ -75,35 +83,11 @@ final appRouter = GoRouter(
       name: 'caregiver_setup',
       builder: (context, state) => const CaregiverSetupScreen(),
     ),
-    GoRoute(
-      path: '/medication/detail/:id',
-      name: 'medication_detail',
-      builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        final bloc = state.extra as MedicationBloc;
-        return BlocProvider.value(
-          value: bloc,
-          child: MedicationDetailScreen(medicationId: id),
-        );
-      },
-    ),
-    GoRoute(
-      path: '/medication/form',
-      name: 'medication_form',
-      builder: (context, state) {
-        final id = state.uri.queryParameters['id'];
-        final patientId = state.uri.queryParameters['patientId'];
-        final bloc = state.extra as MedicationBloc;
-        return BlocProvider.value(
-          value: bloc,
-          child: MedicationFormScreen(medicationId: id, patientId: patientId),
-        );
-      },
-    ),
+
     // Patient StatefulShellRoute
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MultiBlocProvider(
-        providers: [BlocProvider(create: (_) => getIt<MedicationBloc>())],
+        providers: [BlocProvider(create: (_) => getIt<MedicineBloc>())],
         child: PatientLayout(navigationShell: navigationShell),
       ),
       branches: [
@@ -112,11 +96,7 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/patient/home',
               name: 'patient_home',
-              builder: (context, state) => PatientHomeScreen(
-                onSosPressed: () {},
-                onMedicationTaken: (_) {},
-                onMemoryPersonTapped: (_) {},
-              ),
+              builder: (context, state) => const PatientDashboardScreen(),
             ),
           ],
         ),
@@ -125,7 +105,40 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/patient/medications',
               name: 'patient_medications',
-              builder: (context, state) => const MedicationListScreen(),
+              builder: (context, state) => const MedicineListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'detail/:id',
+                  name: 'patient_medication_detail',
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    final initialMedicineJson =
+                        state.extra as Map<String, dynamic>?;
+                    return MedicineDetailScreen(
+                      medicationId: id,
+                      initialMedicineJson: initialMedicineJson,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'form',
+                  name: 'patient_medication_form',
+                  builder: (context, state) {
+                    final id = state.uri.queryParameters['id'];
+                    final authState = context.read<AuthBloc>().state;
+                    final patientId = authState is AuthAuthenticated
+                        ? authState.user.id
+                        : '';
+                    final initialMedicineJson =
+                        state.extra as Map<String, dynamic>?;
+                    return MedicineFormScreen(
+                      medicationId: id,
+                      patientId: patientId,
+                      initialMedicineJson: initialMedicineJson,
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -152,16 +165,23 @@ final appRouter = GoRouter(
     ),
     // Caregiver StatefulShellRoute
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => MultiBlocProvider(
-        providers: [
-          BlocProvider(create: (_) => getIt<MedicationBloc>()),
-          BlocProvider(
-            create: (_) =>
-                getIt<DashboardBloc>()..add(const LoadDashboard(null)),
-          ),
-        ],
-        child: CaregiverLayout(navigationShell: navigationShell),
-      ),
+      builder: (context, state, navigationShell) {
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              // key is needed to prevent bloc from being recreated when switching between branches
+              key: ValueKey('medicineBloc'),
+              create: (_) => getIt<MedicineBloc>(),
+            ),
+            BlocProvider(
+              create: (_) =>
+                  getIt<DashboardBloc>()..add(const LoadDashboard(null)),
+            ),
+            BlocProvider(create: (_) => getIt<CareNetworkBloc>()),
+          ],
+          child: CaregiverLayout(navigationShell: navigationShell),
+        );
+      },
       branches: [
         StatefulShellBranch(
           routes: [
@@ -177,10 +197,42 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/caregiver/medications',
               name: 'caregiver_medications',
-              builder: (context, state) => const MedicationListScreen(),
+              builder: (context, state) => const MedicineListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'detail/:id',
+                  name: 'caregiver_medication_detail',
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    final initialMedicineJson =
+                        state.extra as Map<String, dynamic>?;
+                    return MedicineDetailScreen(
+                      medicationId: id,
+                      initialMedicineJson: initialMedicineJson,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'form',
+                  name: 'caregiver_medication_form',
+                  builder: (context, state) {
+                    final id = state.uri.queryParameters['id'];
+                    final patientId =
+                        state.uri.queryParameters['patientId'] ?? '';
+                    final initialMedicineJson =
+                        state.extra as Map<String, dynamic>?;
+                    return MedicineFormScreen(
+                      medicationId: id,
+                      patientId: patientId,
+                      initialMedicineJson: initialMedicineJson,
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),
+        // MAP SCREEN
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -210,11 +262,8 @@ final appRouter = GoRouter(
                   name: 'user_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final bloc = state.extra as CareNetworkBloc;
-                    return BlocProvider.value(
-                      value: bloc,
-                      child: UserDetailScreen(userId: id),
-                    );
+                    final patientId = state.uri.queryParameters['patientId'];
+                    return UserDetailScreen(userId: id, patientId: patientId);
                   },
                 ),
               ],

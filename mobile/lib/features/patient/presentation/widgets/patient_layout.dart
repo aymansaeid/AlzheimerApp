@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mobile/features/medication/presentation/bloc/medication_bloc.dart';
-import 'package:mobile/features/medication/presentation/bloc/medication_event.dart';
+import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart';
+import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
 import '../../../../core/widgets/app_bottom_nav_bar.dart';
@@ -33,14 +33,13 @@ class PatientLayout extends StatelessWidget {
             initialLocation: index == navigationShell.currentIndex,
           );
           if (index == 1) {
-            String? patientId;
             final authState = context.read<AuthBloc>().state;
             if (authState is AuthAuthenticated) {
-              patientId = authState.user.id;
+              final patientId = authState.user.id;
+              context.read<MedicineBloc>().add(
+                LoadDailyMedicinesEvent(patientId, DateTime.now()),
+              );
             }
-            context.read<MedicationBloc>().add(
-              LoadDailyMedications(patientId ?? '', DateTime.now()),
-            );
           }
           /* BLoC Veri Tazeleme Örneği:
           if (index == 1) {

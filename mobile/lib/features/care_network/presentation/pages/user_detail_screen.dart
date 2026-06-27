@@ -10,19 +10,27 @@ import '../widgets/user_detail_card.dart';
 
 class UserDetailScreen extends StatelessWidget {
   final String userId;
+  final String? patientId;
 
-  const UserDetailScreen({super.key, required this.userId});
+  const UserDetailScreen({super.key, required this.userId, this.patientId});
 
   @override
   Widget build(BuildContext context) {
+    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    final bloc = extra?['bloc'] as CareNetworkBloc?;
     return Scaffold(
       appBar: AppBar(title: const Text('Bağlantı Detayı')),
       body: BlocBuilder<CareNetworkBloc, CareNetworkState>(
+        bloc: bloc,
         builder: (context, state) {
           if (state is CareNetworkLoaded) {
-            // Find user safely across all teams
-            final allUsers = state.patientTeams.values.expand((team) => team).toList();
-            final userIndex = allUsers.indexWhere((u) => u.id == userId);
+            // Find user specifically in the team of patientId
+            final targetTeam =
+                (patientId != null && state.patientTeams.containsKey(patientId))
+                ? state.patientTeams[patientId]!
+                : state.patientTeams.values.expand((team) => team).toList();
+
+            final userIndex = targetTeam.indexWhere((u) => u.id == userId);
 
             if (userIndex == -1) {
               return Center(
@@ -44,22 +52,27 @@ class UserDetailScreen extends StatelessWidget {
               );
             }
 
-            final user = allUsers[userIndex];
+            final user = targetTeam[userIndex];
             final theme = Theme.of(context);
 
             // Find patient ID for this user
-            String? patientId;
-            for (final entry in state.patientTeams.entries) {
-              if (entry.value.any((u) => u.id == userId)) {
-                patientId = entry.key;
-                break;
+            String? resolvedPatientId = patientId;
+            if (resolvedPatientId == null) {
+              for (final entry in state.patientTeams.entries) {
+                if (entry.value.any((u) => u.id == userId)) {
+                  resolvedPatientId = entry.key;
+                  break;
+                }
               }
             }
-            final bool isCurrentUserAdmin = patientId != null && (state.isAdminForPatient[patientId] ?? false);
+            final bool isCurrentUserAdmin =
+                resolvedPatientId != null &&
+                (state.isAdminForPatient[resolvedPatientId] ?? false);
 
             // Resolve isMe dynamically
             final authState = context.read<AuthBloc>().state;
-            final bool isMe = authState is AuthAuthenticated && authState.user.id == user.id;
+            final bool isMe =
+                authState is AuthAuthenticated && authState.user.id == user.id;
 
             return SafeArea(
               child: SizedBox(
@@ -83,8 +96,11 @@ class UserDetailScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed: () =>
-                                _showTransferAdminConfirmDialog(context, patientId!, user.fullName),
+                            onPressed: () => _showTransferAdminConfirmDialog(
+                              context,
+                              resolvedPatientId!,
+                              user.fullName,
+                            ),
                             icon: const Icon(Icons.admin_panel_settings),
                             label: const Text(
                               'Yönetici Yap',
@@ -107,8 +123,11 @@ class UserDetailScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed: () =>
-                                _showRemoveDialog(context, patientId!, user.fullName),
+                            onPressed: () => _showRemoveDialog(
+                              context,
+                              resolvedPatientId!,
+                              user.fullName,
+                            ),
                             child: const Text(
                               'Bağlantıyı Kes',
                               style: TextStyle(
@@ -131,7 +150,11 @@ class UserDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showRemoveDialog(BuildContext context, String patientId, String fullName) {
+  void _showRemoveDialog(
+    BuildContext context,
+    String patientId,
+    String fullName,
+  ) {
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -151,10 +174,9 @@ class UserDetailScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext); // Close dialog
-                context.read<CareNetworkBloc>().add(RemoveMemberClicked(
-                      patientId: patientId,
-                      followerId: userId,
-                    ));
+                context.read<CareNetworkBloc>().add(
+                  RemoveMemberClicked(patientId: patientId, followerId: userId),
+                );
                 context.pop(); // Go back to network list
               },
               child: Text(
@@ -193,11 +215,11 @@ class UserDetailScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pop(dialogContext); // Close dialog
                 context.read<CareNetworkBloc>().add(
-                      TransferAdminClicked(
-                        patientId: patientId,
-                        newAdminId: userId,
-                      ),
-                    );
+                  TransferAdminClicked(
+                    patientId: patientId,
+                    newAdminId: userId,
+                  ),
+                );
                 context.pop(); // Go back to network list
               },
               child: const Text('Onayla'),

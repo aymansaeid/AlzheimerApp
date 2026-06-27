@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import '../../domain/entities/followed_patient.dart';
 import '../../domain/usecases/get_dashboard_summary.dart';
 import '../../domain/usecases/get_followed_patients.dart';
+import '../../../care_network/domain/repositories/care_network_repository.dart';
+import '../../../onboarding/domain/repositories/follower_repository.dart';
 import 'dashboard_event.dart';
 import 'dashboard_state.dart';
 
@@ -13,23 +16,41 @@ export 'dashboard_state.dart';
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final GetFollowedPatients getFollowedPatients;
   final GetDashboardSummary getDashboardSummary;
+  final CareNetworkRepository careNetworkRepository;
+  final FollowerRepository followerRepository;
 
   // Track the target patient ID currently being loaded
   String? _currentlyLoadingPatientId;
+  StreamSubscription? _networkSubscription;
+  StreamSubscription? _inviteSubscription;
 
   DashboardBloc({
     required this.getFollowedPatients,
     required this.getDashboardSummary,
+    required this.careNetworkRepository,
+    required this.followerRepository,
   }) : super(DashboardInitial()) {
     on<LoadDashboard>(_onLoadDashboard);
     on<SelectPatient>(_onSelectPatient);
     on<ResetDashboard>(_onResetDashboard);
+
+    _networkSubscription = careNetworkRepository.onNetworkChanged.listen((_) {
+      add(const LoadDashboard(null));
+    });
+
+    _inviteSubscription = followerRepository.onInviteAccepted.listen((_) {
+      add(const LoadDashboard(null));
+    });
   }
 
-  void _onResetDashboard(
-    ResetDashboard event,
-    Emitter<DashboardState> emit,
-  ) {
+  @override
+  Future<void> close() {
+    _networkSubscription?.cancel();
+    _inviteSubscription?.cancel();
+    return super.close();
+  }
+
+  void _onResetDashboard(ResetDashboard event, Emitter<DashboardState> emit) {
     emit(DashboardInitial());
   }
 
@@ -75,8 +96,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           return;
         }
 
-        // 3. Select the patient ID dynamically: use selected patient or default to the first one in the list
-        final String targetPatientId = localPatientId ?? patients.first.patientId;
+        // 3. Select the patient ID dynamically: check if the selected patient is still followed, otherwise fallback to the first one
+        final bool isStillFollowed = localPatientId != null &&
+            patients.any((p) => p.patientId == localPatientId);
+        final String targetPatientId =
+            isStillFollowed ? localPatientId : patients.first.patientId;
 
         // Update class level loader ID to reflect targetPatientId if it was resolved from default first index
         _currentlyLoadingPatientId = targetPatientId;
@@ -90,8 +114,23 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         summaryResult.fold(
           (failure) =>
               emit(DashboardError(failure.message, patients: patients)),
-          (summary) =>
-              emit(DashboardLoaded(summary: summary, patients: patients)),
+          (summary) {
+            final currentPatient = patients.cast<FollowedPatient?>().firstWhere(
+              (p) => p?.patientId == targetPatientId,
+              orElse: () => null,
+            );
+
+            final isAdmin = currentPatient?.isPrimaryAdmin ?? false;
+
+            // Hesaplanan değer, temiz bir şekilde paketlenip State'e verilir.
+            emit(
+              DashboardLoaded(
+                summary: summary,
+                patients: patients,
+                isCurrentPatientAdmin: isAdmin,
+              ),
+            );
+          },
         );
       },
     );
@@ -104,7 +143,57 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     // If we are already loading or loaded this patient, ignore the click!
     if (_currentlyLoadingPatientId == event.patientId) return;
 
-    // Toggling selected patient reloads dashboard data
-    add(LoadDashboard(event.patientId));
+    _currentlyLoadingPatientId = event.patientId;
+
+    // Extract already loaded patients list from the current state
+    List<FollowedPatient>? existingPatients;
+    if (state is DashboardLoaded) {
+      existingPatients = (state as DashboardLoaded).patients;
+    } else if (state is DashboardLoading) {
+      existingPatients = (state as DashboardLoading).patients;
+    } else if (state is DashboardError) {
+      existingPatients = (state as DashboardError).patients;
+    }
+
+    // If patients list is null or empty, fallback to LoadDashboard
+    if (existingPatients == null || existingPatients.isEmpty) {
+      add(LoadDashboard(event.patientId));
+      return;
+    }
+
+    emit(
+      DashboardLoading(
+        patients: existingPatients,
+        loadingPatientId: event.patientId,
+      ),
+    );
+
+    // Fetch the selected patient's dashboard summary details directly
+    final summaryResult = await getDashboardSummary(event.patientId);
+
+    // RACE CONDITION CHECK: If target ID doesn't match the active ID anymore, exit immediately!
+    if (event.patientId != _currentlyLoadingPatientId) return;
+
+    summaryResult.fold(
+      (failure) =>
+          emit(DashboardError(failure.message, patients: existingPatients)),
+      (summary) {
+        final patients = existingPatients!;
+        final currentPatient = patients.cast<FollowedPatient?>().firstWhere(
+          (p) => p?.patientId == event.patientId,
+          orElse: () => null,
+        );
+
+        final isAdmin = currentPatient?.isPrimaryAdmin ?? false;
+
+        emit(
+          DashboardLoaded(
+            summary: summary,
+            patients: patients,
+            isCurrentPatientAdmin: isAdmin,
+          ),
+        );
+      },
+    );
   }
 }

@@ -23,13 +23,13 @@ class CareTeamMember extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        fullName,
-        role,
-        joinedAt,
-        email,
-        phoneNumber,
-        avatarUrl,
-        relationshipType,
-      ];
+    id,
+    fullName,
+    role,
+    joinedAt,
+    email,
+    phoneNumber,
+    avatarUrl,
+    relationshipType,
+  ];
 }

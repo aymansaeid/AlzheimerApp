@@ -36,16 +36,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<bool> _checkSetupComplete(User user) async {
     if (user.role == 'patient') {
       final result = await _checkHasAdminUseCase(user.id);
-      return result.fold(
-        (_) => false,
-        (hasAdmin) => hasAdmin,
-      );
+      return result.fold((_) => false, (hasAdmin) => hasAdmin);
     } else if (user.role == 'caregiver') {
       final result = await _getFollowedPatients();
-      return result.fold(
-        (_) => false,
-        (patients) => patients.isNotEmpty,
-      );
+      return result.fold((_) => false, (patients) => patients.isNotEmpty);
     }
     return true;
   }
@@ -57,13 +51,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     final result = await _loginUseCase(event.email, event.password);
 
-    await result.fold(
-      (failure) async => emit(AuthError(failure.message)),
-      (user) async {
-        final isSetup = await _checkSetupComplete(user);
-        emit(AuthAuthenticated(user, isSetupComplete: isSetup));
-      },
-    );
+    await result.fold((failure) async => emit(AuthError(failure.message)), (
+      user,
+    ) async {
+      final isSetup = await _checkSetupComplete(user);
+      emit(AuthAuthenticated(user, isSetupComplete: isSetup));
+    });
   }
 
   Future<void> _onRegisterRequested(
@@ -91,6 +84,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     await _logoutUseCase();
+
     emit(AuthUnauthenticated());
   }
 
@@ -98,13 +92,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
+    if (state is AuthAuthenticated) return;
     final result = await _authRepository.checkAuthStatus();
-    await result.fold(
-      (failure) async => emit(AuthUnauthenticated()),
-      (user) async {
-        final isSetup = await _checkSetupComplete(user);
-        emit(AuthAuthenticated(user, isSetupComplete: isSetup));
-      },
-    );
+    await result.fold((failure) async => emit(AuthUnauthenticated()), (
+      user,
+    ) async {
+      final isSetup = await _checkSetupComplete(user);
+      emit(AuthAuthenticated(user, isSetupComplete: isSetup));
+    });
   }
 }

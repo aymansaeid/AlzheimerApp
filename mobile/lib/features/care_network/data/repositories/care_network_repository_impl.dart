@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
@@ -8,8 +9,12 @@ import '../datasources/care_network_remote_data_source.dart';
 @LazySingleton(as: CareNetworkRepository)
 class CareNetworkRepositoryImpl implements CareNetworkRepository {
   final CareNetworkRemoteDataSource remoteDataSource;
+  final StreamController<void> _onNetworkChangedController = StreamController<void>.broadcast();
 
   CareNetworkRepositoryImpl(this.remoteDataSource);
+
+  @override
+  Stream<void> get onNetworkChanged => _onNetworkChangedController.stream;
 
   @override
   Future<Either<Failure, List<CareTeamMember>>> getCareTeam(String patientId) async {
@@ -45,6 +50,7 @@ class CareNetworkRepositoryImpl implements CareNetworkRepository {
   Future<Either<Failure, void>> leaveTeam(String patientId) async {
     try {
       await remoteDataSource.leaveTeam(patientId);
+      _onNetworkChangedController.add(null);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -55,6 +61,7 @@ class CareNetworkRepositoryImpl implements CareNetworkRepository {
   Future<Either<Failure, void>> transferAdminRights(String patientId, String newAdminId) async {
     try {
       await remoteDataSource.transferAdminRights(patientId, newAdminId);
+      _onNetworkChangedController.add(null);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

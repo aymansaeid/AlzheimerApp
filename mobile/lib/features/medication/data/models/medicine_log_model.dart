@@ -9,6 +9,7 @@ class MedicineLogModel extends MedicineLog {
     required super.status,
     required super.scheduledAt,
     super.takenAt,
+    super.note,
   });
 
   factory MedicineLogModel.fromJson(Map<String, dynamic> json) {
@@ -36,6 +37,7 @@ class MedicineLogModel extends MedicineLog {
       status: json['status'] ?? 0,
       scheduledAt: parsedScheduled,
       takenAt: parsedTaken,
+      note: json['note']?.toString(),
     );
   }
 
@@ -48,6 +50,7 @@ class MedicineLogModel extends MedicineLog {
       'status': status,
       'scheduledAt': scheduledAt.toIso8601String(),
       'takenAt': takenAt?.toIso8601String(),
+      'note': note,
     };
   }
 }

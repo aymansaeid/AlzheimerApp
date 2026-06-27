@@ -53,31 +53,30 @@ import '../../features/caregiver/domain/usecases/get_followed_patients.dart'
     as _i1031;
 import '../../features/caregiver/presentation/bloc/dashboard_bloc.dart'
     as _i844;
-import '../../features/medication/data/datasources/medication_remote_data_source.dart'
-    as _i484;
 import '../../features/medication/data/datasources/medicine_log_remote_data_source.dart'
     as _i640;
-import '../../features/medication/data/repositories/medication_repository_impl.dart'
-    as _i598;
+import '../../features/medication/data/datasources/medicine_remote_data_source.dart'
+    as _i964;
 import '../../features/medication/data/repositories/medicine_log_repository_impl.dart'
     as _i370;
-import '../../features/medication/domain/repositories/medication_repository.dart'
-    as _i1036;
+import '../../features/medication/data/repositories/medicine_repository_impl.dart'
+    as _i600;
 import '../../features/medication/domain/repositories/medicine_log_repository.dart'
     as _i1048;
-import '../../features/medication/domain/usecases/add_medication.dart' as _i107;
-import '../../features/medication/domain/usecases/delete_medication.dart'
-    as _i329;
+import '../../features/medication/domain/repositories/medicine_repository.dart'
+    as _i185;
+import '../../features/medication/domain/usecases/add_medicine_usecase.dart'
+    as _i670;
+import '../../features/medication/domain/usecases/delete_medicine_usecase.dart'
+    as _i886;
 import '../../features/medication/domain/usecases/get_daily_logs_usecase.dart'
     as _i787;
-import '../../features/medication/domain/usecases/get_medications_by_date.dart'
-    as _i429;
-import '../../features/medication/domain/usecases/mark_medication_as_taken.dart'
-    as _i929;
-import '../../features/medication/domain/usecases/update_medication.dart'
-    as _i397;
-import '../../features/medication/presentation/bloc/medication_bloc.dart'
-    as _i501;
+import '../../features/medication/domain/usecases/mark_medicine_as_taken_usecase.dart'
+    as _i669;
+import '../../features/medication/domain/usecases/update_medicine_usecase.dart'
+    as _i310;
+import '../../features/medication/presentation/bloc/medicine_bloc.dart'
+    as _i1015;
 import '../../features/onboarding/data/datasources/follower_remote_data_source.dart'
     as _i237;
 import '../../features/onboarding/data/repositories/follower_repository_impl.dart'
@@ -94,6 +93,16 @@ import '../../features/onboarding/presentation/bloc/caregiver_setup/caregiver_se
     as _i454;
 import '../../features/onboarding/presentation/bloc/patient_setup/patient_setup_bloc.dart'
     as _i1068;
+import '../../features/patient/data/datasources/patient_remote_data_source.dart'
+    as _i1012;
+import '../../features/patient/data/repositories/patient_repository_impl.dart'
+    as _i813;
+import '../../features/patient/domain/repositories/patient_repository.dart'
+    as _i233;
+import '../../features/patient/domain/usecases/get_patient_dashboard_usecase.dart'
+    as _i647;
+import '../../features/patient/presentation/bloc/patient_dashboard_bloc.dart'
+    as _i490;
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
@@ -118,14 +127,17 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i237.FollowerRemoteDataSource>(
       () => _i237.FollowerRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
+    gh.lazySingleton<_i964.MedicineRemoteDataSource>(
+      () => _i964.MedicineRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
     gh.lazySingleton<_i485.CareNetworkRemoteDataSource>(
       () => _i485.CareNetworkRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
-    gh.lazySingleton<_i484.MedicationRemoteDataSource>(
-      () => _i484.MedicationRemoteDataSourceImpl(gh<_i361.Dio>()),
-    );
     gh.lazySingleton<_i107.AuthRemoteDataSource>(
       () => _i107.AuthRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i1012.PatientRemoteDataSource>(
+      () => _i1012.PatientRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i640.MedicineLogRemoteDataSource>(
       () => _i640.MedicineLogRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -154,10 +166,22 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i485.CareNetworkRemoteDataSource>(),
       ),
     );
+    gh.lazySingleton<_i185.MedicineRepository>(
+      () => _i600.MedicineRepositoryImpl(gh<_i964.MedicineRemoteDataSource>()),
+    );
     gh.lazySingleton<_i1048.MedicineLogRepository>(
       () => _i370.MedicineLogRepositoryImpl(
         gh<_i640.MedicineLogRemoteDataSource>(),
       ),
+    );
+    gh.lazySingleton<_i670.AddMedicineUseCase>(
+      () => _i670.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.lazySingleton<_i886.DeleteMedicineUseCase>(
+      () => _i886.DeleteMedicineUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.lazySingleton<_i310.UpdateMedicineUseCase>(
+      () => _i310.UpdateMedicineUseCase(gh<_i185.MedicineRepository>()),
     );
     gh.lazySingleton<_i1019.FollowerRepository>(
       () => _i813.FollowerRepositoryImpl(
@@ -180,12 +204,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i754.TransferAdminUseCase>(
       () => _i754.TransferAdminUseCase(gh<_i83.CareNetworkRepository>()),
     );
-    gh.factory<_i844.DashboardBloc>(
-      () => _i844.DashboardBloc(
-        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
-        getDashboardSummary: gh<_i1051.GetDashboardSummary>(),
-      ),
-    );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),
     );
@@ -195,25 +213,19 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i941.RegisterUseCase>(
       () => _i941.RegisterUseCase(gh<_i787.AuthRepository>()),
     );
-    gh.lazySingleton<_i1036.MedicationRepository>(
-      () => _i598.MedicationRepositoryImpl(
-        gh<_i484.MedicationRemoteDataSource>(),
+    gh.lazySingleton<_i233.PatientRepository>(
+      () => _i813.PatientRepositoryImpl(gh<_i1012.PatientRemoteDataSource>()),
+    );
+    gh.lazySingleton<_i647.GetPatientDashboardUseCase>(
+      () => _i647.GetPatientDashboardUseCase(gh<_i233.PatientRepository>()),
+    );
+    gh.factory<_i844.DashboardBloc>(
+      () => _i844.DashboardBloc(
+        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
+        getDashboardSummary: gh<_i1051.GetDashboardSummary>(),
+        careNetworkRepository: gh<_i83.CareNetworkRepository>(),
+        followerRepository: gh<_i1019.FollowerRepository>(),
       ),
-    );
-    gh.lazySingleton<_i107.AddMedication>(
-      () => _i107.AddMedication(gh<_i1036.MedicationRepository>()),
-    );
-    gh.lazySingleton<_i329.DeleteMedication>(
-      () => _i329.DeleteMedication(gh<_i1036.MedicationRepository>()),
-    );
-    gh.lazySingleton<_i429.GetMedicationsByDate>(
-      () => _i429.GetMedicationsByDate(gh<_i1036.MedicationRepository>()),
-    );
-    gh.lazySingleton<_i929.MarkMedicationAsTaken>(
-      () => _i929.MarkMedicationAsTaken(gh<_i1036.MedicationRepository>()),
-    );
-    gh.lazySingleton<_i397.UpdateMedication>(
-      () => _i397.UpdateMedication(gh<_i1036.MedicationRepository>()),
     );
     gh.lazySingleton<_i702.AcceptInviteUseCase>(
       () => _i702.AcceptInviteUseCase(gh<_i1019.FollowerRepository>()),
@@ -240,6 +252,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i787.GetDailyLogsUseCase>(
       () => _i787.GetDailyLogsUseCase(gh<_i1048.MedicineLogRepository>()),
     );
+    gh.lazySingleton<_i669.MarkMedicineAsTakenUseCase>(
+      () =>
+          _i669.MarkMedicineAsTakenUseCase(gh<_i1048.MedicineLogRepository>()),
+    );
     gh.lazySingleton<_i797.AuthBloc>(
       () => _i797.AuthBloc(
         gh<_i188.LoginUseCase>(),
@@ -250,30 +266,37 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i411.CheckHasAdminUseCase>(),
       ),
     );
-    gh.factory<_i501.MedicationBloc>(
-      () => _i501.MedicationBloc(
-        getDailyLogsUseCase: gh<_i787.GetDailyLogsUseCase>(),
-        addMedication: gh<_i107.AddMedication>(),
-        updateMedication: gh<_i397.UpdateMedication>(),
-        deleteMedication: gh<_i329.DeleteMedication>(),
-        markMedicationAsTaken: gh<_i929.MarkMedicationAsTaken>(),
-      ),
-    );
-    gh.factory<_i100.CareNetworkBloc>(
-      () => _i100.CareNetworkBloc(
-        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
-        getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
-        generateInviteUseCase: gh<_i417.GenerateInviteUseCase>(),
-        removeTeamMemberUseCase: gh<_i477.RemoveTeamMemberUseCase>(),
-        leaveTeamUseCase: gh<_i1027.LeaveTeamUseCase>(),
-        acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
-        transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
+    gh.factory<_i490.PatientDashboardBloc>(
+      () => _i490.PatientDashboardBloc(
+        gh<_i647.GetPatientDashboardUseCase>(),
+        gh<_i669.MarkMedicineAsTakenUseCase>(),
       ),
     );
     gh.factory<_i1068.PatientSetupBloc>(
       () => _i1068.PatientSetupBloc(
         gh<_i411.CheckHasAdminUseCase>(),
         gh<_i470.GenerateInviteUseCase>(),
+      ),
+    );
+    gh.factory<_i1015.MedicineBloc>(
+      () => _i1015.MedicineBloc(
+        getDailyLogsUseCase: gh<_i787.GetDailyLogsUseCase>(),
+        addMedicine: gh<_i670.AddMedicineUseCase>(),
+        updateMedicine: gh<_i310.UpdateMedicineUseCase>(),
+        deleteMedicine: gh<_i886.DeleteMedicineUseCase>(),
+        markMedicineAsTaken: gh<_i669.MarkMedicineAsTakenUseCase>(),
+        medicineRepository: gh<_i185.MedicineRepository>(),
+        medicineLogRepository: gh<_i1048.MedicineLogRepository>(),
+      ),
+    );
+    gh.factory<_i100.CareNetworkBloc>(
+      () => _i100.CareNetworkBloc(
+        getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
+        generateInviteUseCase: gh<_i417.GenerateInviteUseCase>(),
+        removeTeamMemberUseCase: gh<_i477.RemoveTeamMemberUseCase>(),
+        leaveTeamUseCase: gh<_i1027.LeaveTeamUseCase>(),
+        acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
+        transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
       ),
     );
     return this;
