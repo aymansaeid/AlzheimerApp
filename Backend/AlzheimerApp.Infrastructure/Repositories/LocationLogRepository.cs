@@ -42,4 +42,11 @@ public class LocationLogRepository : ILocationLogRepository
             .OrderByDescending(l => l.RecordedAt)
             .FirstOrDefaultAsync();
     }
+    public async Task<List<LocationLog>> GetLocationHistoryAsync(Guid patientId, DateTime startTime, DateTime endTime)
+    {
+        return await _context.LocationLogs
+            .Where(l => l.PatientId == patientId && l.RecordedAt >= startTime && l.RecordedAt <= endTime)
+            .OrderBy(l => l.RecordedAt) // Çizgi çizmek için eskiden yeniye sıralı olmalı
+            .ToListAsync();
+    }
 }

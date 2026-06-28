@@ -8,4 +8,5 @@ public interface ILocationLogRepository
     Task<List<LocationLog>> GetPatientLocationsAsync(Guid patientId, DateTime since);
     Task<LocationLog?> GetLatestLocationAsync(Guid patientId);
     Task<LocationLog?> GetLastLocationByPatientIdAsync(Guid patientId);
+    Task<List<LocationLog>> GetLocationHistoryAsync(Guid patientId, DateTime startTime, DateTime endTime);
 }

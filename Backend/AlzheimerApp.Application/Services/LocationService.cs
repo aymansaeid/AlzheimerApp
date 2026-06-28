@@ -102,6 +102,37 @@ public class LocationService : ILocationService
 
         return await _locationRepository.AddAsync(locationLog);
     }
+    public async Task<LocationLogResponse?> GetLatestLocationAsync(Guid patientId)
+    {
+        var lastLocation = await _locationRepository.GetLastLocationByPatientIdAsync(patientId);
+
+        if (lastLocation == null) return null;
+
+        return new LocationLogResponse
+        {
+            PatientId = lastLocation.PatientId,
+            Latitude = lastLocation.Latitude,
+            Longitude = lastLocation.Longitude,
+            AccuracyMeters = lastLocation.AccuracyMeters,
+            RecordedAt = lastLocation.RecordedAt,
+            IsOutsideZone = lastLocation.IsOutsideZone
+        };
+    }
+
+    public async Task<List<LocationLogResponse>> GetLocationHistoryAsync(Guid patientId, DateTime startTime, DateTime endTime)
+    {
+        var history = await _locationRepository.GetLocationHistoryAsync(patientId, startTime, endTime);
+
+        return history.Select(l => new LocationLogResponse
+        {
+            PatientId = l.PatientId,
+            Latitude = l.Latitude,
+            Longitude = l.Longitude,
+            AccuracyMeters = l.AccuracyMeters,
+            RecordedAt = l.RecordedAt,
+            IsOutsideZone = l.IsOutsideZone
+        }).ToList();
+    }
 
     private double CalculateDistanceMeters(double lat1, double lon1, double lat2, double lon2)
     {
