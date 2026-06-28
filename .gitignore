@@ -3,6 +3,9 @@
 bin/
 obj/
 
+# Firebase ve veritabanı gizli anahtarları
+Backend/AlzheimerApp.API/appsettings.json
+
 # User-specific files
 *.user
 *.suo
@@ -19,3 +22,4 @@ obj/
 # OS
 .DS_Store
 Thumbs.db
+
