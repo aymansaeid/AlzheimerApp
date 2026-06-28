@@ -1,6 +1,7 @@
 ﻿using AlzheimerApp.Application.DTOs.Auth;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -91,6 +92,42 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             return Unauthorized(new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Generates a fresh JWT Token with updated database claims (like new roles).
+    /// </summary>
+    [Authorize]
+    [HttpPost("refresh-my-token")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> RefreshMyToken()
+    {
+        try
+        {
+            // 1. Mevcut token içinden kullanıcının ID'sini (Sub) bul
+            var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized(new { Error = "Invalid token claims." });
+
+            var userId = Guid.Parse(userIdClaim);
+
+            // 2. AuthService üzerinden veritabanındaki EN GÜNCEL kullanıcı verisini çek
+            var freshUser = await _authService.GetFreshUserByIdAsync(userId);
+
+            // 3. Controller içindeki kendi metodunu kullanarak yepyeni bir token üret
+            var newToken = GenerateJwtToken(freshUser);
+
+            // 4. Yeni token'ı ve güncel bilgileri frontend'e gönder
+            return Ok(new
+            {
+                Token = newToken,
+                User = new { freshUser.Id, freshUser.FullName, freshUser.Email, freshUser.Role }
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
         }
     }
 
