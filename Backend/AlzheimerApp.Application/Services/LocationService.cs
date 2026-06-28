@@ -28,32 +28,40 @@ public class LocationService : ILocationService
         _alertRepository = alertRepository;
     }
 
-    public async Task<LocationLog> LogLocationAsync(LocationRequest request) 
+    public async Task<LocationLog> LogLocationAsync(LocationRequest request)
     {
         var activeSafeZones = await _safeZoneRepository.GetActiveSafeZonesByPatientIdAsync(request.PatientId);
-        bool isOutside = false;
+        bool isCurrentlyOutside = false;
         bool alertSent = false;
 
+        // 1. Yeni konum güvenli bölgelerin içinde mi kontrol et
         if (activeSafeZones.Any())
         {
-            isOutside = true;
+            isCurrentlyOutside = true; // Başlangıçta dışarıda varsayalım
             foreach (var zone in activeSafeZones)
             {
                 double distanceToCenter = CalculateDistanceMeters(request.Latitude, request.Longitude, zone.CenterLat, zone.CenterLng);
                 if (distanceToCenter <= zone.RadiusMeters)
                 {
-                    isOutside = false;
+                    isCurrentlyOutside = false; // Bir tane bile güvenli bölgedeyse güvendedir!
                     break;
                 }
             }
         }
 
+        // 2. SPAM ENGELLEYİCİ MANTIK (YENİ EKLENEN KISIM)
+        // Hastanın veritabanındaki en son kaydedilen konumunu getir
+        var lastLocation = await _locationRepository.GetLastLocationByPatientIdAsync(request.PatientId);
+
+        // Eğer hastanın önceki konumu zaten "Dışarıda" ise, tekrar bildirim atmamıza gerek yok (wasOutside = true)
+        bool wasAlreadyOutside = lastLocation != null && lastLocation.IsOutsideZone;
+
         // THE ALARM TRIGGER LOGIC
-        if (isOutside)
+        // SADECE VE SADECE şu an dışarıdaysa VE daha önce içerideyken YENİ dışarı çıkmışsa alarm ver!
+        if (isCurrentlyOutside && !wasAlreadyOutside)
         {
             string alertMessage = "EMERGENCY: The patient has left the designated Safe Zone!";
 
-            // 1. ALWAYS log the alert to the database history immediately!
             var alertHistory = new AlertHistory
             {
                 PatientId = request.PatientId,
@@ -64,14 +72,12 @@ public class LocationService : ILocationService
             };
             await _alertRepository.AddAsync(alertHistory);
 
-            // 2. Get all family members following this patient
             var followers = await _followerRepository.GetFollowersByPatientIdAsync(request.PatientId);
-            // 3. Extract their mobile device tokens
             var tokens = followers
                 .Where(f => f.Follower != null && !string.IsNullOrEmpty(f.Follower.FcmToken))
                 .Select(f => f.Follower!.FcmToken!)
                 .ToList();
-            // 4. IF they have tokens, send the Firebase Push Notification
+
             if (tokens.Any())
             {
                 alertSent = await _notificationService.SendMulticastAlertAsync(
@@ -82,6 +88,7 @@ public class LocationService : ILocationService
             }
         }
 
+        // 3. Konumu her halükarda logla (Harita çizimi için bu şart)
         var locationLog = new LocationLog
         {
             PatientId = request.PatientId,
@@ -89,7 +96,7 @@ public class LocationService : ILocationService
             Longitude = request.Longitude,
             AccuracyMeters = request.AccuracyMeters,
             RecordedAt = DateTime.UtcNow,
-            IsOutsideZone = isOutside,
+            IsOutsideZone = isCurrentlyOutside, // Güncel durumu kaydet
             AlertSent = alertSent
         };
 
