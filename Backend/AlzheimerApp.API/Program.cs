@@ -1,4 +1,4 @@
-using AlzheimerApp.API.Hubs; 
+using AlzheimerApp.API.Hubs;
 using AlzheimerApp.Application;
 using AlzheimerApp.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,6 +8,8 @@ using System.Text;
 using AlzheimerApp.API.BackgroundJobs;
 using System.Reflection;
 using System.IO;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,8 +28,6 @@ if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.StartsWith
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSignalR();
-
-
 builder.Services.AddSwaggerGen(options =>
 {
     const string schemeId = "bearer";
@@ -67,16 +67,13 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(xmlPath);
 });
 
-
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-
 builder.Services.AddHostedService<MedicineStatusSweeperWorker>();
 builder.Services.AddHostedService<MedicineDailyGeneratorWorker>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"]!);
-
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -95,6 +92,24 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// FIREBASE INITIALIZATION 
+var firebaseConfig = builder.Configuration.GetSection("FirebaseSettings");
+
+var firebaseCredentials = new Dictionary<string, string>
+{
+    { "type", firebaseConfig["Type"] ?? throw new ArgumentNullException("Firebase: Type is missing") },
+    { "project_id", firebaseConfig["ProjectId"] ?? throw new ArgumentNullException("Firebase: ProjectId is missing") },
+    { "private_key_id", firebaseConfig["PrivateKeyId"] ?? "" },
+    { "private_key", firebaseConfig["PrivateKey"] ?? throw new ArgumentNullException("Firebase: PrivateKey is missing") },
+    { "client_email", firebaseConfig["ClientEmail"] ?? "" },
+    { "client_id", firebaseConfig["ClientId"] ?? "" }
+};
+
+FirebaseApp.Create(new AppOptions
+{
+    Credential = GoogleCredential.FromJson(System.Text.Json.JsonSerializer.Serialize(firebaseCredentials))
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -102,14 +117,13 @@ app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "AlzheimerApp API v1");
-    options.RoutePrefix = "swagger"; // Serves Swagger at /swagger
+    options.RoutePrefix = "swagger";
 });
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
 app.MapHub<LocationHub>("/hubs/location");
 
 using (var scope = app.Services.CreateScope())
@@ -118,7 +132,6 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<AlzheimerApp.Infrastructure.Persistence.ApplicationDbContext>();
-        // This automatically executes 'dotnet ef database update' on the cloud server upon boot
         await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.MigrateAsync(context.Database);
     }
     catch (Exception ex)
