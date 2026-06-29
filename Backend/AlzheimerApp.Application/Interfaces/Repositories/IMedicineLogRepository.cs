@@ -11,4 +11,6 @@ public interface IMedicineLogRepository
     Task<List<MedicineLog>> GetPendingLogsBeforeAsync(DateTime cutoffDate);
     Task UpdateRangeAsync(IEnumerable<MedicineLog> logs);
     Task<List<MedicineLog>> GetAllLogsByDateAsync(DateTime date);
+    Task<List<MedicineLog>> GetFuturePendingLogsByMedicineIdAsync(Guid medicineId, DateTime fromDate);
+    Task RemoveRangeAsync(IEnumerable<MedicineLog> logs);
 }

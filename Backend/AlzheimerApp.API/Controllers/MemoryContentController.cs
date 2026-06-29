@@ -1,4 +1,5 @@
-﻿using AlzheimerApp.Application.DTOs.MemoryContents;
+﻿using AlzheimerApp.Application.DTOs;
+using AlzheimerApp.Application.DTOs.MemoryContents;
 using AlzheimerApp.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -62,33 +63,6 @@ public class MemoryContentController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves all active memory content for a specific patient.
-    /// </summary>
-    /// <remarks>
-    /// **Access:** Open to all authenticated users (Patients, Followers, Admins).
-    /// The Flutter app should call this to build the "Memory Gallery" screen for the patient. 
-    /// Memories are returned in descending order (newest first).
-    /// </remarks>
-    /// <param name="patientId">The unique Guid of the Patient.</param>
-    /// <response code="200">Returns a list of all active memory contents.</response>
-    /// <response code="400">If the patient is not found.</response>
-    [HttpGet("patient/{patientId}")]
-    [ProducesResponseType(typeof(List<MemoryContentResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetPatientContent(Guid patientId)
-    {
-        try
-        {
-            var response = await _contentService.GetPatientContentAsync(patientId);
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Error = ex.Message });
-        }
-    }
-
-    /// <summary>
     /// Updates the text metadata (title, description, relationship) of an existing memory.
     /// </summary>
     /// <remarks>
@@ -143,6 +117,58 @@ public class MemoryContentController : ControllerBase
         catch (Exception ex)
         {
             return NotFound(new { Error = ex.Message });
+        }
+    }
+    /// <summary>
+    /// Retrieves active memory content for a specific patient. Supports dynamic filtering.
+    /// </summary>
+    /// <remarks>
+    /// **Examples:**
+    /// * Get all: `/api/MemoryContent/patient/{patientId}`
+    /// * Filter by app user: `/api/MemoryContent/patient/{patientId}?uploaderId=1234...`
+    /// * Filter by child/relative name: `/api/MemoryContent/patient/{patientId}?personName=Ayşe`
+    /// </remarks>
+    [HttpGet("patient/{patientId}")]
+    [ProducesResponseType(typeof(List<MemoryContentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetPatientContent(
+        Guid patientId,
+        [FromQuery] Guid? uploaderId,
+        [FromQuery] string? personName,
+        [FromQuery] int? contentType)
+    {
+        try
+        {
+            var response = await _contentService.GetPatientContentAsync(patientId, uploaderId, personName, contentType);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+    /// <summary>
+    /// Retrieves unique memory profiles (Cards) for the "Anılarım" tab with Pagination.
+    /// Includes the 'Latest Voice Record' to avoid N+1 queries on the frontend.
+    /// </summary>
+    [HttpGet("patient/{patientId}/profiles")]
+    [ProducesResponseType(typeof(PagedResponse<MemoryProfileResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMemoryProfiles(
+        Guid patientId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 5)
+    {
+        try
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 5;
+
+            var response = await _contentService.GetPaginatedMemoryProfilesAsync(patientId, page, pageSize);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
         }
     }
 }

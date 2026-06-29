@@ -78,4 +78,52 @@ public class LocationController : ControllerBase
             return BadRequest(new { Error = ex.Message });
         }
     }
+    /// <summary>
+    /// Gets the absolute latest known location of a patient.
+    /// </summary>
+    /// <remarks>
+    /// **Flutter Note:** Call this endpoint immediately when opening the map screen to place the initial marker 
+    /// before waiting for real-time WebSocket updates.
+    /// </remarks>
+    [HttpGet("patient/{patientId}/latest")]
+    [ProducesResponseType(typeof(LocationLogResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetLatestLocation(Guid patientId)
+    {
+        try
+        {
+            var location = await _locationService.GetLatestLocationAsync(patientId);
+            if (location == null) return NotFound(new { Message = "No location data found for this patient yet." });
+
+            return Ok(location);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Gets the location history of a patient within a specific time window.
+    /// </summary>
+    /// <remarks>
+    /// **Flutter Note:** Use this to draw a "Polyline" (path) on the map showing where the patient has been today.
+    /// </remarks>
+    [HttpGet("patient/{patientId}/history")]
+    [ProducesResponseType(typeof(List<LocationLogResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetLocationHistory(
+        Guid patientId,
+        [FromQuery] DateTime startTime,
+        [FromQuery] DateTime endTime)
+    {
+        try
+        {
+            var history = await _locationService.GetLocationHistoryAsync(patientId, startTime, endTime);
+            return Ok(history);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
 }

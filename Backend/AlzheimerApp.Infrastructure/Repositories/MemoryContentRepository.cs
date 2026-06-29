@@ -21,12 +21,28 @@ public class MemoryContentRepository : IMemoryContentRepository
         return content;
     }
 
-    public async Task<List<MemoryContent>> GetActiveContentByPatientIdAsync(Guid patientId)
+    public async Task<List<MemoryContent>> GetActiveContentByPatientIdAsync(Guid patientId, Guid? uploaderId = null, string? personName = null, int? contentType = null)
     {
-        return await _context.MemoryContents
+        var query = _context.MemoryContents
             .Where(mc => mc.PatientId == patientId && mc.IsActive)
-            .OrderByDescending(mc => mc.CreatedAt) // Show newest memories first
-            .ToListAsync();
+            .AsQueryable();
+
+        if (uploaderId.HasValue)
+        {
+            query = query.Where(mc => mc.UploadedBy == uploaderId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(personName))
+        {
+            query = query.Where(mc => mc.PersonName.ToLower().Contains(personName.ToLower()));
+        }
+
+        if (contentType.HasValue)
+        {
+            query = query.Where(mc => (int)mc.ContentType == contentType.Value);
+        }
+
+        return await query.OrderByDescending(mc => mc.CreatedAt).ToListAsync();
     }
 
     public async Task<MemoryContent?> GetByIdAsync(Guid id)

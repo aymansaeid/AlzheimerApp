@@ -60,4 +60,13 @@ public class AuthService : IAuthService
 
         return user;
     }
+
+    public async Task<User> GetFreshUserByIdAsync(Guid userId)
+    {
+        // Kullanıcıyı veritabanından güncel rolüyle birlikte çek
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null) throw new Exception("User not found.");
+
+        return user;
+    }
 }
