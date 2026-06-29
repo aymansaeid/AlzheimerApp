@@ -100,7 +100,9 @@ var firebaseCredentials = new Dictionary<string, string>
     { "type", firebaseConfig["Type"] ?? throw new ArgumentNullException("Firebase: Type is missing") },
     { "project_id", firebaseConfig["ProjectId"] ?? throw new ArgumentNullException("Firebase: ProjectId is missing") },
     { "private_key_id", firebaseConfig["PrivateKeyId"] ?? "" },
-    { "private_key", firebaseConfig["PrivateKey"] ?? throw new ArgumentNullException("Firebase: PrivateKey is missing") },
+    
+    { "private_key", (firebaseConfig["PrivateKey"] ?? throw new ArgumentNullException("Firebase: PrivateKey is missing")).Replace("\\n", "\n") },
+
     { "client_email", firebaseConfig["ClientEmail"] ?? "" },
     { "client_id", firebaseConfig["ClientId"] ?? "" }
 };
