@@ -32,7 +32,9 @@ class AuthRepositoryImpl implements AuthRepository {
       final token = (data['token'] ?? data['jwtToken'] ?? '') as String;
 
       if (token.isNotEmpty) {
+        // Store the token and user ID in secure storage
         await secureStorage.write(key: 'jwt_token', value: token);
+        await secureStorage.write(key: 'user_id', value: user.id);
       }
 
       return Right(user);
@@ -87,7 +89,9 @@ class AuthRepositoryImpl implements AuthRepository {
     String? token;
     try {
       token = await secureStorage.read(key: 'jwt_token');
-      debugPrint('CheckAuthStatus: Stored Token: ${token != null ? "FOUND (Length: ${token.length})" : "NULL"}');
+      debugPrint(
+        'CheckAuthStatus: Stored Token: ${token != null ? "FOUND (Length: ${token.length})" : "NULL"}',
+      );
     } catch (e) {
       debugPrint('CheckAuthStatus: Exception while reading secure storage: $e');
       return Left(ServerFailure('Oturum okunamadı: ${e.toString()}'));
@@ -119,10 +123,24 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final payload = JwtDecoder.decode(token);
       debugPrint('CheckAuthStatus: Decoded payload: $payload');
-      final id = payload['sub'] ?? payload['nameid'] ?? payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ?? '';
-      final email = payload['email'] ?? payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ?? '';
-      final roleRaw = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ?? payload['role'] ?? 'patient';
-      final fullName = payload['FullName'] ?? payload['fullName'] ?? payload['unique_name'] ?? '';
+      final id =
+          payload['sub'] ??
+          payload['nameid'] ??
+          payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ??
+          '';
+      final email =
+          payload['email'] ??
+          payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ??
+          '';
+      final roleRaw =
+          payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ??
+          payload['role'] ??
+          'patient';
+      final fullName =
+          payload['FullName'] ??
+          payload['fullName'] ??
+          payload['unique_name'] ??
+          '';
 
       DateTime createdAt = DateTime.now();
       if (payload.containsKey('iat')) {
@@ -136,7 +154,9 @@ class AuthRepositoryImpl implements AuthRepository {
       final roleStr = roleRaw.toString().toLowerCase();
       if (roleStr == 'patient' || roleStr == '0') {
         mappedRole = 'patient';
-      } else if (roleStr == 'caregiver' || roleStr == 'follower' || roleStr == '1') {
+      } else if (roleStr == 'caregiver' ||
+          roleStr == 'follower' ||
+          roleStr == '1') {
         mappedRole = 'caregiver';
       } else if (roleStr == 'admin' || roleStr == '2') {
         mappedRole = 'admin';
@@ -149,7 +169,10 @@ class AuthRepositoryImpl implements AuthRepository {
         email: email.toString(),
         role: mappedRole,
         fullName: fullName.toString(),
-        phone: payload['phone'] ?? payload['phoneNumber'] ?? payload['phone_number'],
+        phone:
+            payload['phone'] ??
+            payload['phoneNumber'] ??
+            payload['phone_number'],
         avatarUrl: payload['avatarUrl'] ?? payload['avatar_url'],
         fcmToken: payload['fcmToken'] ?? payload['fcm_token'],
         isActive: true,
@@ -158,7 +181,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Right(user);
     } catch (e) {
-      debugPrint('CheckAuthStatus: Exception during token payload decoding: $e');
+      debugPrint(
+        'CheckAuthStatus: Exception during token payload decoding: $e',
+      );
       try {
         await secureStorage.delete(key: 'jwt_token');
       } catch (_) {}
