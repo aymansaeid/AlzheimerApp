@@ -21,14 +21,14 @@ class AuthRegisterRequested extends AuthEvent {
   final String email;
   final String password;
   final String fullName;
-  final String? phone;
+  final String phone;
   final int role;
 
   const AuthRegisterRequested({
     required this.email,
     required this.password,
     required this.fullName,
-    this.phone,
+    required this.phone,
     required this.role,
   });
 

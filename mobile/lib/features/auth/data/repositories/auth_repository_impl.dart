@@ -25,16 +25,18 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
 
-      final userJson = data.containsKey('user')
-          ? data['user'] as Map<String, dynamic>
-          : data;
+      final userJson = data['user'] as Map<String, dynamic>;
       final user = UserModel.fromJson(userJson);
-      final token = (data['token'] ?? data['jwtToken'] ?? '') as String;
+      final token = (data['token']) as String;
 
       if (token.isNotEmpty) {
         // Store the token and user ID in secure storage
-        await secureStorage.write(key: 'jwt_token', value: token);
-        await secureStorage.write(key: 'user_id', value: user.id);
+        try {
+          await secureStorage.write(key: 'jwt_token', value: token);
+          await secureStorage.write(key: 'user_id', value: user.id);
+        } catch (e) {
+          debugPrint('Login: Exception while writing to secure storage: $e');
+        }
       }
 
       return Right(user);
@@ -50,7 +52,7 @@ class AuthRepositoryImpl implements AuthRepository {
     String email,
     String password,
     String fullName,
-    String? phone,
+    String phone,
     int role,
   ) async {
     try {
@@ -66,7 +68,7 @@ class AuthRepositoryImpl implements AuthRepository {
       // to obtain the actual JWT token and real user profile
       final loginResult = await login(email, password);
 
-      return loginResult.fold((failure) {
+      return await loginResult.fold((failure) {
         // If auto-login fails, fall back to parsing local inputs to prevent registration crash
         final userJson = Map<String, dynamic>.from(data);
         userJson['role'] = role;

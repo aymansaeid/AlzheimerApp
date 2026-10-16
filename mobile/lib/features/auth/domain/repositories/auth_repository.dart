@@ -9,7 +9,7 @@ abstract class AuthRepository {
     String email,
     String password,
     String fullName,
-    String? phone,
+    String phone,
     int role,
   );
 

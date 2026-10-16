@@ -9,7 +9,7 @@ class RegisterDto {
     required this.email,
     required this.password,
     required this.fullName,
-    this.phone,
+    required this.phone,
     required this.role,
   });
 
@@ -18,7 +18,7 @@ class RegisterDto {
       'email': email,
       'password': password,
       'fullName': fullName,
-      if (phone != null) 'phone': phone,
+      'phone': phone,
       'role': role,
     };
   }

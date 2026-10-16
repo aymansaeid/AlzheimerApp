@@ -14,7 +14,7 @@ class RegisterUseCase {
     String email,
     String password,
     String fullName,
-    String? phone,
+    String phone,
     int role,
   ) {
     return repository.register(email, password, fullName, phone, role);

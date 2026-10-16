@@ -19,6 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController();
   String _selectedRole = 'patient';
 
   @override
@@ -26,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -121,6 +123,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
+                  // phone section
+                  _buildTextField(
+                    theme: theme,
+                    label: 'Telefon',
+                    icon: Icons.phone_outlined,
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      // we need turkish teleohone number validation
+                      if (value == null || value.isEmpty) {
+                        return 'Telefon alanı boş bırakılamaz';
+                      }
+                      // it should start with +90 or 0 and then 10 digits
+                      if (!RegExp(r'^(?:\+90|0)?\d{10}$').hasMatch(value)) {
+                        return 'Geçerli bir Türkiye telefon numarası giriniz';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   _buildRoleSelector(theme),
                   const SizedBox(height: 32),
                   ElevatedButton(
@@ -133,6 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   fullName: _fullNameController.text,
                                   email: _emailController.text,
                                   password: _passwordController.text,
+                                  phone: _phoneController.text,
                                   role: _selectedRole == 'patient' ? 0 : 1,
                                 ),
                               );
@@ -226,6 +249,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String? Function(String?)? validator,
   }) {
     return TextFormField(
+      onTapOutside: (event) {
+        FocusScope.of(context).unfocus();
+      },
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
