@@ -94,6 +94,8 @@ import '../../features/notifications/data/repositories/notification_repository_i
     as _i362;
 import '../../features/notifications/domain/repository/notification_repository.dart'
     as _i1068;
+import '../../features/notifications/presentation/bloc/notification_permission_cubit.dart'
+    as _i1030;
 import '../../features/notifications/service/notification_service.dart'
     as _i105;
 import '../../features/onboarding/data/datasources/follower_remote_data_source.dart'
@@ -136,6 +138,9 @@ extension GetItInjectableX on _i174.GetIt {
     final gh = _i526.GetItHelper(this, environment, environmentFilter);
     final registerModule = _$RegisterModule();
     gh.factory<_i344.LoggingInterceptor>(() => _i344.LoggingInterceptor());
+    gh.factory<_i1030.NotificationPermissionCubit>(
+      () => _i1030.NotificationPermissionCubit(),
+    );
     gh.lazySingleton<_i361.Dio>(() => registerModule.dio);
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
@@ -196,6 +201,12 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i1031.GetFollowedPatients>(
       () => _i1031.GetFollowedPatients(gh<_i445.DashboardRepository>()),
     );
+    gh.lazySingleton<_i185.MedicineRepository>(
+      () => _i600.MedicineRepositoryImpl(
+        gh<_i964.MedicineRemoteDataSource>(),
+        gh<_i481.NotificationLocalDataSource>(),
+      ),
+    );
     gh.lazySingleton<_i856.LocationRepositoryImpl>(
       () => _i856.LocationRepositoryImpl(
         remoteDataSource: gh<_i60.LocationRemoteDataSource>(),
@@ -208,9 +219,6 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i902.LogLocationUseCase>(
       () => _i902.LogLocationUseCase(gh<_i326.LocationRepository>()),
-    );
-    gh.lazySingleton<_i185.MedicineRepository>(
-      () => _i600.MedicineRepositoryImpl(gh<_i964.MedicineRemoteDataSource>()),
     );
     gh.lazySingleton<_i1048.MedicineLogRepository>(
       () => _i370.MedicineLogRepositoryImpl(
