@@ -3,9 +3,9 @@ import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:mobile/features/notifications/data/fcm_remote_data_source.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../notifications/data/datasources/notification_remote_data_source.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
@@ -15,7 +15,7 @@ import '../models/user_model.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final FlutterSecureStorage secureStorage;
-  final FcmRemoteDataSource fcmRemoteDataSource;
+  final NotificationRemoteDataSource fcmRemoteDataSource;
 
   AuthRepositoryImpl(
     this.remoteDataSource,
@@ -190,7 +190,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   Future<void> _syncFcmToken() async {
     try {
-      final fcmToken = await fcmRemoteDataSource.getDeviceToken();
+      final fcmToken = await fcmRemoteDataSource.getToken();
       if (fcmToken != null && fcmToken.isNotEmpty) {
         await updateFcmToken(fcmToken);
       }

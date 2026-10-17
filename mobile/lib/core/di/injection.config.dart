@@ -86,7 +86,16 @@ import '../../features/medication/domain/usecases/update_medicine_usecase.dart'
     as _i310;
 import '../../features/medication/presentation/bloc/medicine_bloc.dart'
     as _i1015;
-import '../../features/notifications/data/fcm_remote_data_source.dart' as _i339;
+import '../../features/notifications/data/datasources/notification_local_data_source.dart'
+    as _i481;
+import '../../features/notifications/data/datasources/notification_remote_data_source.dart'
+    as _i757;
+import '../../features/notifications/data/repositories/notification_repository_impl.dart'
+    as _i362;
+import '../../features/notifications/domain/repository/notification_repository.dart'
+    as _i1068;
+import '../../features/notifications/service/notification_service.dart'
+    as _i105;
 import '../../features/onboarding/data/datasources/follower_remote_data_source.dart'
     as _i237;
 import '../../features/onboarding/data/repositories/follower_repository_impl.dart'
@@ -102,7 +111,7 @@ import '../../features/onboarding/domain/usecases/generate_invite_usecase.dart'
 import '../../features/onboarding/presentation/bloc/caregiver_setup/caregiver_setup_bloc.dart'
     as _i454;
 import '../../features/onboarding/presentation/bloc/patient_setup/patient_setup_bloc.dart'
-    as _i1068;
+    as _i1069;
 import '../../features/patient/data/datasources/patient_remote_data_source.dart'
     as _i1012;
 import '../../features/patient/data/repositories/patient_repository_impl.dart'
@@ -131,11 +140,14 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
     );
+    gh.lazySingleton<_i757.NotificationRemoteDataSource>(
+      () => _i757.NotificationRemoteDataSourceImpl(),
+    );
     gh.lazySingleton<_i368.DashboardRemoteDataSource>(
       () => _i368.DashboardRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
-    gh.lazySingleton<_i339.FcmRemoteDataSource>(
-      () => _i339.FcmRemoteDataSourceImpl(),
+    gh.lazySingleton<_i481.NotificationLocalDataSource>(
+      () => _i481.NotificationLocalDataSourceImpl(),
     );
     gh.lazySingleton<_i237.FollowerRemoteDataSource>(
       () => _i237.FollowerRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -158,12 +170,25 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i640.MedicineLogRemoteDataSource>(
       () => _i640.MedicineLogRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
+    gh.lazySingleton<_i1068.NotificationRepository>(
+      () => _i362.NotificationRepositoryImpl(
+        gh<_i757.NotificationRemoteDataSource>(),
+        gh<_i481.NotificationLocalDataSource>(),
+      ),
+    );
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
     );
     gh.lazySingleton<_i445.DashboardRepository>(
       () =>
           _i598.DashboardRepositoryImpl(gh<_i368.DashboardRemoteDataSource>()),
+    );
+    gh.lazySingleton<_i787.AuthRepository>(
+      () => _i153.AuthRepositoryImpl(
+        gh<_i107.AuthRemoteDataSource>(),
+        gh<_i558.FlutterSecureStorage>(),
+        gh<_i757.NotificationRemoteDataSource>(),
+      ),
     );
     gh.lazySingleton<_i1051.GetDashboardSummary>(
       () => _i1051.GetDashboardSummary(gh<_i445.DashboardRepository>()),
@@ -222,11 +247,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i754.TransferAdminUseCase>(
       () => _i754.TransferAdminUseCase(gh<_i83.CareNetworkRepository>()),
     );
-    gh.lazySingleton<_i787.AuthRepository>(
-      () => _i153.AuthRepositoryImpl(
-        gh<_i107.AuthRemoteDataSource>(),
+    gh.lazySingleton<_i105.NotificationService>(
+      () => _i105.NotificationService(
+        gh<_i1068.NotificationRepository>(),
         gh<_i558.FlutterSecureStorage>(),
-        gh<_i339.FcmRemoteDataSource>(),
       ),
     );
     gh.lazySingleton<_i188.LoginUseCase>(
@@ -297,8 +321,8 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i669.MarkMedicineAsTakenUseCase>(),
       ),
     );
-    gh.factory<_i1068.PatientSetupBloc>(
-      () => _i1068.PatientSetupBloc(
+    gh.factory<_i1069.PatientSetupBloc>(
+      () => _i1069.PatientSetupBloc(
         gh<_i411.CheckHasAdminUseCase>(),
         gh<_i470.GenerateInviteUseCase>(),
       ),
