@@ -7,10 +7,9 @@ import 'notification_permission_state.dart';
 class NotificationPermissionCubit extends Cubit<NotificationPermissionState> {
   final NotificationRepository _notificationRepository;
 
-  NotificationPermissionCubit({
-    required NotificationRepository notificationRepository,
-  }) : _notificationRepository = notificationRepository,
-       super(const NotificationPermissionInitial());
+  NotificationPermissionCubit(
+    this._notificationRepository,
+  ) : super(const NotificationPermissionInitial());
 
   /// Mevcut bildirim izin durumunu kontrol eder.
   Future<void> checkPermission() async {

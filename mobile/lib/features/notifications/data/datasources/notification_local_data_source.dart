@@ -116,14 +116,19 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
 
       for (final med in medications) {
         if (!med.isActive ||
-            (med.endDate != null && med.endDate!.isBefore(now)))
+            (med.endDate != null && med.endDate!.isBefore(now))) {
           continue;
+        }
 
         final parts = med.scheduleTime.trim().split(':');
-        if (parts.length < 2) continue;
+        if (parts.length < 2) {
+          continue;
+        }
         final hour = int.tryParse(parts[0]);
         final minute = int.tryParse(parts[1]);
-        if (hour == null || minute == null) continue;
+        if (hour == null || minute == null) {
+          continue;
+        }
 
         final id = _generateId(med.id, med.scheduleTime);
         expectedIds.add(id);
@@ -199,8 +204,9 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
       hour,
       minute,
     );
-    if (scheduled.isBefore(now))
+    if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
+    }
 
     await _localPlugin.zonedSchedule(
       id: id,
@@ -235,8 +241,9 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
     try {
       final map = jsonDecode(payload) as Map<String, dynamic>;
       if (map['type'] != _medType) return false;
-      if (targetMedicineId != null && map['medicineId'] != targetMedicineId)
+      if (targetMedicineId != null && map['medicineId'] != targetMedicineId) {
         return false;
+      }
       return true;
     } catch (_) {
       return false;

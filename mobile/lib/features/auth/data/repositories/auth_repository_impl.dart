@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
@@ -45,7 +46,7 @@ class AuthRepositoryImpl implements AuthRepository {
         }
       }
 
-      _syncFcmToken();
+      unawaited(_syncFcmToken());
 
       return Right(user);
     } on ServerException catch (e) {
@@ -145,7 +146,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
 
       // 4. Sync FCM token in the background
-      _syncFcmToken();
+      unawaited(_syncFcmToken());
 
       return Right(user);
     } catch (e) {

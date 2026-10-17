@@ -9,11 +9,11 @@ import 'package:permission_handler/permission_handler.dart' as ph;
 @LazySingleton(as: NotificationRepository)
 class NotificationRepositoryImpl implements NotificationRepository {
   final NotificationRemoteDataSource _remoteDataSource;
-  final NotificationRepository _notificationRepository;
+  final NotificationLocalDataSource _localDataSource;
 
   NotificationRepositoryImpl(
     this._remoteDataSource,
-    this._notificationRepository,
+    this._localDataSource,
   );
 
   @override
@@ -48,7 +48,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     required String body,
     String? payload,
   }) {
-    return _notificationRepository.showLocalNotification(
+    return _localDataSource.showNotification(
       id: id,
       title: title,
       body: body,
@@ -75,11 +75,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
   @override
   Future<void> syncMedicationReminders(List<Medicine> medications) {
-    return _notificationRepository.syncMedicationReminders(medications);
+    return _localDataSource.syncMedicationReminders(medications);
   }
 
   @override
   Future<void> cancelMedicationReminders(String medicineId) {
-    return _notificationRepository.cancelMedicationReminders(medicineId);
+    return _localDataSource.cancelMedicationReminders(medicineId);
   }
 }

@@ -138,9 +138,6 @@ extension GetItInjectableX on _i174.GetIt {
     final gh = _i526.GetItHelper(this, environment, environmentFilter);
     final registerModule = _$RegisterModule();
     gh.factory<_i344.LoggingInterceptor>(() => _i344.LoggingInterceptor());
-    gh.factory<_i1030.NotificationPermissionCubit>(
-      () => _i1030.NotificationPermissionCubit(),
-    );
     gh.lazySingleton<_i361.Dio>(() => registerModule.dio);
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
@@ -184,6 +181,11 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
     );
+    gh.lazySingleton<_i326.LocationRepository>(
+      () => _i856.LocationRepositoryImpl(
+        remoteDataSource: gh<_i60.LocationRemoteDataSource>(),
+      ),
+    );
     gh.lazySingleton<_i445.DashboardRepository>(
       () =>
           _i598.DashboardRepositoryImpl(gh<_i368.DashboardRemoteDataSource>()),
@@ -201,17 +203,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i1031.GetFollowedPatients>(
       () => _i1031.GetFollowedPatients(gh<_i445.DashboardRepository>()),
     );
-    gh.lazySingleton<_i185.MedicineRepository>(
-      () => _i600.MedicineRepositoryImpl(
-        gh<_i964.MedicineRemoteDataSource>(),
-        gh<_i481.NotificationLocalDataSource>(),
-      ),
-    );
-    gh.lazySingleton<_i856.LocationRepositoryImpl>(
-      () => _i856.LocationRepositoryImpl(
-        remoteDataSource: gh<_i60.LocationRemoteDataSource>(),
-      ),
-    );
     gh.lazySingleton<_i83.CareNetworkRepository>(
       () => _i517.CareNetworkRepositoryImpl(
         gh<_i485.CareNetworkRemoteDataSource>(),
@@ -225,14 +216,11 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i640.MedicineLogRemoteDataSource>(),
       ),
     );
-    gh.lazySingleton<_i670.AddMedicineUseCase>(
-      () => _i670.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
-    );
-    gh.lazySingleton<_i886.DeleteMedicineUseCase>(
-      () => _i886.DeleteMedicineUseCase(gh<_i185.MedicineRepository>()),
-    );
-    gh.lazySingleton<_i310.UpdateMedicineUseCase>(
-      () => _i310.UpdateMedicineUseCase(gh<_i185.MedicineRepository>()),
+    gh.lazySingleton<_i185.MedicineRepository>(
+      () => _i600.MedicineRepositoryImpl(
+        gh<_i964.MedicineRemoteDataSource>(),
+        gh<_i1068.NotificationRepository>(),
+      ),
     );
     gh.lazySingleton<_i1019.FollowerRepository>(
       () => _i813.FollowerRepositoryImpl(
@@ -269,6 +257,11 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i941.RegisterUseCase>(
       () => _i941.RegisterUseCase(gh<_i787.AuthRepository>()),
+    );
+    gh.factory<_i1030.NotificationPermissionCubit>(
+      () => _i1030.NotificationPermissionCubit(
+        gh<_i1068.NotificationRepository>(),
+      ),
     );
     gh.lazySingleton<_i233.PatientRepository>(
       () => _i814.PatientRepositoryImpl(gh<_i1012.PatientRemoteDataSource>()),
@@ -322,6 +315,15 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i1031.GetFollowedPatients>(),
         gh<_i411.CheckHasAdminUseCase>(),
       ),
+    );
+    gh.lazySingleton<_i670.AddMedicineUseCase>(
+      () => _i670.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.lazySingleton<_i886.DeleteMedicineUseCase>(
+      () => _i886.DeleteMedicineUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.lazySingleton<_i310.UpdateMedicineUseCase>(
+      () => _i310.UpdateMedicineUseCase(gh<_i185.MedicineRepository>()),
     );
     gh.factory<_i490.PatientDashboardBloc>(
       () => _i490.PatientDashboardBloc(

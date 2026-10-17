@@ -108,10 +108,12 @@ class NotificationService {
 
     if (type == 'SAFEZONE_EXIT') {
       final patientId = message.data['patientId'];
+      debugPrint('SAFEZONE_EXIT for patient: $patientId');
       // Harita takip rotasına yönlendir
       // getIt<AppRouter>().push('/patient-tracking/$patientId');
     } else if (type == 'MEDICATION_MISSED' || type == 'MEDICATION_DELAYED') {
       final patientId = message.data['patientId'];
+      debugPrint('MEDICATION alert for patient: $patientId');
       // Hasta detayındaki ilaç takip sekmesine yönlendir
       // getIt<AppRouter>().push('/patient-medications/$patientId');
     }

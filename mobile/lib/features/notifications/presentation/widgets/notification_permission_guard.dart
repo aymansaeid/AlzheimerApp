@@ -66,8 +66,9 @@ class _NotificationPermissionGuardState
 
   bool _isAtSplashScreen() {
     try {
-      final location = appRouter.routerDelegate.currentConfiguration.uri.toString();
-      return location.isEmpty || location == '/splash';
+      final uri = appRouter.routerDelegate.currentConfiguration.uri;
+      final path = uri.path;
+      return path.isEmpty || path == '/splash';
     } catch (_) {
       return false;
     }
@@ -82,12 +83,21 @@ class _NotificationPermissionGuardState
     await _cubit.checkPermission();
   }
 
-  void _showModal(BuildContext context) {
+  void _showModal() {
     if (_isModalOpen || !mounted) return;
+
+    final navContext = appRouter.routerDelegate.navigatorKey.currentContext;
+    if (navContext == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showModal();
+      });
+      return;
+    }
+
     _isModalOpen = true;
 
     showModalBottomSheet<void>(
-      context: context,
+      context: navContext,
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
@@ -104,11 +114,11 @@ class _NotificationPermissionGuardState
     });
   }
 
-  void _closeModal(BuildContext context) {
+  void _closeModal() {
     if (_isModalOpen && mounted) {
       _isModalOpen = false;
-      final nav = Navigator.of(context, rootNavigator: true);
-      if (nav.canPop()) {
+      final nav = appRouter.routerDelegate.navigatorKey.currentState;
+      if (nav != null && nav.canPop()) {
         nav.pop();
       }
     }
@@ -126,9 +136,9 @@ class _NotificationPermissionGuardState
           }
 
           if (state is NotificationPermissionDenied) {
-            _showModal(context);
+            _showModal();
           } else if (state is NotificationPermissionGranted) {
-            _closeModal(context);
+            _closeModal();
           }
         },
         child: widget.child,
