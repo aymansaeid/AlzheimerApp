@@ -18,6 +18,8 @@ abstract class AuthRemoteDataSource {
     required int role,
     String? phone,
   });
+
+  Future<void> updateFcmToken(String fcmToken);
 }
 
 @LazySingleton(as: AuthRemoteDataSource)
@@ -118,5 +120,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
     }
     return e.message ?? 'Bilinmeyen bir sunucu hatası oluştu.';
+  }
+
+  @override
+  Future<void> updateFcmToken(String fcmToken) async {
+    await dio.post(
+      '/api/Auth/update-fcm-token',
+      data: {'fcmToken': fcmToken},
+    );
   }
 }

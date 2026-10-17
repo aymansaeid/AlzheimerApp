@@ -9,6 +9,7 @@
 // coverage:ignore-file
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+
 import 'package:dio/dio.dart' as _i361;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
 import 'package:get_it/get_it.dart' as _i174;
@@ -53,6 +54,14 @@ import '../../features/caregiver/domain/usecases/get_followed_patients.dart'
     as _i1031;
 import '../../features/caregiver/presentation/bloc/dashboard_bloc.dart'
     as _i844;
+import '../../features/location_tracking/data/datasources/location_remote_datasource.dart'
+    as _i60;
+import '../../features/location_tracking/data/repositories/location_repository.dart'
+    as _i856;
+import '../../features/location_tracking/domain/repositories/location_repository.dart'
+    as _i326;
+import '../../features/location_tracking/domain/usecases/log_location_usecase.dart'
+    as _i902;
 import '../../features/medication/data/datasources/medicine_log_remote_data_source.dart'
     as _i640;
 import '../../features/medication/data/datasources/medicine_remote_data_source.dart'
@@ -70,13 +79,14 @@ import '../../features/medication/domain/usecases/add_medicine_usecase.dart'
 import '../../features/medication/domain/usecases/delete_medicine_usecase.dart'
     as _i886;
 import '../../features/medication/domain/usecases/get_daily_logs_usecase.dart'
-    as _i787;
+    as _i788;
 import '../../features/medication/domain/usecases/mark_medicine_as_taken_usecase.dart'
     as _i669;
 import '../../features/medication/domain/usecases/update_medicine_usecase.dart'
     as _i310;
 import '../../features/medication/presentation/bloc/medicine_bloc.dart'
     as _i1015;
+import '../../features/notifications/data/fcm_remote_data_source.dart' as _i339;
 import '../../features/onboarding/data/datasources/follower_remote_data_source.dart'
     as _i237;
 import '../../features/onboarding/data/repositories/follower_repository_impl.dart'
@@ -96,7 +106,7 @@ import '../../features/onboarding/presentation/bloc/patient_setup/patient_setup_
 import '../../features/patient/data/datasources/patient_remote_data_source.dart'
     as _i1012;
 import '../../features/patient/data/repositories/patient_repository_impl.dart'
-    as _i813;
+    as _i814;
 import '../../features/patient/domain/repositories/patient_repository.dart'
     as _i233;
 import '../../features/patient/domain/usecases/get_patient_dashboard_usecase.dart'
@@ -124,8 +134,14 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i368.DashboardRemoteDataSource>(
       () => _i368.DashboardRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
+    gh.lazySingleton<_i339.FcmRemoteDataSource>(
+      () => _i339.FcmRemoteDataSourceImpl(),
+    );
     gh.lazySingleton<_i237.FollowerRemoteDataSource>(
       () => _i237.FollowerRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i60.LocationRemoteDataSource>(
+      () => _i60.LocationRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i964.MedicineRemoteDataSource>(
       () => _i964.MedicineRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -145,12 +161,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
     );
-    gh.lazySingleton<_i787.AuthRepository>(
-      () => _i153.AuthRepositoryImpl(
-        gh<_i107.AuthRemoteDataSource>(),
-        gh<_i558.FlutterSecureStorage>(),
-      ),
-    );
     gh.lazySingleton<_i445.DashboardRepository>(
       () =>
           _i598.DashboardRepositoryImpl(gh<_i368.DashboardRemoteDataSource>()),
@@ -161,10 +171,18 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i1031.GetFollowedPatients>(
       () => _i1031.GetFollowedPatients(gh<_i445.DashboardRepository>()),
     );
+    gh.lazySingleton<_i856.LocationRepositoryImpl>(
+      () => _i856.LocationRepositoryImpl(
+        remoteDataSource: gh<_i60.LocationRemoteDataSource>(),
+      ),
+    );
     gh.lazySingleton<_i83.CareNetworkRepository>(
       () => _i517.CareNetworkRepositoryImpl(
         gh<_i485.CareNetworkRemoteDataSource>(),
       ),
+    );
+    gh.lazySingleton<_i902.LogLocationUseCase>(
+      () => _i902.LogLocationUseCase(gh<_i326.LocationRepository>()),
     );
     gh.lazySingleton<_i185.MedicineRepository>(
       () => _i600.MedicineRepositoryImpl(gh<_i964.MedicineRemoteDataSource>()),
@@ -204,6 +222,13 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i754.TransferAdminUseCase>(
       () => _i754.TransferAdminUseCase(gh<_i83.CareNetworkRepository>()),
     );
+    gh.lazySingleton<_i787.AuthRepository>(
+      () => _i153.AuthRepositoryImpl(
+        gh<_i107.AuthRemoteDataSource>(),
+        gh<_i558.FlutterSecureStorage>(),
+        gh<_i339.FcmRemoteDataSource>(),
+      ),
+    );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),
     );
@@ -214,7 +239,7 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i941.RegisterUseCase(gh<_i787.AuthRepository>()),
     );
     gh.lazySingleton<_i233.PatientRepository>(
-      () => _i813.PatientRepositoryImpl(gh<_i1012.PatientRemoteDataSource>()),
+      () => _i814.PatientRepositoryImpl(gh<_i1012.PatientRemoteDataSource>()),
     );
     gh.lazySingleton<_i647.GetPatientDashboardUseCase>(
       () => _i647.GetPatientDashboardUseCase(gh<_i233.PatientRepository>()),
@@ -249,8 +274,8 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i1031.GetFollowedPatients>(),
       ),
     );
-    gh.lazySingleton<_i787.GetDailyLogsUseCase>(
-      () => _i787.GetDailyLogsUseCase(gh<_i1048.MedicineLogRepository>()),
+    gh.lazySingleton<_i788.GetDailyLogsUseCase>(
+      () => _i788.GetDailyLogsUseCase(gh<_i1048.MedicineLogRepository>()),
     );
     gh.lazySingleton<_i669.MarkMedicineAsTakenUseCase>(
       () =>
@@ -280,7 +305,7 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.factory<_i1015.MedicineBloc>(
       () => _i1015.MedicineBloc(
-        getDailyLogsUseCase: gh<_i787.GetDailyLogsUseCase>(),
+        getDailyLogsUseCase: gh<_i788.GetDailyLogsUseCase>(),
         addMedicine: gh<_i670.AddMedicineUseCase>(),
         updateMedicine: gh<_i310.UpdateMedicineUseCase>(),
         deleteMedicine: gh<_i886.DeleteMedicineUseCase>(),

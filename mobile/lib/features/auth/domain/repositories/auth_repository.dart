@@ -12,7 +12,7 @@ abstract class AuthRepository {
     String phone,
     int role,
   );
-
+  Future<Either<Failure, void>> updateFcmToken(String fcmToken);
   Future<Either<Failure, User>> checkAuthStatus();
   Future<Either<Failure, void>> logout();
 }

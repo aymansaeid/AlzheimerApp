@@ -3,6 +3,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:mobile/features/notifications/data/fcm_remote_data_source.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../domain/entities/user.dart';
@@ -14,8 +15,13 @@ import '../models/user_model.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final FlutterSecureStorage secureStorage;
+  final FcmRemoteDataSource fcmRemoteDataSource;
 
-  AuthRepositoryImpl(this.remoteDataSource, this.secureStorage);
+  AuthRepositoryImpl(
+    this.remoteDataSource,
+    this.secureStorage,
+    this.fcmRemoteDataSource,
+  );
 
   @override
   Future<Either<Failure, User>> login(String email, String password) async {
@@ -38,6 +44,8 @@ class AuthRepositoryImpl implements AuthRepository {
           debugPrint('Login: Exception while writing to secure storage: $e');
         }
       }
+
+      _syncFcmToken();
 
       return Right(user);
     } on ServerException catch (e) {
@@ -136,6 +144,9 @@ class AuthRepositoryImpl implements AuthRepository {
         createdAt: DateTime.now(),
       );
 
+      // 4. Sync FCM token in the background
+      _syncFcmToken();
+
       return Right(user);
     } catch (e) {
       debugPrint(
@@ -159,8 +170,32 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> _safeDeleteToken() async {
     try {
       await secureStorage.delete(key: 'jwt_token');
+      await secureStorage.delete(key: 'user_id');
     } catch (e) {
       debugPrint('Error deleting token: $e');
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateFcmToken(String fcmToken) async {
+    try {
+      await remoteDataSource.updateFcmToken(fcmToken);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Future.value(Left(ServerFailure(e.message)));
+    } catch (e) {
+      return Future.value(Left(ServerFailure(e.toString())));
+    }
+  }
+
+  Future<void> _syncFcmToken() async {
+    try {
+      final fcmToken = await fcmRemoteDataSource.getDeviceToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await updateFcmToken(fcmToken);
+      }
+    } catch (e) {
+      debugPrint('Error syncing FCM token: $e');
     }
   }
 }
