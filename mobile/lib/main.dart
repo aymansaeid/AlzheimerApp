@@ -9,10 +9,13 @@ import 'core/router/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await dotenv.load(fileName: ".env");
-  
+
+  // Initialize dependency injection
   configureDependencies();
+
+  // Initialize the AuthBloc and check authentication status
+  getIt<AuthBloc>().add(AuthCheckRequested());
 
   runApp(const AlzheimerApp());
 }
@@ -22,8 +25,8 @@ class AlzheimerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getIt<AuthBloc>()..add(AuthCheckRequested()),
+    return BlocProvider.value(
+      value: getIt<AuthBloc>(),
       child: MaterialApp.router(
         title: 'AlzCare',
         debugShowCheckedModeBanner: false,

@@ -51,12 +51,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     final result = await _loginUseCase(event.email, event.password);
 
-    await result.fold((failure) async => emit(AuthError(failure.message)), (
-      user,
-    ) async {
-      final isSetup = await _checkSetupComplete(user);
-      emit(AuthAuthenticated(user, isSetupComplete: isSetup));
-    });
+    await result.fold(
+      (failure) async => emit(AuthError(failure.message)),
+      (user) async {
+        final isSetup = await _checkSetupComplete(user);
+        emit(AuthAuthenticated(user, isSetupComplete: isSetup));
+      },
+    );
   }
 
   Future<void> _onRegisterRequested(
@@ -84,7 +85,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     await _logoutUseCase();
-
     emit(AuthUnauthenticated());
   }
 
@@ -92,13 +92,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
+    // Zaten giriş yapılmışsa tekrar işlem yapma
     if (state is AuthAuthenticated) return;
+
+    // 1. Splash ekranında bekletmek için Loading yayınla
+    emit(AuthLoading());
+
+    // 2. Storage'dan token kontrolü
     final result = await _authRepository.checkAuthStatus();
-    await result.fold((failure) async => emit(AuthUnauthenticated()), (
-      user,
-    ) async {
-      final isSetup = await _checkSetupComplete(user);
-      emit(AuthAuthenticated(user, isSetupComplete: isSetup));
-    });
+
+    await result.fold(
+      (failure) async {
+        // Token yoksa, süresi dolmuşsa veya geçersizse
+        emit(AuthUnauthenticated());
+      },
+      (user) async {
+        // Token geçerli, kullanıcının kurulum durumunu kontrol et
+        final isSetup = await _checkSetupComplete(user);
+        emit(AuthAuthenticated(user, isSetupComplete: isSetup));
+      },
+    );
   }
 }

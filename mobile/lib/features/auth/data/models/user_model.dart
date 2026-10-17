@@ -26,17 +26,11 @@ class UserModel extends User {
 
     DateTime parsedDate = DateTime.now();
     final createdAtRaw = json['createdAt'] ?? json['created_at'];
-    print('UserModel: Parsing createdAt from raw value: $createdAtRaw');
+
     if (createdAtRaw != null) {
       try {
         parsedDate = DateTime.parse(createdAtRaw.toString());
       } catch (_) {}
-    }
-
-    try {
-      parsedDate = DateTime.parse(createdAtRaw.toString());
-    } catch (e) {
-      print('UserModel: Exception during createdAt parsing: $e');
     }
 
     return UserModel(

@@ -89,6 +89,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User>> checkAuthStatus() async {
     String? token;
+
+    // 1. Read the token from secure storage
     try {
       token = await secureStorage.read(key: 'jwt_token');
       debugPrint(
@@ -96,89 +98,42 @@ class AuthRepositoryImpl implements AuthRepository {
       );
     } catch (e) {
       debugPrint('CheckAuthStatus: Exception while reading secure storage: $e');
-      return Left(ServerFailure('Oturum okunamadı: ${e.toString()}'));
+      return Left(CacheFailure('Yerel Depolama Hatası: ${e.toString()}'));
     }
 
-    if (token == null) {
-      return Left(ServerFailure('Oturum bulunamadı.'));
+    // If there is no token, return a AuthFailure indicating that the user is not authenticated
+    if (token == null || token.isEmpty) {
+      debugPrint('CheckAuthStatus: No token found in secure storage.');
+      return Left(AuthFailure('Oturum bulunamadı.'));
     }
 
-    bool isExpired = true;
+    // 2. Token exists, check if it is expired
     try {
-      isExpired = JwtDecoder.isExpired(token);
+      if (JwtDecoder.isExpired(token)) {
+        debugPrint('CheckAuthStatus: Token is expired. Deleting...');
+        await _safeDeleteToken();
+        return Left(AuthFailure('Oturum süresi doldu.'));
+      }
     } catch (e) {
       debugPrint('CheckAuthStatus: Exception during expiry check: $e');
-      try {
-        await secureStorage.delete(key: 'jwt_token');
-      } catch (_) {}
-      return Left(ServerFailure('Geçersiz token formatı.'));
+      await _safeDeleteToken();
+      return Left(AuthFailure('Geçersiz token formatı.'));
     }
 
-    if (isExpired) {
-      debugPrint('CheckAuthStatus: Token is expired. Deleting...');
-      try {
-        await secureStorage.delete(key: 'jwt_token');
-      } catch (_) {}
-      return Left(ServerFailure('Oturum süresi doldu.'));
-    }
-
+    // 3. Payload decoding and mapping
     try {
+      const roleClaimKey =
+          'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
       final payload = JwtDecoder.decode(token);
-      debugPrint('CheckAuthStatus: Decoded payload: $payload');
-      final id =
-          payload['sub'] ??
-          payload['nameid'] ??
-          payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ??
-          '';
-      final email =
-          payload['email'] ??
-          payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ??
-          '';
-      final roleRaw =
-          payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ??
-          payload['role'] ??
-          'patient';
-      final fullName =
-          payload['FullName'] ??
-          payload['fullName'] ??
-          payload['unique_name'] ??
-          '';
-
-      DateTime createdAt = DateTime.now();
-      if (payload.containsKey('iat')) {
-        final iat = payload['iat'];
-        if (iat is int) {
-          createdAt = DateTime.fromMillisecondsSinceEpoch(iat * 1000);
-        }
-      }
-
-      String mappedRole = 'patient';
-      final roleStr = roleRaw.toString().toLowerCase();
-      if (roleStr == 'patient' || roleStr == '0') {
-        mappedRole = 'patient';
-      } else if (roleStr == 'caregiver' ||
-          roleStr == 'follower' ||
-          roleStr == '1') {
-        mappedRole = 'caregiver';
-      } else if (roleStr == 'admin' || roleStr == '2') {
-        mappedRole = 'admin';
-      } else {
-        mappedRole = roleStr;
-      }
 
       final user = UserModel(
-        id: id.toString(),
-        email: email.toString(),
-        role: mappedRole,
-        fullName: fullName.toString(),
-        phone:
-            payload['phone'] ??
-            payload['phoneNumber'] ??
-            payload['phone_number'],
-        avatarUrl: payload['avatarUrl'] ?? payload['avatar_url'],
-        fcmToken: payload['fcmToken'] ?? payload['fcm_token'],
+        id: payload['sub'] ?? '',
+        email: payload['email'] ?? '',
+        fullName: payload['FullName'] ?? '',
+        role: (payload[roleClaimKey] ?? 'Patient').toString().toLowerCase(),
         isActive: true,
-        createdAt: createdAt,
+        createdAt: DateTime.now(),
       );
 
       return Right(user);
@@ -186,20 +141,26 @@ class AuthRepositoryImpl implements AuthRepository {
       debugPrint(
         'CheckAuthStatus: Exception during token payload decoding: $e',
       );
-      try {
-        await secureStorage.delete(key: 'jwt_token');
-      } catch (_) {}
-      return Left(ServerFailure('Oturum çözümlenemedi.'));
+      await _safeDeleteToken();
+      return Left(AuthFailure('Oturum verisi çözümlenemedi.'));
     }
   }
 
   @override
   Future<Either<Failure, void>> logout() async {
     try {
-      await secureStorage.delete(key: 'jwt_token');
+      await _safeDeleteToken();
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure('Çıkış yapılamadı: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _safeDeleteToken() async {
+    try {
+      await secureStorage.delete(key: 'jwt_token');
+    } catch (e) {
+      debugPrint('Error deleting token: $e');
     }
   }
 }
