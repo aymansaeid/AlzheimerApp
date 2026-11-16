@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:mobile/features/medication/domain/entities/medicine.dart';
 
 abstract class NotificationRepository {
   Future<bool> requestPermission();
@@ -12,4 +13,9 @@ abstract class NotificationRepository {
     required String body,
     String? payload,
   });
+  Future<bool> checkPermissionStatus();
+  Future<bool> isPermissionPermanentlyDenied(); // Kalıcı red kontrolü için
+  Future<bool> openNotificationSettings();
+  Future<void> syncMedicationReminders(List<Medicine> medications);
+  Future<void> cancelMedicationReminders(String medicineId);
 }
