@@ -89,18 +89,6 @@ import '../../features/medication/domain/usecases/update_medicine_usecase.dart'
     as _i310;
 import '../../features/medication/presentation/bloc/medicine_bloc.dart'
     as _i1015;
-import '../../features/notifications/data/datasources/notification_local_data_source.dart'
-    as _i481;
-import '../../features/notifications/data/datasources/notification_remote_data_source.dart'
-    as _i757;
-import '../../features/notifications/data/repositories/notification_repository_impl.dart'
-    as _i362;
-import '../../features/notifications/domain/repository/notification_repository.dart'
-    as _i1068;
-import '../../features/notifications/presentation/bloc/notification_permission_cubit.dart'
-    as _i1030;
-import '../../features/notifications/service/notification_service.dart'
-    as _i105;
 import '../../features/memory_content/features/create_audio_post/presentation/cubit/record_audio_cubit.dart'
     as _i784;
 import '../../features/memory_content/features/create_text_post/presentation/cubit/create_post_cubit.dart'
@@ -117,6 +105,18 @@ import '../../features/memory_content/feed/domain/usecases/get_feed_usecase.dart
     as _i59;
 import '../../features/memory_content/feed/presentation/bloc/feed_bloc.dart'
     as _i820;
+import '../../features/notifications/data/datasources/notification_local_data_source.dart'
+    as _i481;
+import '../../features/notifications/data/datasources/notification_remote_data_source.dart'
+    as _i757;
+import '../../features/notifications/data/repositories/notification_repository_impl.dart'
+    as _i362;
+import '../../features/notifications/domain/repository/notification_repository.dart'
+    as _i1068;
+import '../../features/notifications/presentation/bloc/notification_permission_cubit.dart'
+    as _i1030;
+import '../../features/notifications/service/notification_service.dart'
+    as _i105;
 import '../../features/onboarding/data/datasources/follower_remote_data_source.dart'
     as _i237;
 import '../../features/onboarding/data/repositories/follower_repository_impl.dart'
@@ -165,13 +165,14 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
     );
-    gh.lazySingleton<_i757.NotificationRemoteDataSource>(
-      () => _i757.NotificationRemoteDataSourceImpl(),
     gh.lazySingleton<_i501.AudioPlayer>(() => registerModule.audioPlayer);
     gh.lazySingleton<_i183.ImagePicker>(() => registerModule.imagePicker);
     gh.lazySingleton<_i184.ImageCropper>(() => registerModule.imageCropper);
     gh.lazySingleton<_i750.FeedAudioCoordinator>(
       () => _i750.FeedAudioCoordinator(),
+    );
+    gh.lazySingleton<_i757.NotificationRemoteDataSource>(
+      () => _i757.NotificationRemoteDataSourceImpl(),
     );
     gh.lazySingleton<_i197.FeedLocalDataSource>(
       () => _i197.FeedLocalDataSourceImpl(),
@@ -206,13 +207,14 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i640.MedicineLogRemoteDataSource>(
       () => _i640.MedicineLogRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
+    gh.lazySingleton<_i165.PermissionService>(
+      () => _i165.PermissionServiceImpl(),
+    );
     gh.lazySingleton<_i1068.NotificationRepository>(
       () => _i362.NotificationRepositoryImpl(
         gh<_i757.NotificationRemoteDataSource>(),
         gh<_i481.NotificationLocalDataSource>(),
       ),
-    gh.lazySingleton<_i165.PermissionService>(
-      () => _i165.PermissionServiceImpl(),
     );
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
@@ -247,9 +249,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i902.LogLocationUseCase>(
       () => _i902.LogLocationUseCase(gh<_i326.LocationRepository>()),
     );
-    gh.lazySingleton<_i185.MedicineRepository>(
-      () => _i600.MedicineRepositoryImpl(gh<_i964.MedicineRemoteDataSource>()),
-    );
     gh.lazySingleton<_i641.FeedRepository>(
       () => _i202.FeedRepositoryImpl(gh<_i197.FeedLocalDataSource>()),
     );
@@ -264,14 +263,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i184.ImageCropper>(),
       ),
     );
-    gh.lazySingleton<_i670.AddMedicineUseCase>(
-      () => _i670.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
-    );
-    gh.lazySingleton<_i886.DeleteMedicineUseCase>(
-      () => _i886.DeleteMedicineUseCase(gh<_i185.MedicineRepository>()),
-    );
-    gh.lazySingleton<_i310.UpdateMedicineUseCase>(
-      () => _i310.UpdateMedicineUseCase(gh<_i185.MedicineRepository>()),
     gh.lazySingleton<_i185.MedicineRepository>(
       () => _i600.MedicineRepositoryImpl(
         gh<_i964.MedicineRemoteDataSource>(),
@@ -378,12 +369,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i411.CheckHasAdminUseCase>(),
       ),
     );
-    gh.factory<_i410.CreatePostCubit>(
-      () => _i410.CreatePostCubit(
-        gh<_i165.PermissionService>(),
-        gh<_i586.MediaService>(),
-        gh<_i968.AddPostUseCase>(),
-      ),
     gh.lazySingleton<_i670.AddMedicineUseCase>(
       () => _i670.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
     );
@@ -392,6 +377,13 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i310.UpdateMedicineUseCase>(
       () => _i310.UpdateMedicineUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.factory<_i410.CreatePostCubit>(
+      () => _i410.CreatePostCubit(
+        gh<_i165.PermissionService>(),
+        gh<_i586.MediaService>(),
+        gh<_i968.AddPostUseCase>(),
+      ),
     );
     gh.factory<_i490.PatientDashboardBloc>(
       () => _i490.PatientDashboardBloc(

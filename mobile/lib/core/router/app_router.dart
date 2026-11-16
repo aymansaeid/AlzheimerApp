@@ -11,7 +11,6 @@ import '../../features/auth/presentation/pages/splash_screen.dart';
 import '../../features/profile/presentation/pages/profile_screen.dart';
 import '../../features/caregiver/presentation/pages/caregiver_dashboard_screen.dart';
 import '../../features/caregiver/presentation/widgets/caregiver_layout.dart';
-import '../../features/geofence/presentation/pages/geofence_alert_screen.dart';
 import '../../features/patient/presentation/pages/patient_dashboard_screen.dart';
 import '../../features/patient/presentation/widgets/patient_layout.dart';
 import '../../features/care_network/presentation/pages/care_network_screen.dart';
