@@ -11,33 +11,34 @@ import 'core/router/app_router.dart';
 import 'features/notifications/data/datasources/notification_local_data_source.dart';
 import 'features/notifications/service/notification_service.dart';
 import 'features/notifications/presentation/widgets/notification_permission_guard.dart';
+import 'firebase_options.dart';
 
 // Arka planda bildirimleri yakalayan fonksiyon
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   // Arka plandayken gelen safezone alert'leri sistem tarafından otomatik push banner olarak gösterilir
   debugPrint('Arka plan bildirimi: ${message.messageId}');
 }
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
 
-  await Firebase.initializeApp();
+  await dotenv.load(fileName: '.env');
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  FirebaseMessaging.onBackgroundMessage(
+    _firebaseMessagingBackgroundHandler,
+  );
 
-  // Initialize dependency injection
   configureDependencies();
 
-  // Initialize local notification service
   await getIt<NotificationLocalDataSource>().init();
-
-  // Start the notification service and listeners from centralized location
   await getIt<NotificationService>().initialize();
 
-  // Initialize the AuthBloc and check authentication status
   getIt<AuthBloc>().add(AuthCheckRequested());
 
   runApp(const AlzheimerApp());
@@ -56,7 +57,9 @@ class AlzheimerApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         routerConfig: appRouter,
         builder: (context, child) {
-          return NotificationPermissionGuard(child: child ?? const SizedBox.shrink());
+          return NotificationPermissionGuard(
+            child: child ?? const SizedBox.shrink(),
+          );
         },
       ),
     );

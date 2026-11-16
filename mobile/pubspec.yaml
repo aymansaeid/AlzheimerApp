@@ -58,13 +58,13 @@ dependencies:
   timezone: ^0.11.2
   record: ^7.1.2
   just_audio: ^0.10.6
-  audio_waveforms: ^2.0.2
   image_picker: ^1.2.4
   image_cropper: ^13.0.0
   permission_handler: ^13.0.2
   path_provider: ^2.1.6
   audio_session: ^0.2.4
   visibility_detector: ^0.4.0+2
+  firebase_storage: 
 
 dev_dependencies:
   flutter_test:
