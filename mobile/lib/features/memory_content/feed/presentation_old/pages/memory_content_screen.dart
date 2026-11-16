@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/widgets/app_card.dart';
+import '../../../../../core/widgets/app_card.dart';
 
 class MemoryPerson {
   final String name;
@@ -19,13 +19,11 @@ class MemoryPerson {
   });
 }
 
-class MemoryModuleScreen extends StatefulWidget {
+class MemoryContentScreen extends StatefulWidget {
   final List<MemoryPerson> people;
-  final VoidCallback onAddMemory;
 
-  const MemoryModuleScreen({
+  const MemoryContentScreen({
     super.key,
-    required this.onAddMemory,
     this.people = const [
       MemoryPerson(
         name: 'Fatma Hanım',
@@ -47,10 +45,10 @@ class MemoryModuleScreen extends StatefulWidget {
   });
 
   @override
-  State<MemoryModuleScreen> createState() => _MemoryModuleScreenState();
+  State<MemoryContentScreen> createState() => _MemoryContentScreenState();
 }
 
-class _MemoryModuleScreenState extends State<MemoryModuleScreen> {
+class _MemoryContentScreenState extends State<MemoryContentScreen> {
   int _currentIndex = 0;
 
   @override

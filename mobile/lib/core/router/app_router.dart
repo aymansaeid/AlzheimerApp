@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../features/memory_content/features/create_audio_post/presentation/pages/record_audio_screen.dart';
+import '../../features/memory_content/features/create_text_post/presentation/pages/create_post_screen.dart';
+import '../../features/memory_content/feed/presentation/pages/feed_screen.dart';
 import 'go_router_refresh_stream.dart';
 import '../../features/auth/presentation/pages/login_screen.dart';
 import '../../features/auth/presentation/pages/register_screen.dart';
@@ -9,7 +12,6 @@ import '../../features/profile/presentation/pages/profile_screen.dart';
 import '../../features/caregiver/presentation/pages/caregiver_dashboard_screen.dart';
 import '../../features/caregiver/presentation/widgets/caregiver_layout.dart';
 import '../../features/geofence/presentation/pages/geofence_alert_screen.dart';
-import '../../features/memory/presentation/pages/memory_module_screen.dart';
 import '../../features/patient/presentation/pages/patient_dashboard_screen.dart';
 import '../../features/patient/presentation/widgets/patient_layout.dart';
 import '../../features/care_network/presentation/pages/care_network_screen.dart';
@@ -26,7 +28,12 @@ import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/care_network/presentation/bloc/care_network_bloc.dart';
 
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'root',
+);
+
 final appRouter = GoRouter(
+  navigatorKey: _rootNavigatorKey,
   initialLocation: '/splash',
   refreshListenable: GoRouterRefreshStream(getIt<AuthBloc>().stream),
   redirect: (context, state) {
@@ -163,8 +170,7 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/patient/memory',
               name: 'patient_memory',
-              builder: (context, state) =>
-                  MemoryModuleScreen(onAddMemory: () {}),
+              builder: (context, state) => FeedScreen(),
             ),
           ],
         ),
@@ -248,24 +254,50 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // MAP SCREEN
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/caregiver/alerts',
-              name: 'caregiver_alerts',
-              builder: (context, state) => GeofenceAlertScreen(
-                patientName: 'Ahmet Bey',
-                locationAddress: 'Kadıköy',
-                distanceMeters: 50,
-                timeOutside: '5 dk',
-                onDismissAlert: () {},
-                onCallPatient: () {},
-                onOpenLiveMap: () {},
-              ),
+              path: '/caregiver/memory',
+              name: 'caregiver_memory',
+              builder: (context, state) => FeedScreen(),
+              routes: [
+                // Feed üzerinde açılan Metin/Görsel paylaşım ekranı
+                GoRoute(
+                  path: 'create-post',
+                  name: 'create-post',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const CreatePostScreen(),
+                ),
+                // Feed üzerinde açılan ses kayıt ekranı
+                GoRoute(
+                  path: 'record-audio',
+                  name: 'record-audio',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const RecordAudioScreen(),
+                ),
+              ],
             ),
           ],
         ),
+
+        // MAP SCREEN
+        // StatefulShellBranch(
+        //   routes: [
+        //     GoRoute(
+        //       path: '/caregiver/alerts',
+        //       name: 'caregiver_alerts',
+        //       builder: (context, state) => GeofenceAlertScreen(
+        //         patientName: 'Ahmet Bey',
+        //         locationAddress: 'Kadıköy',
+        //         distanceMeters: 50,
+        //         timeOutside: '5 dk',
+        //         onDismissAlert: () {},
+        //         onCallPatient: () {},
+        //         onOpenLiveMap: () {},
+        //       ),
+        //     ),
+        //   ],
+        // ),
         StatefulShellBranch(
           routes: [
             GoRoute(
