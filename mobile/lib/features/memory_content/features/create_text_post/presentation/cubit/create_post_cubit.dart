@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
-import 'package:mobile/features/memory_content/feed/domain/entities/post.dart';
+import 'package:mobile/features/memory_content/features/feed/domain/entities/post.dart';
 
 import '../../../../../../core/services/media_service.dart';
 import '../../../../../../core/services/permission_service.dart';
-import '../../../../feed/domain/usecases/add_post_usecase.dart';
+import '../../../feed/domain/usecases/add_post_usecase.dart';
 import 'create_post_state.dart';
 
 @injectable

@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
 
-import '../../../../../core/errors/failures.dart';
+import '../../../../../../core/errors/failures.dart';
 import '../entities/post.dart';
 
 abstract class FeedRepository {

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../features/memory_content/features/create_audio_post/presentation/pages/record_audio_screen.dart';
 import '../../features/memory_content/features/create_text_post/presentation/pages/create_post_screen.dart';
-import '../../features/memory_content/feed/presentation/pages/feed_screen.dart';
+import '../../features/memory_content/features/feed/presentation/pages/feed_screen.dart';
 import 'go_router_refresh_stream.dart';
 import '../../features/auth/presentation/pages/login_screen.dart';
 import '../../features/auth/presentation/pages/register_screen.dart';

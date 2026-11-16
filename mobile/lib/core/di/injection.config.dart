@@ -11,6 +11,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 
 import 'package:dio/dio.dart' as _i361;
+import 'package:firebase_storage/firebase_storage.dart' as _i457;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:image_cropper/image_cropper.dart' as _i184;
@@ -93,18 +94,22 @@ import '../../features/memory_content/features/create_audio_post/presentation/cu
     as _i784;
 import '../../features/memory_content/features/create_text_post/presentation/cubit/create_post_cubit.dart'
     as _i410;
-import '../../features/memory_content/feed/data/datasources/feed_local_data_source.dart'
-    as _i197;
-import '../../features/memory_content/feed/data/repositories/feed_repository_impl.dart'
-    as _i202;
-import '../../features/memory_content/feed/domain/repositories/feed_repository.dart'
-    as _i641;
-import '../../features/memory_content/feed/domain/usecases/add_post_usecase.dart'
-    as _i968;
-import '../../features/memory_content/feed/domain/usecases/get_feed_usecase.dart'
-    as _i59;
-import '../../features/memory_content/feed/presentation/bloc/feed_bloc.dart'
-    as _i820;
+import '../../features/memory_content/features/feed/data/datasources/feed_local_data_source.dart'
+    as _i171;
+import '../../features/memory_content/features/feed/data/repositories/feed_repository_impl.dart'
+    as _i177;
+import '../../features/memory_content/features/feed/data/repositories/firebase_storage_repository_impl.dart'
+    as _i331;
+import '../../features/memory_content/features/feed/domain/repositories/feed_repository.dart'
+    as _i315;
+import '../../features/memory_content/features/feed/domain/repositories/file_storage_repository.dart'
+    as _i314;
+import '../../features/memory_content/features/feed/domain/usecases/add_post_usecase.dart'
+    as _i399;
+import '../../features/memory_content/features/feed/domain/usecases/get_feed_usecase.dart'
+    as _i320;
+import '../../features/memory_content/features/feed/presentation/bloc/feed_bloc.dart'
+    as _i86;
 import '../../features/notifications/data/datasources/notification_local_data_source.dart'
     as _i481;
 import '../../features/notifications/data/datasources/notification_remote_data_source.dart'
@@ -165,6 +170,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
     );
+    gh.lazySingleton<_i457.FirebaseStorage>(
+      () => registerModule.firebaseStorage,
+    );
     gh.lazySingleton<_i501.AudioPlayer>(() => registerModule.audioPlayer);
     gh.lazySingleton<_i183.ImagePicker>(() => registerModule.imagePicker);
     gh.lazySingleton<_i184.ImageCropper>(() => registerModule.imageCropper);
@@ -173,9 +181,6 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i757.NotificationRemoteDataSource>(
       () => _i757.NotificationRemoteDataSourceImpl(),
-    );
-    gh.lazySingleton<_i197.FeedLocalDataSource>(
-      () => _i197.FeedLocalDataSourceImpl(),
     );
     gh.lazySingleton<_i368.DashboardRemoteDataSource>(
       () => _i368.DashboardRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -188,6 +193,9 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i60.LocationRemoteDataSource>(
       () => _i60.LocationRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i171.FeedLocalDataSource>(
+      () => _i171.FeedLocalDataSourceImpl(),
     );
     gh.lazySingleton<_i964.MedicineRemoteDataSource>(
       () => _i964.MedicineRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -209,6 +217,9 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i165.PermissionService>(
       () => _i165.PermissionServiceImpl(),
+    );
+    gh.lazySingleton<_i315.FeedRepository>(
+      () => _i177.FeedRepositoryImpl(gh<_i171.FeedLocalDataSource>()),
     );
     gh.lazySingleton<_i1068.NotificationRepository>(
       () => _i362.NotificationRepositoryImpl(
@@ -235,6 +246,9 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i757.NotificationRemoteDataSource>(),
       ),
     );
+    gh.lazySingleton<_i314.FileStorageRepository>(
+      () => _i331.FirebaseStorageRepositoryImpl(gh<_i457.FirebaseStorage>()),
+    );
     gh.lazySingleton<_i1051.GetDashboardSummary>(
       () => _i1051.GetDashboardSummary(gh<_i445.DashboardRepository>()),
     );
@@ -249,8 +263,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i902.LogLocationUseCase>(
       () => _i902.LogLocationUseCase(gh<_i326.LocationRepository>()),
     );
-    gh.lazySingleton<_i641.FeedRepository>(
-      () => _i202.FeedRepositoryImpl(gh<_i197.FeedLocalDataSource>()),
+    gh.lazySingleton<_i320.GetFeedUseCase>(
+      () => _i320.GetFeedUseCase(gh<_i315.FeedRepository>()),
     );
     gh.lazySingleton<_i1048.MedicineLogRepository>(
       () => _i370.MedicineLogRepositoryImpl(
@@ -262,6 +276,9 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i183.ImagePicker>(),
         gh<_i184.ImageCropper>(),
       ),
+    );
+    gh.lazySingleton<_i399.AddPostUseCase>(
+      () => _i399.AddPostUseCase(gh<_i315.FeedRepository>()),
     );
     gh.lazySingleton<_i185.MedicineRepository>(
       () => _i600.MedicineRepositoryImpl(
@@ -289,6 +306,13 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i754.TransferAdminUseCase>(
       () => _i754.TransferAdminUseCase(gh<_i83.CareNetworkRepository>()),
+    );
+    gh.factory<_i410.CreatePostCubit>(
+      () => _i410.CreatePostCubit(
+        gh<_i165.PermissionService>(),
+        gh<_i586.MediaService>(),
+        gh<_i399.AddPostUseCase>(),
+      ),
     );
     gh.lazySingleton<_i105.NotificationService>(
       () => _i105.NotificationService(
@@ -353,11 +377,16 @@ extension GetItInjectableX on _i174.GetIt {
       () =>
           _i669.MarkMedicineAsTakenUseCase(gh<_i1048.MedicineLogRepository>()),
     );
-    gh.lazySingleton<_i968.AddPostUseCase>(
-      () => _i968.AddPostUseCase(gh<_i641.FeedRepository>()),
+    gh.factory<_i86.FeedBloc>(
+      () =>
+          _i86.FeedBloc(gh<_i320.GetFeedUseCase>(), gh<_i399.AddPostUseCase>()),
     );
-    gh.lazySingleton<_i59.GetFeedUseCase>(
-      () => _i59.GetFeedUseCase(gh<_i641.FeedRepository>()),
+    gh.factory<_i784.RecordAudioCubit>(
+      () => _i784.RecordAudioCubit(
+        gh<_i492.AudioRecordService>(),
+        gh<_i165.PermissionService>(),
+        gh<_i399.AddPostUseCase>(),
+      ),
     );
     gh.lazySingleton<_i797.AuthBloc>(
       () => _i797.AuthBloc(
@@ -377,13 +406,6 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i310.UpdateMedicineUseCase>(
       () => _i310.UpdateMedicineUseCase(gh<_i185.MedicineRepository>()),
-    );
-    gh.factory<_i410.CreatePostCubit>(
-      () => _i410.CreatePostCubit(
-        gh<_i165.PermissionService>(),
-        gh<_i586.MediaService>(),
-        gh<_i968.AddPostUseCase>(),
-      ),
     );
     gh.factory<_i490.PatientDashboardBloc>(
       () => _i490.PatientDashboardBloc(
@@ -408,13 +430,6 @@ extension GetItInjectableX on _i174.GetIt {
         medicineLogRepository: gh<_i1048.MedicineLogRepository>(),
       ),
     );
-    gh.factory<_i784.RecordAudioCubit>(
-      () => _i784.RecordAudioCubit(
-        gh<_i492.AudioRecordService>(),
-        gh<_i165.PermissionService>(),
-        gh<_i968.AddPostUseCase>(),
-      ),
-    );
     gh.factory<_i100.CareNetworkBloc>(
       () => _i100.CareNetworkBloc(
         getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
@@ -424,10 +439,6 @@ extension GetItInjectableX on _i174.GetIt {
         acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
         transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
       ),
-    );
-    gh.factory<_i820.FeedBloc>(
-      () =>
-          _i820.FeedBloc(gh<_i59.GetFeedUseCase>(), gh<_i968.AddPostUseCase>()),
     );
     return this;
   }

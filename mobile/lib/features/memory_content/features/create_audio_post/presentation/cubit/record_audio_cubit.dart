@@ -6,8 +6,8 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../../../../../core/services/audio_record_service.dart';
 import '../../../../../../core/services/permission_service.dart';
-import '../../../../feed/domain/entities/post.dart';
-import '../../../../feed/domain/usecases/add_post_usecase.dart';
+import '../../../feed/domain/entities/post.dart';
+import '../../../feed/domain/usecases/add_post_usecase.dart';
 import 'record_audio_state.dart';
 
 @injectable

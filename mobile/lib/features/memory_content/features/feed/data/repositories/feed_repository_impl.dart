@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../../../../core/errors/failures.dart';
+import '../../../../../../core/errors/failures.dart';
 import '../../domain/entities/post.dart';
 import '../../domain/repositories/feed_repository.dart';
 import '../datasources/feed_local_data_source.dart';

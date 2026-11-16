@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-import '../../../../../core/di/injection.dart';
-import '../../../../../core/services/feed_audio_coordinator.dart';
+import '../../../../../../core/di/injection.dart';
+import '../../../../../../core/services/feed_audio_coordinator.dart';
 import '../../domain/entities/post.dart';
 import 'post_header_widget.dart';
 
