@@ -13,7 +13,10 @@
 import 'package:dio/dio.dart' as _i361;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
 import 'package:get_it/get_it.dart' as _i174;
+import 'package:image_cropper/image_cropper.dart' as _i184;
+import 'package:image_picker/image_picker.dart' as _i183;
 import 'package:injectable/injectable.dart' as _i526;
+import 'package:just_audio/just_audio.dart' as _i501;
 
 import '../../features/auth/data/datasources/auth_remote_data_source.dart'
     as _i107;
@@ -98,6 +101,22 @@ import '../../features/notifications/presentation/bloc/notification_permission_c
     as _i1030;
 import '../../features/notifications/service/notification_service.dart'
     as _i105;
+import '../../features/memory_content/features/create_audio_post/presentation/cubit/record_audio_cubit.dart'
+    as _i784;
+import '../../features/memory_content/features/create_text_post/presentation/cubit/create_post_cubit.dart'
+    as _i410;
+import '../../features/memory_content/feed/data/datasources/feed_local_data_source.dart'
+    as _i197;
+import '../../features/memory_content/feed/data/repositories/feed_repository_impl.dart'
+    as _i202;
+import '../../features/memory_content/feed/domain/repositories/feed_repository.dart'
+    as _i641;
+import '../../features/memory_content/feed/domain/usecases/add_post_usecase.dart'
+    as _i968;
+import '../../features/memory_content/feed/domain/usecases/get_feed_usecase.dart'
+    as _i59;
+import '../../features/memory_content/feed/presentation/bloc/feed_bloc.dart'
+    as _i820;
 import '../../features/onboarding/data/datasources/follower_remote_data_source.dart'
     as _i237;
 import '../../features/onboarding/data/repositories/follower_repository_impl.dart'
@@ -127,6 +146,10 @@ import '../../features/patient/presentation/bloc/patient_dashboard_bloc.dart'
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
+import '../services/audio_record_service.dart' as _i492;
+import '../services/feed_audio_coordinator.dart' as _i750;
+import '../services/media_service.dart' as _i586;
+import '../services/permission_service.dart' as _i165;
 import 'register_module.dart' as _i291;
 
 extension GetItInjectableX on _i174.GetIt {
@@ -144,6 +167,14 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i757.NotificationRemoteDataSource>(
       () => _i757.NotificationRemoteDataSourceImpl(),
+    gh.lazySingleton<_i501.AudioPlayer>(() => registerModule.audioPlayer);
+    gh.lazySingleton<_i183.ImagePicker>(() => registerModule.imagePicker);
+    gh.lazySingleton<_i184.ImageCropper>(() => registerModule.imageCropper);
+    gh.lazySingleton<_i750.FeedAudioCoordinator>(
+      () => _i750.FeedAudioCoordinator(),
+    );
+    gh.lazySingleton<_i197.FeedLocalDataSource>(
+      () => _i197.FeedLocalDataSourceImpl(),
     );
     gh.lazySingleton<_i368.DashboardRemoteDataSource>(
       () => _i368.DashboardRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -159,6 +190,9 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i964.MedicineRemoteDataSource>(
       () => _i964.MedicineRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i492.AudioRecordService>(
+      () => _i492.AudioRecordServiceImpl(),
     );
     gh.lazySingleton<_i485.CareNetworkRemoteDataSource>(
       () => _i485.CareNetworkRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -177,6 +211,8 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i757.NotificationRemoteDataSource>(),
         gh<_i481.NotificationLocalDataSource>(),
       ),
+    gh.lazySingleton<_i165.PermissionService>(
+      () => _i165.PermissionServiceImpl(),
     );
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
@@ -211,11 +247,31 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i902.LogLocationUseCase>(
       () => _i902.LogLocationUseCase(gh<_i326.LocationRepository>()),
     );
+    gh.lazySingleton<_i185.MedicineRepository>(
+      () => _i600.MedicineRepositoryImpl(gh<_i964.MedicineRemoteDataSource>()),
+    );
+    gh.lazySingleton<_i641.FeedRepository>(
+      () => _i202.FeedRepositoryImpl(gh<_i197.FeedLocalDataSource>()),
+    );
     gh.lazySingleton<_i1048.MedicineLogRepository>(
       () => _i370.MedicineLogRepositoryImpl(
         gh<_i640.MedicineLogRemoteDataSource>(),
       ),
     );
+    gh.lazySingleton<_i586.MediaService>(
+      () => _i586.MediaServiceImpl(
+        gh<_i183.ImagePicker>(),
+        gh<_i184.ImageCropper>(),
+      ),
+    );
+    gh.lazySingleton<_i670.AddMedicineUseCase>(
+      () => _i670.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.lazySingleton<_i886.DeleteMedicineUseCase>(
+      () => _i886.DeleteMedicineUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.lazySingleton<_i310.UpdateMedicineUseCase>(
+      () => _i310.UpdateMedicineUseCase(gh<_i185.MedicineRepository>()),
     gh.lazySingleton<_i185.MedicineRepository>(
       () => _i600.MedicineRepositoryImpl(
         gh<_i964.MedicineRemoteDataSource>(),
@@ -306,6 +362,12 @@ extension GetItInjectableX on _i174.GetIt {
       () =>
           _i669.MarkMedicineAsTakenUseCase(gh<_i1048.MedicineLogRepository>()),
     );
+    gh.lazySingleton<_i968.AddPostUseCase>(
+      () => _i968.AddPostUseCase(gh<_i641.FeedRepository>()),
+    );
+    gh.lazySingleton<_i59.GetFeedUseCase>(
+      () => _i59.GetFeedUseCase(gh<_i641.FeedRepository>()),
+    );
     gh.lazySingleton<_i797.AuthBloc>(
       () => _i797.AuthBloc(
         gh<_i188.LoginUseCase>(),
@@ -316,6 +378,12 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i411.CheckHasAdminUseCase>(),
       ),
     );
+    gh.factory<_i410.CreatePostCubit>(
+      () => _i410.CreatePostCubit(
+        gh<_i165.PermissionService>(),
+        gh<_i586.MediaService>(),
+        gh<_i968.AddPostUseCase>(),
+      ),
     gh.lazySingleton<_i670.AddMedicineUseCase>(
       () => _i670.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
     );
@@ -348,6 +416,13 @@ extension GetItInjectableX on _i174.GetIt {
         medicineLogRepository: gh<_i1048.MedicineLogRepository>(),
       ),
     );
+    gh.factory<_i784.RecordAudioCubit>(
+      () => _i784.RecordAudioCubit(
+        gh<_i492.AudioRecordService>(),
+        gh<_i165.PermissionService>(),
+        gh<_i968.AddPostUseCase>(),
+      ),
+    );
     gh.factory<_i100.CareNetworkBloc>(
       () => _i100.CareNetworkBloc(
         getCareTeamUseCase: gh<_i240.GetCareTeamUseCase>(),
@@ -357,6 +432,10 @@ extension GetItInjectableX on _i174.GetIt {
         acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
         transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
       ),
+    );
+    gh.factory<_i820.FeedBloc>(
+      () =>
+          _i820.FeedBloc(gh<_i59.GetFeedUseCase>(), gh<_i968.AddPostUseCase>()),
     );
     return this;
   }

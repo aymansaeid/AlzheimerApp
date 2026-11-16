@@ -6,6 +6,20 @@
  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+<!-- Memory Content icin gerekli izinler -->
+<!-- Mikrofon izni (Ses kaydı için) -->
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+<!-- Galeri erişimi (Android 13 öncesi) -->
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+<!-- Galeri erişimi (Android 13 ve sonrası) -->
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+<!-- (Opsiyonel) Eğer eski Android sürümlerinde dosyayı hariciye yazacaksanız -->
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+
  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
  <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -25,6 +39,10 @@
             </intent-filter>
         </receiver>
         <activity
+
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"

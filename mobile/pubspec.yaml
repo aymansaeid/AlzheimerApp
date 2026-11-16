@@ -56,7 +56,15 @@ dependencies:
   cloud_firestore: ^6.6.0
   flutter_background_service: ^5.1.0
   timezone: ^0.11.2
-  permission_handler: ^11.4.0
+  record: ^7.1.2
+  just_audio: ^0.10.6
+  audio_waveforms: ^2.0.2
+  image_picker: ^1.2.4
+  image_cropper: ^13.0.0
+  permission_handler: ^13.0.2
+  path_provider: ^2.1.6
+  audio_session: ^0.2.4
+  visibility_detector: ^0.4.0+2
 
 dev_dependencies:
   flutter_test:
