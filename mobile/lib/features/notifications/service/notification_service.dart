@@ -65,14 +65,32 @@ class NotificationService {
         payload: jsonEncode(message.data),
       );
 
-      // İleride harita/takip ekranındaki SafeZoneBloc'a event fırlatılabilir:
+      // Harita/takip ekranındaki SafeZoneBloc'a event fırlatılabilir:
       // getIt<SafeZoneBloc>().add(SafeZoneBreachedEvent(message.data));
     }
-    // 2. Senaryo: Admin Yetkisi Devri (ROLE_UPDATED)
+    // 2. Senaryo: İlaç Alma Gecikmesi Uyarısı (MEDICATION_MISSED)
+    else if (type == 'MEDICATION_MISSED' || type == 'MEDICATION_DELAYED') {
+      final patientName = message.data['patientName'] ?? 'Hasta';
+      final medicineName = message.data['medicineName'] ?? 'İlacını';
+      final scheduledTime = message.data['scheduledTime'] ?? '';
+
+      final timeText = scheduledTime.isNotEmpty ? ' ($scheduledTime)' : '';
+
+      await _repository.showLocalNotification(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: '💊 İLAÇ GECİKMESİ UYARISI!',
+        body: '$patientName saat$timeText $medicineName dozunu henüz almadı!',
+        payload: jsonEncode(message.data),
+      );
+
+      // Varsa hasta takip / ilaç takip Bloc'una event atılabilir:
+      // getIt<MedicationBloc>().add(MedicationMissedEvent(message.data));
+    }
+    // 3. Senaryo: Admin Yetkisi Devri (ROLE_UPDATED)
     else if (type == 'ROLE_UPDATED' || type == 'ADMIN_GRANTED') {
       // getIt<AuthBloc>().add(const AuthEvent.refreshRole());
     }
-    // Standart bir bildirim başlığı varsa ve yukarıdakilere girmediyse:
+    // Standart bildirim (eğer özel type eşleşmediyse ve notification alanı doluysa)
     else if (message.notification != null) {
       await _repository.showLocalNotification(
         id: message.hashCode,
@@ -90,8 +108,14 @@ class NotificationService {
 
     if (type == 'SAFEZONE_EXIT') {
       final patientId = message.data['patientId'];
-      // go_router ile doğrudan haritada hastanın konumuna yönlendir:
+      debugPrint('SAFEZONE_EXIT for patient: $patientId');
+      // Harita takip rotasına yönlendir
       // getIt<AppRouter>().push('/patient-tracking/$patientId');
+    } else if (type == 'MEDICATION_MISSED' || type == 'MEDICATION_DELAYED') {
+      final patientId = message.data['patientId'];
+      debugPrint('MEDICATION alert for patient: $patientId');
+      // Hasta detayındaki ilaç takip sekmesine yönlendir
+      // getIt<AppRouter>().push('/patient-medications/$patientId');
     }
   }
 }

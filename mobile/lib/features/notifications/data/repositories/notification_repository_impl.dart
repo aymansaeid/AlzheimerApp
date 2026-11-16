@@ -1,8 +1,10 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/features/medication/domain/entities/medicine.dart';
 import '../../domain/repository/notification_repository.dart';
 import '../datasources/notification_local_data_source.dart';
 import '../datasources/notification_remote_data_source.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
 @LazySingleton(as: NotificationRepository)
 class NotificationRepositoryImpl implements NotificationRepository {
@@ -15,7 +17,15 @@ class NotificationRepositoryImpl implements NotificationRepository {
   );
 
   @override
-  Future<bool> requestPermission() => _remoteDataSource.requestPermission();
+  Future<bool> requestPermission() async {
+    // Hem sistem iznini hem FCM iznini ister
+    final status = await ph.Permission.notification.request();
+    if (status.isGranted) {
+      await _remoteDataSource.requestPermission();
+      return true;
+    }
+    return false;
+  }
 
   @override
   Future<String?> getDeviceToken() => _remoteDataSource.getToken();
@@ -44,5 +54,32 @@ class NotificationRepositoryImpl implements NotificationRepository {
       body: body,
       payload: payload,
     );
+  }
+
+  @override
+  Future<bool> checkPermissionStatus() async {
+    final status = await ph.Permission.notification.status;
+    return status.isGranted;
+  }
+
+  @override
+  Future<bool> isPermissionPermanentlyDenied() async {
+    final status = await ph.Permission.notification.status;
+    return status.isPermanentlyDenied || status.isRestricted;
+  }
+
+  @override
+  Future<bool> openNotificationSettings() async {
+    return await ph.openAppSettings();
+  }
+
+  @override
+  Future<void> syncMedicationReminders(List<Medicine> medications) {
+    return _localDataSource.syncMedicationReminders(medications);
+  }
+
+  @override
+  Future<void> cancelMedicationReminders(String medicineId) {
+    return _localDataSource.cancelMedicationReminders(medicineId);
   }
 }

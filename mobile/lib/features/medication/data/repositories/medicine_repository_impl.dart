@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../notifications/domain/repository/notification_repository.dart';
 import '../../domain/entities/medicine.dart';
 import '../../domain/repositories/medicine_repository.dart';
 import '../datasources/medicine_remote_data_source.dart';
@@ -11,8 +12,12 @@ import '../models/medicine_model.dart';
 @LazySingleton(as: MedicineRepository)
 class MedicineRepositoryImpl implements MedicineRepository {
   final MedicineRemoteDataSource remoteDataSource;
+  final NotificationRepository notificationRepository;
 
-  MedicineRepositoryImpl(this.remoteDataSource);
+  MedicineRepositoryImpl(
+    this.remoteDataSource,
+    this.notificationRepository,
+  );
 
   @override
   Future<Either<Failure, Medicine>> addMedicine(Medicine medicine) async {
@@ -33,6 +38,8 @@ class MedicineRepositoryImpl implements MedicineRepository {
   ) async {
     try {
       final medicines = await remoteDataSource.getMedicines(patientId);
+      // UI akışını bloklamadan asenkron olarak yerel bildirimleri senkronize et
+      unawaited(notificationRepository.syncMedicationReminders(medicines));
       return Right(medicines);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -60,6 +67,8 @@ class MedicineRepositoryImpl implements MedicineRepository {
   Future<Either<Failure, void>> deleteMedicine(String id) async {
     try {
       await remoteDataSource.deleteMedicine(id);
+      // Silinen ilacın yerel bildirimini de temizle
+      unawaited(notificationRepository.cancelMedicationReminders(id));
       return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

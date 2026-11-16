@@ -10,6 +10,7 @@ import 'core/di/injection.dart';
 import 'core/router/app_router.dart';
 import 'features/notifications/data/datasources/notification_local_data_source.dart';
 import 'features/notifications/service/notification_service.dart';
+import 'features/notifications/presentation/widgets/notification_permission_guard.dart';
 
 // Arka planda bildirimleri yakalayan fonksiyon
 @pragma('vm:entry-point')
@@ -54,6 +55,9 @@ class AlzheimerApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         routerConfig: appRouter,
+        builder: (context, child) {
+          return NotificationPermissionGuard(child: child ?? const SizedBox.shrink());
+        },
       ),
     );
   }
