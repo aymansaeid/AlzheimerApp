@@ -19,6 +19,7 @@ import '../../features/medication/presentation/pages/medicine_list_screen.dart';
 import '../../features/medication/presentation/pages/medicine_detail_screen.dart';
 import '../../features/medication/presentation/pages/medicine_form_screen.dart';
 import '../../features/medication/presentation/bloc/medicine_bloc.dart';
+import '../../features/memory_content/features/feed/presentation/bloc/memory_bloc.dart';
 import '../../features/caregiver/presentation/bloc/dashboard_bloc.dart';
 import '../../features/onboarding/presentation/pages/patient_setup_screen.dart';
 import '../../features/onboarding/presentation/pages/caregiver_setup_screen.dart';
@@ -109,7 +110,10 @@ final appRouter = GoRouter(
     // Patient StatefulShellRoute
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MultiBlocProvider(
-        providers: [BlocProvider(create: (_) => getIt<MedicineBloc>())],
+        providers: [
+          BlocProvider(create: (_) => getIt<MedicineBloc>()),
+          BlocProvider(create: (_) => getIt<MemoryBloc>()),
+        ],
         child: PatientLayout(navigationShell: navigationShell),
       ),
       branches: [
@@ -193,6 +197,10 @@ final appRouter = GoRouter(
               // key is needed to prevent bloc from being recreated when switching between branches
               key: ValueKey('medicineBloc'),
               create: (_) => getIt<MedicineBloc>(),
+            ),
+            BlocProvider(
+              key: ValueKey('memoryBloc'),
+              create: (_) => getIt<MemoryBloc>(),
             ),
             BlocProvider(
               create: (_) =>

@@ -18,8 +18,10 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
     this._createMemoryUseCase,
   ) : super(MemoryInitial()) {
     on<LoadMemories>(_onLoadMemories);
+    on<RefreshMemories>(_onRefreshMemories);
     on<DeleteMemory>(_onDeleteMemory);
     on<CreateMemory>(_onCreateMemory);
+    on<AddMemoryContentEvent>(_onAddMemoryDirectly);
   }
 
   Future<void> _onLoadMemories(
@@ -32,12 +34,58 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
       emit(
         MemoryLoaded(
           memories: memories,
+          patientId: event.patientId,
           currentUserId: event.currentUserId,
           isPrimaryAdmin: event.isPrimaryAdmin,
         ),
       );
     } catch (e) {
       emit(MemoryError(e.toString()));
+    }
+  }
+
+  Future<void> _onRefreshMemories(
+    RefreshMemories event,
+    Emitter<MemoryState> emit,
+  ) async {
+    String? targetPatientId = event.patientId;
+    String? currentUserId = event.currentUserId;
+    bool? isPrimaryAdmin = event.isPrimaryAdmin;
+
+    if (state is MemoryLoaded) {
+      final currentState = state as MemoryLoaded;
+      targetPatientId ??= currentState.patientId;
+      currentUserId ??= currentState.currentUserId;
+      isPrimaryAdmin ??= currentState.isPrimaryAdmin;
+    }
+
+    if (targetPatientId == null || targetPatientId.isEmpty) {
+      return;
+    }
+
+    try {
+      final memories = await _getMemoriesUseCase(targetPatientId);
+      emit(
+        MemoryLoaded(
+          memories: memories,
+          patientId: targetPatientId,
+          currentUserId: currentUserId ?? '',
+          isPrimaryAdmin: isPrimaryAdmin ?? false,
+        ),
+      );
+    } catch (e) {
+      emit(MemoryError(e.toString()));
+    }
+  }
+
+  void _onAddMemoryDirectly(
+    AddMemoryContentEvent event,
+    Emitter<MemoryState> emit,
+  ) {
+    if (state is MemoryLoaded) {
+      final currentState = state as MemoryLoaded;
+      final updatedMemories = [event.memory, ...currentState.memories];
+      emit(currentState.copyWith(memories: updatedMemories));
     }
   }
 
@@ -56,14 +104,18 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
             .where((m) => m.id != event.memoryId)
             .toList();
         emit(
-          currentState.copyWith(
+          MemoryOperationSuccess(
             memories: updatedMemories,
+            patientId: currentState.patientId,
+            currentUserId: currentState.currentUserId,
+            isPrimaryAdmin: currentState.isPrimaryAdmin,
             isActionInProgress: false,
+            message: 'Anı başarıyla silindi.',
           ),
         );
       } catch (e) {
         emit(currentState.copyWith(isActionInProgress: false));
-        // İstersen burada ayrı bir Event veya Error fırlatabilirsin
+        emit(MemoryError('Anı silinirken bir hata oluştu: ${e.toString()}'));
       }
     }
   }
@@ -73,31 +125,40 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
     Emitter<MemoryState> emit,
   ) async {
     final currentState = state;
+    final currentUserId = event.uploaderId ??
+        (currentState is MemoryLoaded ? currentState.currentUserId : '');
     if (currentState is MemoryLoaded) {
       emit(currentState.copyWith(isActionInProgress: true));
-      try {
-        final newMemory = await _createMemoryUseCase(
-          file: event.file,
-          patientId: event.patientId,
-          contentType: event.contentType,
-          title: event.title,
-          description: event.description,
-          relationship: event.relationship,
-          uploaderId:
-              currentState.currentUserId, // Burada uploaderId'yi geçiyoruz
-        );
+    }
+    try {
+      final newMemory = await _createMemoryUseCase(
+        file: event.file,
+        patientId: event.patientId,
+        contentType: event.contentType,
+        title: event.title,
+        description: event.description,
+        relationship: event.relationship,
+        uploaderId: currentUserId,
+      );
 
-        // Yeni anıyı listenin en başına ekle (Pull-to-refresh yapmadan anında görünsün)
+      if (currentState is MemoryLoaded) {
         final updatedMemories = [newMemory, ...currentState.memories];
         emit(
-          currentState.copyWith(
+          MemoryOperationSuccess(
             memories: updatedMemories,
+            patientId: currentState.patientId,
+            currentUserId: currentState.currentUserId,
+            isPrimaryAdmin: currentState.isPrimaryAdmin,
             isActionInProgress: false,
+            message: 'Anı başarıyla paylaşıldı.',
           ),
         );
-      } catch (e) {
+      }
+    } catch (e) {
+      if (currentState is MemoryLoaded) {
         emit(currentState.copyWith(isActionInProgress: false));
       }
+      emit(MemoryError('Anı kaydedilemedi: ${e.toString()}'));
     }
   }
 }

@@ -25,6 +25,21 @@ class LoadMemories extends MemoryEvent {
   List<Object?> get props => [patientId, currentUserId, isPrimaryAdmin];
 }
 
+class RefreshMemories extends MemoryEvent {
+  final String? patientId;
+  final String? currentUserId;
+  final bool? isPrimaryAdmin;
+
+  const RefreshMemories({
+    this.patientId,
+    this.currentUserId,
+    this.isPrimaryAdmin,
+  });
+
+  @override
+  List<Object?> get props => [patientId, currentUserId, isPrimaryAdmin];
+}
+
 class DeleteMemory extends MemoryEvent {
   final String memoryId;
 
@@ -34,8 +49,6 @@ class DeleteMemory extends MemoryEvent {
   List<Object?> get props => [memoryId];
 }
 
-// Not: CreateMemory için ayrı bir BLoC (CreatePostBloc) da yapabilirsin, 
-// ancak şimdilik kolaylık olması adına buraya ekliyoruz.
 class CreateMemory extends MemoryEvent {
   final File file;
   final String patientId;
@@ -43,6 +56,7 @@ class CreateMemory extends MemoryEvent {
   final String title;
   final String description;
   final String relationship;
+  final String? uploaderId;
 
   const CreateMemory({
     required this.file,
@@ -51,5 +65,26 @@ class CreateMemory extends MemoryEvent {
     required this.title,
     required this.description,
     required this.relationship,
+    this.uploaderId,
   });
+
+  @override
+  List<Object?> get props => [
+    file,
+    patientId,
+    contentType,
+    title,
+    description,
+    relationship,
+    uploaderId,
+  ];
+}
+
+class AddMemoryContentEvent extends MemoryEvent {
+  final MemoryContent memory;
+
+  const AddMemoryContentEvent(this.memory);
+
+  @override
+  List<Object?> get props => [memory];
 }
