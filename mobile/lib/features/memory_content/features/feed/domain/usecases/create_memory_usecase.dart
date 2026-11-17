@@ -22,7 +22,7 @@ class CreateMemoryUseCase {
   }) async {
     String fileUrl = '';
 
-    // Yalnızca dosya varsa (resim veya ses) Firebase Storage'a yükle!
+    // 1. Yalnızca dosya varsa (resim veya ses) Firebase Storage'a yükle
     if (file != null) {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final extension = file.path.split('.').last; // örn: jpg, png, m4a
@@ -38,15 +38,25 @@ class CreateMemoryUseCase {
       );
     }
 
-    // Backend tarafına Firebase indirme URL'i (varsa) ve yazı kısımları gidecek
-    return await _memoryRepository.createMemory(
-      patientId: patientId,
-      fileUrl: fileUrl,
-      contentType: contentType,
-      title: title,
-      description: description,
-      relationship: relationship,
-      uploaderId: uploaderId,
-    );
+    // 2. Backend tarafına kayıt isteği at
+    try {
+      return await _memoryRepository.createMemory(
+        patientId: patientId,
+        fileUrl: fileUrl,
+        contentType: contentType,
+        title: title,
+        description: description,
+        relationship: relationship,
+        uploaderId: uploaderId,
+      );
+    } catch (e) {
+      // 3. Rollback (Geri Alma): Backend kaydı başarısız olursa Firebase'e yüklenen dosyayı sil!
+      if (fileUrl.isNotEmpty) {
+        try {
+          await _fileStorage.deleteFile(fileUrl);
+        } catch (_) {}
+      }
+      rethrow;
+    }
   }
 }

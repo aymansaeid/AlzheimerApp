@@ -7,4 +7,7 @@ abstract class FileStorageRepository {
     required String fileName,
     required String folderPath,
   });
+
+  /// Yüklenen dosyayı sunucudan (ör. Firebase Storage) siler.
+  Future<void> deleteFile(String fileUrl);
 }

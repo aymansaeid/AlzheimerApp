@@ -47,4 +47,15 @@ class FirebaseStorageRepositoryImpl implements FileStorageRepository {
       throw Exception('Bilinmeyen bir hata oluştu: $e');
     }
   }
+
+  @override
+  Future<void> deleteFile(String fileUrl) async {
+    try {
+      if (fileUrl.isEmpty) return;
+      final ref = _firebaseStorage.refFromURL(fileUrl);
+      await ref.delete();
+    } catch (_) {
+      // Temizleme işlemi sessizce yutulabilir veya loglanabilir
+    }
+  }
 }
