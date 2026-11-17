@@ -38,6 +38,9 @@ class LoggingInterceptor extends Interceptor {
         name: 'Network',
       );
       log('Message: ${err.message}', name: 'Network');
+      if (err.response?.data != null) {
+        log('Response Data: ${err.response?.data}', name: 'Network');
+      }
     }
     return handler.next(err);
   }

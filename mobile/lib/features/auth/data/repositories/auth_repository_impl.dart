@@ -136,11 +136,22 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final payload = JwtDecoder.decode(token);
 
+      final rawRole =
+          (payload[roleClaimKey] ?? 'Patient').toString().toLowerCase();
+      String mappedRole = 'patient';
+      if (rawRole == 'follower' || rawRole == 'caregiver' || rawRole == '1') {
+        mappedRole = 'caregiver';
+      } else if (rawRole == 'admin' || rawRole == '2') {
+        mappedRole = 'admin';
+      } else {
+        mappedRole = 'patient';
+      }
+
       final user = UserModel(
         id: payload['sub'] ?? '',
         email: payload['email'] ?? '',
         fullName: payload['FullName'] ?? '',
-        role: (payload[roleClaimKey] ?? 'Patient').toString().toLowerCase(),
+        role: mappedRole,
         isActive: true,
         createdAt: DateTime.now(),
       );

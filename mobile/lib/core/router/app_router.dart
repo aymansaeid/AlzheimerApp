@@ -273,14 +273,20 @@ final appRouter = GoRouter(
                   path: 'create-post',
                   name: 'create-post',
                   parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => const CreatePostScreen(),
+                  builder: (context, state) {
+                    final patientId = state.uri.queryParameters['patientId'];
+                    return CreatePostScreen(patientId: patientId);
+                  },
                 ),
                 // Feed üzerinde açılan ses kayıt ekranı
                 GoRoute(
                   path: 'record-audio',
                   name: 'record-audio',
                   parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => const RecordAudioScreen(),
+                  builder: (context, state) {
+                    final patientId = state.uri.queryParameters['patientId'];
+                    return RecordAudioScreen(patientId: patientId);
+                  },
                 ),
               ],
             ),

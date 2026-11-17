@@ -125,11 +125,16 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
     Emitter<MemoryState> emit,
   ) async {
     final currentState = state;
-    final currentUserId = event.uploaderId ??
-        (currentState is MemoryLoaded ? currentState.currentUserId : '');
+    final currentUserId = (event.uploaderId != null && event.uploaderId!.isNotEmpty)
+        ? event.uploaderId!
+        : (currentState is MemoryLoaded ? currentState.currentUserId : '');
+
     if (currentState is MemoryLoaded) {
       emit(currentState.copyWith(isActionInProgress: true));
+    } else {
+      emit(MemoryLoading());
     }
+
     try {
       final newMemory = await _createMemoryUseCase(
         file: event.file,
@@ -149,6 +154,17 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
             patientId: currentState.patientId,
             currentUserId: currentState.currentUserId,
             isPrimaryAdmin: currentState.isPrimaryAdmin,
+            isActionInProgress: false,
+            message: 'Anı başarıyla paylaşıldı.',
+          ),
+        );
+      } else {
+        emit(
+          MemoryOperationSuccess(
+            memories: [newMemory],
+            patientId: event.patientId,
+            currentUserId: currentUserId,
+            isPrimaryAdmin: false,
             isActionInProgress: false,
             message: 'Anı başarıyla paylaşıldı.',
           ),

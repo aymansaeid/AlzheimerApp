@@ -68,6 +68,9 @@ class AuthInterceptor extends Interceptor {
           final dio = getIt<Dio>();
           final response = await dio.fetch(options);
           return handler.resolve(response);
+        } else {
+          await _handleLogout();
+          return handler.reject(err);
         }
       } catch (e) {
         _refreshTokenFuture = null;

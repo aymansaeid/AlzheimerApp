@@ -50,20 +50,20 @@ class DeleteMemory extends MemoryEvent {
 }
 
 class CreateMemory extends MemoryEvent {
-  final File file;
+  final File? file;
   final String patientId;
   final MemoryContentType contentType;
-  final String title;
-  final String description;
+  final String? title;
+  final String? description;
   final String relationship;
   final String? uploaderId;
 
   const CreateMemory({
-    required this.file,
+    this.file,
     required this.patientId,
     required this.contentType,
-    required this.title,
-    required this.description,
+    this.title,
+    this.description,
     required this.relationship,
     this.uploaderId,
   });

@@ -23,8 +23,25 @@ class MemoryRemoteDataSourceImpl implements MemoryRemoteDataSource {
     Map<String, dynamic> requestBody,
   ) async {
     // Swagger: POST /api/MemoryContent
-    final response = await _dio.post('/api/MemoryContent', data: requestBody);
-    return MemoryContentModel.fromJson(response.data);
+    try {
+      final response = await _dio.post('/api/MemoryContent', data: requestBody);
+      return MemoryContentModel.fromJson(response.data);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      String errorMsg = e.message ?? 'Bir hata oluştu.';
+      if (data is Map) {
+        if (data.containsKey('errors')) {
+          errorMsg = data['errors'].toString();
+        } else if (data.containsKey('message')) {
+          errorMsg = data['message'].toString();
+        } else if (data.containsKey('title')) {
+          errorMsg = data['title'].toString();
+        }
+      } else if (data != null) {
+        errorMsg = data.toString();
+      }
+      throw Exception(errorMsg);
+    }
   }
 
   @override

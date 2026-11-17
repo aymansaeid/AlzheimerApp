@@ -17,10 +17,27 @@ class FirebaseStorageRepositoryImpl implements FileStorageRepository {
     required String folderPath,
   }) async {
     try {
-      // Örnek path: memories/1698765432_photo.jpg
       final ref = _firebaseStorage.ref().child('$folderPath/$fileName');
 
-      final uploadTask = await ref.putFile(file);
+      String? mimeType;
+      final ext = fileName.split('.').last.toLowerCase();
+      if (ext == 'jpg' || ext == 'jpeg') {
+        mimeType = 'image/jpeg';
+      } else if (ext == 'png') {
+        mimeType = 'image/png';
+      } else if (ext == 'm4a') {
+        mimeType = 'audio/m4a';
+      } else if (ext == 'mp3') {
+        mimeType = 'audio/mp3';
+      } else if (ext == 'aac') {
+        mimeType = 'audio/aac';
+      }
+
+      final metadata = mimeType != null
+          ? SettableMetadata(contentType: mimeType)
+          : null;
+
+      final uploadTask = await ref.putFile(file, metadata);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
 
       return downloadUrl;

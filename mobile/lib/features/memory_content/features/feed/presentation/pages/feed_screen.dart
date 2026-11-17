@@ -38,10 +38,11 @@ class _FeedScreenState extends State<FeedScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       currentUserId = authState.user.id;
-      if (authState.user.role == 'patient') {
+      final role = authState.user.role.toLowerCase();
+      if (role == 'patient') {
         patientId = authState.user.id;
         isPrimaryAdmin = false;
-      } else if (authState.user.role == 'caregiver') {
+      } else if (role == 'caregiver' || role == 'follower') {
         try {
           final dashboardState = context.read<DashboardBloc>().state;
           if (dashboardState is DashboardLoaded) {
@@ -71,10 +72,11 @@ class _FeedScreenState extends State<FeedScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       currentUserId = authState.user.id;
-      if (authState.user.role == 'patient') {
+      final role = authState.user.role.toLowerCase();
+      if (role == 'patient') {
         patientId = authState.user.id;
         isPrimaryAdmin = false;
-      } else if (authState.user.role == 'caregiver') {
+      } else if (role == 'caregiver' || role == 'follower') {
         try {
           final dashboardState = context.read<DashboardBloc>().state;
           if (dashboardState is DashboardLoaded) {
@@ -121,7 +123,8 @@ class _FeedScreenState extends State<FeedScreen> {
       builder: (context, authState) {
         bool isCaregiver = false;
         if (authState is AuthAuthenticated) {
-          isCaregiver = authState.user.role == 'caregiver';
+          final role = authState.user.role.toLowerCase();
+          isCaregiver = role == 'caregiver' || role == 'follower';
         }
 
         Widget scaffold = Scaffold(
@@ -137,13 +140,51 @@ class _FeedScreenState extends State<FeedScreen> {
               ? null
               : SpeedDialFab(
                   onRecordAudioTap: () async {
-                    final result = await context.pushNamed('record-audio');
+                    String patientId = '';
+                    final memoryState = context.read<MemoryBloc>().state;
+                    if (memoryState is MemoryLoaded) {
+                      patientId = memoryState.patientId;
+                    }
+                    if (patientId.isEmpty) {
+                      try {
+                        final dashboardState =
+                            context.read<DashboardBloc>().state;
+                        if (dashboardState is DashboardLoaded) {
+                          patientId = dashboardState.summary.patientId;
+                        }
+                      } catch (_) {}
+                    }
+                    final result = await context.pushNamed(
+                      'record-audio',
+                      queryParameters: {
+                        if (patientId.isNotEmpty) 'patientId': patientId,
+                      },
+                    );
                     if (result == true && mounted) {
                       _refreshMemories();
                     }
                   },
                   onCreatePostTap: () async {
-                    final result = await context.pushNamed('create-post');
+                    String patientId = '';
+                    final memoryState = context.read<MemoryBloc>().state;
+                    if (memoryState is MemoryLoaded) {
+                      patientId = memoryState.patientId;
+                    }
+                    if (patientId.isEmpty) {
+                      try {
+                        final dashboardState =
+                            context.read<DashboardBloc>().state;
+                        if (dashboardState is DashboardLoaded) {
+                          patientId = dashboardState.summary.patientId;
+                        }
+                      } catch (_) {}
+                    }
+                    final result = await context.pushNamed(
+                      'create-post',
+                      queryParameters: {
+                        if (patientId.isNotEmpty) 'patientId': patientId,
+                      },
+                    );
                     if (result == true && mounted) {
                       _refreshMemories();
                     }

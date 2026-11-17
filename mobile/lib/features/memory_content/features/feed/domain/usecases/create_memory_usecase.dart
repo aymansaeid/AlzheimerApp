@@ -12,7 +12,7 @@ class CreateMemoryUseCase {
   CreateMemoryUseCase(this._fileStorage, this._memoryRepository);
 
   Future<MemoryContent> call({
-    required File file,
+    File? file,
     required String patientId,
     required MemoryContentType contentType,
     String? title,
@@ -20,19 +20,25 @@ class CreateMemoryUseCase {
     required String relationship,
     required String uploaderId,
   }) async {
-    // 1. Firebase için benzersiz bir dosya adı oluşturuyoruz (Çakışmaları önlemek için)
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final extension = file.path.split('.').last; // örn: jpg, mp4, m4a
-    final fileName = '${patientId}_$timestamp.$extension';
+    String fileUrl = '';
 
-    // 2. Dosyayı Firebase'e yükle ve indirme URL'ini al
-    final fileUrl = await _fileStorage.uploadFile(
-      file: file,
-      fileName: fileName,
-      folderPath: 'memories',
-    );
+    // Yalnızca dosya varsa (resim veya ses) Firebase Storage'a yükle!
+    if (file != null) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = file.path.split('.').last; // örn: jpg, png, m4a
+      final folder = contentType == MemoryContentType.voice
+          ? 'memories/voice'
+          : 'memories/photos';
+      final fileName = '${patientId}_$timestamp.$extension';
 
-    // 3. Firebase'den dönen URL ile backend'e kayıt isteği at
+      fileUrl = await _fileStorage.uploadFile(
+        file: file,
+        fileName: fileName,
+        folderPath: folder,
+      );
+    }
+
+    // Backend tarafına Firebase indirme URL'i (varsa) ve yazı kısımları gidecek
     return await _memoryRepository.createMemory(
       patientId: patientId,
       fileUrl: fileUrl,
