@@ -11,6 +11,7 @@ class MemoryContentModel extends MemoryContent {
     required super.isActive,
     required super.patientId,
     required super.createdAt,
+    required super.uploaderId,
   });
 
   factory MemoryContentModel.fromJson(Map<String, dynamic> json) {
@@ -24,6 +25,7 @@ class MemoryContentModel extends MemoryContent {
       isActive: json['isActive'] ?? true,
       patientId: json['patientId'] ?? '',
       createdAt: json['createdAt'] ?? '',
+      uploaderId: json['uploaderId'] ?? '',
     );
   }
 
@@ -35,6 +37,7 @@ class MemoryContentModel extends MemoryContent {
     String? description,
     required String relationship,
     required int contentType,
+    required String uploaderId,
   }) {
     return {
       "patientId": patientId,
@@ -43,6 +46,7 @@ class MemoryContentModel extends MemoryContent {
       "description": description,
       "relationship": relationship,
       "contentType": contentType,
+      "uploaderId": uploaderId,
     };
   }
 }

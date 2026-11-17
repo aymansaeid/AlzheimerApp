@@ -9,6 +9,7 @@ abstract class MemoryRepository {
     String? title,
     String? description,
     required String relationship,
+    required String uploaderId,
   });
 
   /// Hastaya ait anıları getirir (GET /api/MemoryContent/patient/{patientId})

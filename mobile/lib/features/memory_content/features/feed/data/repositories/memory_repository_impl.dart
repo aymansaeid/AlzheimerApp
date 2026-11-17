@@ -18,6 +18,7 @@ class MemoryRepositoryImpl implements MemoryRepository {
     String? title,
     String? description,
     required String relationship,
+    required String uploaderId,
   }) async {
     // 1. Backend'in beklediği JSON request'i oluştur
     final requestBody = MemoryContentModel.toJsonRequest(
@@ -26,6 +27,7 @@ class MemoryRepositoryImpl implements MemoryRepository {
       title: title,
       description: description,
       relationship: relationship,
+      uploaderId: uploaderId,
       contentType: contentType.index, // 0: Photo, 1: Voice
     );
 

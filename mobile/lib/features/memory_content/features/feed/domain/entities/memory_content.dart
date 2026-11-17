@@ -10,6 +10,7 @@ class MemoryContent {
   final MemoryContentType contentType;
   final bool isActive;
   final String createdAt;
+  final String uploaderId;
 
   MemoryContent({
     required this.id,
@@ -21,5 +22,6 @@ class MemoryContent {
     required this.contentType,
     required this.isActive,
     required this.createdAt,
+    required this.uploaderId,
   });
 }

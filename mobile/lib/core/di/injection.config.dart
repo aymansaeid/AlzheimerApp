@@ -96,20 +96,36 @@ import '../../features/memory_content/features/create_text_post/presentation/cub
     as _i410;
 import '../../features/memory_content/features/feed/data/datasources/feed_local_data_source.dart'
     as _i171;
+import '../../features/memory_content/features/feed/data/datasources/memory_remote_data_source.dart'
+    as _i399;
 import '../../features/memory_content/features/feed/data/repositories/feed_repository_impl.dart'
     as _i177;
 import '../../features/memory_content/features/feed/data/repositories/firebase_storage_repository_impl.dart'
     as _i331;
+import '../../features/memory_content/features/feed/data/repositories/memory_repository_impl.dart'
+    as _i405;
 import '../../features/memory_content/features/feed/domain/repositories/feed_repository.dart'
     as _i315;
 import '../../features/memory_content/features/feed/domain/repositories/file_storage_repository.dart'
     as _i314;
+import '../../features/memory_content/features/feed/domain/repositories/memory_repository.dart'
+    as _i472;
 import '../../features/memory_content/features/feed/domain/usecases/add_post_usecase.dart'
-    as _i399;
+    as _i400;
+import '../../features/memory_content/features/feed/domain/usecases/create_memory_usecase.dart'
+    as _i506;
+import '../../features/memory_content/features/feed/domain/usecases/delete_memory_usecase.dart'
+    as _i308;
 import '../../features/memory_content/features/feed/domain/usecases/get_feed_usecase.dart'
     as _i320;
+import '../../features/memory_content/features/feed/domain/usecases/get_patient_memories_usecase.dart'
+    as _i748;
+import '../../features/memory_content/features/feed/domain/usecases/update_memory_usecase.dart'
+    as _i418;
 import '../../features/memory_content/features/feed/presentation/bloc/feed_bloc.dart'
     as _i86;
+import '../../features/memory_content/features/feed/presentation/bloc/memory_bloc.dart'
+    as _i426;
 import '../../features/notifications/data/datasources/notification_local_data_source.dart'
     as _i481;
 import '../../features/notifications/data/datasources/notification_remote_data_source.dart'
@@ -212,6 +228,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i1012.PatientRemoteDataSource>(
       () => _i1012.PatientRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
+    gh.lazySingleton<_i399.MemoryRemoteDataSource>(
+      () => _i399.MemoryRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
     gh.lazySingleton<_i640.MedicineLogRemoteDataSource>(
       () => _i640.MedicineLogRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
@@ -220,6 +239,18 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i315.FeedRepository>(
       () => _i177.FeedRepositoryImpl(gh<_i171.FeedLocalDataSource>()),
+    );
+    gh.lazySingleton<_i472.MemoryRepository>(
+      () => _i405.MemoryRepositoryImpl(gh<_i399.MemoryRemoteDataSource>()),
+    );
+    gh.lazySingleton<_i308.DeleteMemoryUseCase>(
+      () => _i308.DeleteMemoryUseCase(gh<_i472.MemoryRepository>()),
+    );
+    gh.lazySingleton<_i748.GetPatientMemoriesUseCase>(
+      () => _i748.GetPatientMemoriesUseCase(gh<_i472.MemoryRepository>()),
+    );
+    gh.lazySingleton<_i418.UpdateMemoryUseCase>(
+      () => _i418.UpdateMemoryUseCase(gh<_i472.MemoryRepository>()),
     );
     gh.lazySingleton<_i1068.NotificationRepository>(
       () => _i362.NotificationRepositoryImpl(
@@ -277,8 +308,14 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i184.ImageCropper>(),
       ),
     );
-    gh.lazySingleton<_i399.AddPostUseCase>(
-      () => _i399.AddPostUseCase(gh<_i315.FeedRepository>()),
+    gh.lazySingleton<_i506.CreateMemoryUseCase>(
+      () => _i506.CreateMemoryUseCase(
+        gh<_i314.FileStorageRepository>(),
+        gh<_i472.MemoryRepository>(),
+      ),
+    );
+    gh.lazySingleton<_i400.AddPostUseCase>(
+      () => _i400.AddPostUseCase(gh<_i315.FeedRepository>()),
     );
     gh.lazySingleton<_i185.MedicineRepository>(
       () => _i600.MedicineRepositoryImpl(
@@ -311,7 +348,7 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i410.CreatePostCubit(
         gh<_i165.PermissionService>(),
         gh<_i586.MediaService>(),
-        gh<_i399.AddPostUseCase>(),
+        gh<_i400.AddPostUseCase>(),
       ),
     );
     gh.lazySingleton<_i105.NotificationService>(
@@ -336,6 +373,13 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i233.PatientRepository>(
       () => _i814.PatientRepositoryImpl(gh<_i1012.PatientRemoteDataSource>()),
+    );
+    gh.factory<_i426.MemoryBloc>(
+      () => _i426.MemoryBloc(
+        gh<_i748.GetPatientMemoriesUseCase>(),
+        gh<_i308.DeleteMemoryUseCase>(),
+        gh<_i506.CreateMemoryUseCase>(),
+      ),
     );
     gh.lazySingleton<_i647.GetPatientDashboardUseCase>(
       () => _i647.GetPatientDashboardUseCase(gh<_i233.PatientRepository>()),
@@ -379,13 +423,13 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.factory<_i86.FeedBloc>(
       () =>
-          _i86.FeedBloc(gh<_i320.GetFeedUseCase>(), gh<_i399.AddPostUseCase>()),
+          _i86.FeedBloc(gh<_i320.GetFeedUseCase>(), gh<_i400.AddPostUseCase>()),
     );
     gh.factory<_i784.RecordAudioCubit>(
       () => _i784.RecordAudioCubit(
         gh<_i492.AudioRecordService>(),
         gh<_i165.PermissionService>(),
-        gh<_i399.AddPostUseCase>(),
+        gh<_i400.AddPostUseCase>(),
       ),
     );
     gh.lazySingleton<_i797.AuthBloc>(
