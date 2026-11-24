@@ -98,7 +98,11 @@ class PatientDashboardView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 8),
-                        _buildHeader(theme, dashboard.patientName),
+                        _buildHeader(
+                          theme,
+                          dashboard.patientName,
+                          dashboard.profilePhotoUrl,
+                        ),
                         const SizedBox(height: 20),
                         _buildSOSButton(theme),
                         const SizedBox(height: 20),
@@ -170,7 +174,11 @@ class PatientDashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(ThemeData theme, String patientName) {
+  Widget _buildHeader(
+    ThemeData theme,
+    String patientName,
+    String? profilePhotoUrl,
+  ) {
     String getInitials(String fullName) {
       if (fullName.trim().isEmpty) return '?';
       final parts = fullName.trim().split(RegExp(r'\s+'));
@@ -193,7 +201,11 @@ class PatientDashboardView extends StatelessWidget {
             ],
           ),
         ),
-        AvatarCircle(initials: getInitials(patientName), size: 56),
+        AvatarCircle(
+          initials: getInitials(patientName),
+          size: 72,
+          imageUrl: profilePhotoUrl,
+        ),
       ],
     );
   }

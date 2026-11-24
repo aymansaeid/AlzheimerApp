@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/avatar_circle.dart';
 import '../../domain/entities/care_team_member.dart';
 
 class UserDetailCard extends StatelessWidget {
@@ -24,22 +25,15 @@ class UserDetailCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 32),
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              _getInitials(user.fullName),
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
-            ),
+        AvatarCircle(
+          initials: _getInitials(user.fullName),
+          size: 136,
+          imageUrl: user.avatarUrl,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          textStyle: TextStyle(
+            fontSize: 44,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
           ),
         ),
         const SizedBox(height: 24),

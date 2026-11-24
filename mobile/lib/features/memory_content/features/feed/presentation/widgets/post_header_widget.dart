@@ -62,7 +62,7 @@ class PostHeaderWidget extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 18,
+            radius: 22,
             backgroundColor: Colors.grey.shade300,
             backgroundImage: userAvatarUrl != null
                 ? NetworkImage(userAvatarUrl!)
