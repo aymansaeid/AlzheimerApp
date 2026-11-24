@@ -22,4 +22,5 @@ Backend/AlzheimerApp.API/appsettings.json
 # OS
 .DS_Store
 Thumbs.db
-
+/mobile/graphify-out
+*/build/

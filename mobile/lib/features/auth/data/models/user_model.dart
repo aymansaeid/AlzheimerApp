@@ -16,27 +16,17 @@ class UserModel extends User {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     String mappedRole = 'patient';
     final roleRaw = json['role'];
-    if (roleRaw != null) {
-      if (roleRaw == 0 ||
-          roleRaw == '0' ||
-          roleRaw.toString().toLowerCase() == 'patient') {
-        mappedRole = 'patient';
-      } else if (roleRaw == 1 ||
-          roleRaw == '1' ||
-          roleRaw.toString().toLowerCase() == 'follower' ||
-          roleRaw.toString().toLowerCase() == 'caregiver') {
-        mappedRole = 'caregiver';
-      } else if (roleRaw == 2 ||
-          roleRaw == '2' ||
-          roleRaw.toString().toLowerCase() == 'admin') {
-        mappedRole = 'admin';
-      } else {
-        mappedRole = roleRaw.toString().toLowerCase();
-      }
+    if (roleRaw == 1) {
+      mappedRole = 'caregiver';
+    } else if (roleRaw == 2) {
+      mappedRole = 'admin';
+    } else {
+      mappedRole = 'patient';
     }
 
     DateTime parsedDate = DateTime.now();
     final createdAtRaw = json['createdAt'] ?? json['created_at'];
+
     if (createdAtRaw != null) {
       try {
         parsedDate = DateTime.parse(createdAtRaw.toString());
@@ -44,10 +34,10 @@ class UserModel extends User {
     }
 
     return UserModel(
-      id: (json['id'] ?? '').toString(),
-      email: (json['email'] ?? '').toString(),
+      id: (json['id']).toString(),
+      email: (json['email']).toString(),
       role: mappedRole,
-      fullName: (json['fullName'] ?? json['full_name'] ?? '').toString(),
+      fullName: (json['fullName']).toString(),
       phone: json['phone'] ?? json['phoneNumber'] ?? json['phone_number'],
       avatarUrl: json['avatarUrl'] ?? json['avatar_url'],
       fcmToken: json['fcmToken'] ?? json['fcm_token'],

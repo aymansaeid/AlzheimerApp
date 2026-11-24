@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/services/permission_service.dart';
+import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/profile_picture_options_sheet.dart';
+import '../../../../core/widgets/profile_picture_widget.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../cubit/register_cubit.dart';
+import '../cubit/register_state.dart';
 import '../widgets/auth_layout.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -19,22 +26,112 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _selectedRole = 'patient';
+  final _phoneController = TextEditingController();
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _phoneController.dispose();
     super.dispose();
+  }
+
+  void _goToLogin(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.goNamed('login');
+    }
+  }
+
+  Future<void> _onAvatarTap(
+    BuildContext context,
+    RegisterCubit cubit,
+    bool hasPhoto,
+  ) async {
+    final action = await showProfilePictureOptionsSheet(
+      context,
+      hasPhoto: hasPhoto,
+    );
+    if (action == null) return;
+
+    switch (action) {
+      case ProfilePictureAction.camera:
+        await cubit.pickAvatar(ImageSource.camera);
+        break;
+      case ProfilePictureAction.gallery:
+        await cubit.pickAvatar(ImageSource.gallery);
+        break;
+      case ProfilePictureAction.remove:
+        cubit.removeAvatar();
+        break;
+    }
+  }
+
+  Future<void> _onSubmit(
+    BuildContext context,
+    RegisterCubit registerCubit,
+    RegisterState registerState,
+  ) async {
+    if (!_formKey.currentState!.validate()) return;
+
+    String? avatarUrl;
+    if (registerState.selectedAvatarFile != null) {
+      avatarUrl = await registerCubit.uploadAvatarIfSelected();
+      if (avatarUrl == null) {
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
+    context.read<AuthBloc>().add(
+          AuthRegisterRequested(
+            fullName: _fullNameController.text,
+            email: _emailController.text,
+            password: _passwordController.text,
+            phone: _phoneController.text,
+            role: registerState.selectedRole == 'patient' ? 0 : 1,
+            avatarUrl: avatarUrl,
+          ),
+        );
+  }
+
+  void _showPermissionDialog(BuildContext context, String type) {
+    final label = type == 'camera' ? 'kamera' : 'galeri';
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('İzin Gerekli'),
+        content: Text(
+          'Profil fotoğrafı seçmek için $label izni vermeniz gerekiyor.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              getIt<PermissionService>().openSettings();
+            },
+            child: const Text('Ayarlara Git'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return BlocProvider.value(
-      value: getIt<AuthBloc>(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: getIt<AuthBloc>()),
+        BlocProvider(create: (_) => getIt<RegisterCubit>()),
+      ],
       child: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
@@ -63,121 +160,197 @@ class _RegisterScreenState extends State<RegisterScreen> {
             );
           }
         },
-        builder: (context, state) {
-          return AuthLayout(
-            title: 'Hesap Oluştur',
-            subtitle: 'Sisteme katılmak için bilgilerinizi girin',
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildTextField(
-                    theme: theme,
-                    label: 'Ad Soyad',
-                    icon: Icons.person_outline,
-                    controller: _fullNameController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Lütfen ad ve soyadınızı giriniz';
-                      }
-                      return null;
-                    },
+        builder: (context, authState) {
+          return BlocConsumer<RegisterCubit, RegisterState>(
+            listener: (context, registerState) {
+              if (registerState.errorMessage != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      registerState.errorMessage!,
+                      style: TextStyle(color: theme.colorScheme.onError),
+                    ),
+                    backgroundColor: theme.colorScheme.error,
                   ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    theme: theme,
-                    label: 'E-posta',
-                    icon: Icons.email_outlined,
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Bu alan boş bırakılamaz';
-                      }
-                      if (!RegExp(
-                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                      ).hasMatch(value)) {
-                        return 'Geçerli bir e-posta adresi giriniz';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    theme: theme,
-                    label: 'Şifre',
-                    icon: Icons.lock_outline,
-                    controller: _passwordController,
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Şifre alanı boş bırakılamaz';
-                      }
-                      if (value.length < 6) {
-                        return 'Şifre en az 6 karakter olmalıdır';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildRoleSelector(theme),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: state is AuthLoading
-                        ? null
-                        : () {
-                            if (_formKey.currentState!.validate()) {
-                              context.read<AuthBloc>().add(
-                                AuthRegisterRequested(
-                                  fullName: _fullNameController.text,
-                                  email: _emailController.text,
-                                  password: _passwordController.text,
-                                  role: _selectedRole == 'patient' ? 0 : 1,
-                                ),
-                              );
-                            }
-                          },
-                    child: state is AuthLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Kayıt Ol'),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                );
+              }
+              if (registerState.permissionDeniedType != null) {
+                _showPermissionDialog(
+                  context,
+                  registerState.permissionDeniedType!,
+                );
+                context.read<RegisterCubit>().clearPermissionWarning();
+              }
+            },
+            builder: (context, registerState) {
+              final registerCubit = context.read<RegisterCubit>();
+              final isBusy =
+                  authState is AuthLoading || registerState.isLoading;
+
+              return AuthLayout(
+                title: 'Hesap Oluştur',
+                subtitle: 'Sisteme katılmak için bilgilerinizi girin',
+                showLogo: false,
+                titleInAppBar: true,
+                onBack: () => _goToLogin(context),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        'Zaten hesabınız var mı?',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Column(
+                          children: [
+                            ProfilePictureWidget(
+                              imageFile: registerState.selectedAvatarFile,
+                              size: 100,
+                              showAddBadge:
+                                  registerState.selectedAvatarFile == null,
+                              isLoading: registerState.isLoading,
+                              onTap: () => _onAvatarTap(
+                                context,
+                                registerCubit,
+                                registerState.selectedAvatarFile != null,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              registerState.selectedAvatarFile == null
+                                  ? 'Profil Fotoğrafı Ekle (İsteğe Bağlı)'
+                                  : 'Fotoğrafı Değiştir',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      TextButton(
-                        onPressed: () => context.goNamed('login'),
-                        child: Text(
-                          'Giriş Yap',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
+                      const SizedBox(height: 20),
+                      AppTextField(
+                        label: 'Ad Soyad',
+                        icon: Icons.person_outline,
+                        controller: _fullNameController,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen ad ve soyadınızı giriniz';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      AppTextField(
+                        label: 'E-posta',
+                        icon: Icons.email_outlined,
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Bu alan boş bırakılamaz';
+                          }
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
+                            return 'Geçerli bir e-posta adresi giriniz';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      AppTextField(
+                        label: 'Şifre',
+                        icon: Icons.lock_outline,
+                        controller: _passwordController,
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Şifre alanı boş bırakılamaz';
+                          }
+                          if (value.length < 6) {
+                            return 'Şifre en az 6 karakter olmalıdır';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      AppTextField(
+                        label: 'Telefon',
+                        icon: Icons.phone_outlined,
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Telefon alanı boş bırakılamaz';
+                          }
+                          if (!RegExp(r'^(?:\+90|0)?\d{10}$').hasMatch(value)) {
+                            return 'Geçerli bir Türkiye telefon numarası giriniz';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildRoleSelector(
+                        theme,
+                        registerState.selectedRole,
+                        registerCubit,
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: isBusy
+                            ? null
+                            : () => _onSubmit(
+                                  context,
+                                  registerCubit,
+                                  registerState,
+                                ),
+                        child: isBusy
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Kayıt Ol'),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Zaten hesabınız var mı?',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
+                          TextButton(
+                            onPressed: () => _goToLogin(context),
+                            child: Text(
+                              'Giriş Yap',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget _buildRoleSelector(ThemeData theme) {
+  Widget _buildRoleSelector(
+    ThemeData theme,
+    String selectedRole,
+    RegisterCubit registerCubit,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -195,8 +368,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: _RoleCard(
                 title: 'Hasta',
                 icon: '👴',
-                isSelected: _selectedRole == 'patient',
-                onTap: () => setState(() => _selectedRole = 'patient'),
+                isSelected: selectedRole == 'patient',
+                onTap: () => registerCubit.selectRole('patient'),
                 theme: theme,
               ),
             ),
@@ -205,63 +378,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: _RoleCard(
                 title: 'Takipçi',
                 icon: '👩‍⚕️',
-                isSelected: _selectedRole == 'caregiver',
-                onTap: () => setState(() => _selectedRole = 'caregiver'),
+                isSelected: selectedRole == 'caregiver',
+                onTap: () => registerCubit.selectRole('caregiver'),
                 theme: theme,
               ),
             ),
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildTextField({
-    required ThemeData theme,
-    required String label,
-    required IconData icon,
-    required TextEditingController controller,
-    bool obscureText = false,
-    TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: theme.textTheme.bodyLarge,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: theme.textTheme.bodyLarge?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-        prefixIcon: Icon(icon, color: theme.colorScheme.primary, size: 28),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 20,
-        ),
-      ),
     );
   }
 }

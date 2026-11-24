@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../notifications/data/datasources/notification_remote_data_source.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
@@ -14,8 +16,13 @@ import '../models/user_model.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final FlutterSecureStorage secureStorage;
+  final NotificationRemoteDataSource fcmRemoteDataSource;
 
-  AuthRepositoryImpl(this.remoteDataSource, this.secureStorage);
+  AuthRepositoryImpl(
+    this.remoteDataSource,
+    this.secureStorage,
+    this.fcmRemoteDataSource,
+  );
 
   @override
   Future<Either<Failure, User>> login(String email, String password) async {
@@ -25,15 +32,34 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
 
-      final userJson = data.containsKey('user')
-          ? data['user'] as Map<String, dynamic>
-          : data;
+      final userJson = data['user'] as Map<String, dynamic>;
       final user = UserModel.fromJson(userJson);
-      final token = (data['token'] ?? data['jwtToken'] ?? '') as String;
+      final token = (data['token']) as String;
 
       if (token.isNotEmpty) {
-        await secureStorage.write(key: 'jwt_token', value: token);
+        // Store the token and user info in secure storage
+        try {
+          await secureStorage.write(key: 'jwt_token', value: token);
+          await secureStorage.write(key: 'user_id', value: user.id);
+          if (user.phone != null && user.phone!.isNotEmpty) {
+            await secureStorage.write(key: 'user_phone', value: user.phone);
+          } else {
+            await secureStorage.delete(key: 'user_phone');
+          }
+          if (user.avatarUrl != null && user.avatarUrl!.isNotEmpty) {
+            await secureStorage.write(
+              key: 'user_avatar_url',
+              value: user.avatarUrl,
+            );
+          } else {
+            await secureStorage.delete(key: 'user_avatar_url');
+          }
+        } catch (e) {
+          debugPrint('Login: Exception while writing to secure storage: $e');
+        }
       }
+
+      unawaited(_syncFcmToken());
 
       return Right(user);
     } on ServerException catch (e) {
@@ -48,9 +74,10 @@ class AuthRepositoryImpl implements AuthRepository {
     String email,
     String password,
     String fullName,
-    String? phone,
-    int role,
-  ) async {
+    String phone,
+    int role, {
+    String? avatarUrl,
+  }) async {
     try {
       final data = await remoteDataSource.register(
         fullName: fullName,
@@ -58,19 +85,23 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
         role: role,
         phone: phone,
+        avatarUrl: avatarUrl,
       );
 
       // Automatically log in the user using the credentials they just signed up with
       // to obtain the actual JWT token and real user profile
       final loginResult = await login(email, password);
 
-      return loginResult.fold((failure) {
+      return await loginResult.fold((failure) {
         // If auto-login fails, fall back to parsing local inputs to prevent registration crash
         final userJson = Map<String, dynamic>.from(data);
         userJson['role'] = role;
         userJson['fullName'] = fullName;
         userJson['email'] = email;
         userJson['id'] = data['userId'] ?? data['id'] ?? '';
+        if (avatarUrl != null && avatarUrl.isNotEmpty) {
+          userJson['avatarUrl'] = avatarUrl;
+        }
 
         final user = UserModel.fromJson(userJson);
         return Right(user);
@@ -85,94 +116,129 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User>> checkAuthStatus() async {
     String? token;
+
+    // 1. Read the token from secure storage
     try {
       token = await secureStorage.read(key: 'jwt_token');
-      debugPrint('CheckAuthStatus: Stored Token: ${token != null ? "FOUND (Length: ${token.length})" : "NULL"}');
+      debugPrint(
+        'CheckAuthStatus: Stored Token: ${token != null ? "FOUND (Length: ${token.length})" : "NULL"}',
+      );
     } catch (e) {
       debugPrint('CheckAuthStatus: Exception while reading secure storage: $e');
-      return Left(ServerFailure('Oturum okunamadı: ${e.toString()}'));
+      return Left(CacheFailure('Yerel Depolama Hatası: ${e.toString()}'));
     }
 
-    if (token == null) {
-      return Left(ServerFailure('Oturum bulunamadı.'));
+    // If there is no token, return a AuthFailure indicating that the user is not authenticated
+    if (token == null || token.isEmpty) {
+      debugPrint('CheckAuthStatus: No token found in secure storage.');
+      return Left(AuthFailure('Oturum bulunamadı.'));
     }
 
-    bool isExpired = true;
+    // 2. Token exists, check if it is expired
     try {
-      isExpired = JwtDecoder.isExpired(token);
+      if (JwtDecoder.isExpired(token)) {
+        debugPrint('CheckAuthStatus: Token is expired. Deleting...');
+        await _safeDeleteToken();
+        return Left(AuthFailure('Oturum süresi doldu.'));
+      }
     } catch (e) {
       debugPrint('CheckAuthStatus: Exception during expiry check: $e');
-      try {
-        await secureStorage.delete(key: 'jwt_token');
-      } catch (_) {}
-      return Left(ServerFailure('Geçersiz token formatı.'));
+      await _safeDeleteToken();
+      return Left(AuthFailure('Geçersiz token formatı.'));
     }
 
-    if (isExpired) {
-      debugPrint('CheckAuthStatus: Token is expired. Deleting...');
-      try {
-        await secureStorage.delete(key: 'jwt_token');
-      } catch (_) {}
-      return Left(ServerFailure('Oturum süresi doldu.'));
-    }
-
+    // 3. Payload decoding and mapping
     try {
+      const roleClaimKey =
+          'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
       final payload = JwtDecoder.decode(token);
-      debugPrint('CheckAuthStatus: Decoded payload: $payload');
-      final id = payload['sub'] ?? payload['nameid'] ?? payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ?? '';
-      final email = payload['email'] ?? payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ?? '';
-      final roleRaw = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ?? payload['role'] ?? 'patient';
-      final fullName = payload['FullName'] ?? payload['fullName'] ?? payload['unique_name'] ?? '';
 
-      DateTime createdAt = DateTime.now();
-      if (payload.containsKey('iat')) {
-        final iat = payload['iat'];
-        if (iat is int) {
-          createdAt = DateTime.fromMillisecondsSinceEpoch(iat * 1000);
-        }
-      }
-
+      final rawRole =
+          (payload[roleClaimKey] ?? 'Patient').toString().toLowerCase();
       String mappedRole = 'patient';
-      final roleStr = roleRaw.toString().toLowerCase();
-      if (roleStr == 'patient' || roleStr == '0') {
-        mappedRole = 'patient';
-      } else if (roleStr == 'caregiver' || roleStr == 'follower' || roleStr == '1') {
+      if (rawRole == 'follower' || rawRole == 'caregiver' || rawRole == '1') {
         mappedRole = 'caregiver';
-      } else if (roleStr == 'admin' || roleStr == '2') {
+      } else if (rawRole == 'admin' || rawRole == '2') {
         mappedRole = 'admin';
       } else {
-        mappedRole = roleStr;
+        mappedRole = 'patient';
       }
 
+      final storedPhone = await secureStorage.read(key: 'user_phone');
+      final storedAvatarUrl = await secureStorage.read(key: 'user_avatar_url');
+      final payloadPhone =
+          payload['phone'] ?? payload['phoneNumber'] ?? payload['phone_number'];
+      final resolvedPhone =
+          (storedPhone != null && storedPhone.isNotEmpty)
+              ? storedPhone
+              : payloadPhone?.toString();
+
       final user = UserModel(
-        id: id.toString(),
-        email: email.toString(),
+        id: payload['sub'] ?? '',
+        email: payload['email'] ?? '',
+        fullName: payload['FullName'] ?? '',
+        phone: resolvedPhone,
+        avatarUrl: storedAvatarUrl,
         role: mappedRole,
-        fullName: fullName.toString(),
-        phone: payload['phone'] ?? payload['phoneNumber'] ?? payload['phone_number'],
-        avatarUrl: payload['avatarUrl'] ?? payload['avatar_url'],
-        fcmToken: payload['fcmToken'] ?? payload['fcm_token'],
         isActive: true,
-        createdAt: createdAt,
+        createdAt: DateTime.now(),
       );
+
+      // 4. Sync FCM token in the background
+      unawaited(_syncFcmToken());
 
       return Right(user);
     } catch (e) {
-      debugPrint('CheckAuthStatus: Exception during token payload decoding: $e');
-      try {
-        await secureStorage.delete(key: 'jwt_token');
-      } catch (_) {}
-      return Left(ServerFailure('Oturum çözümlenemedi.'));
+      debugPrint(
+        'CheckAuthStatus: Exception during token payload decoding: $e',
+      );
+      await _safeDeleteToken();
+      return Left(AuthFailure('Oturum verisi çözümlenemedi.'));
     }
   }
 
   @override
   Future<Either<Failure, void>> logout() async {
     try {
-      await secureStorage.delete(key: 'jwt_token');
+      await _safeDeleteToken();
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure('Çıkış yapılamadı: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _safeDeleteToken() async {
+    try {
+      await secureStorage.delete(key: 'jwt_token');
+      await secureStorage.delete(key: 'user_id');
+      await secureStorage.delete(key: 'user_phone');
+      await secureStorage.delete(key: 'user_avatar_url');
+    } catch (e) {
+      debugPrint('Error deleting token: $e');
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateFcmToken(String fcmToken) async {
+    try {
+      await remoteDataSource.updateFcmToken(fcmToken);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Future.value(Left(ServerFailure(e.message)));
+    } catch (e) {
+      return Future.value(Left(ServerFailure(e.toString())));
+    }
+  }
+
+  Future<void> _syncFcmToken() async {
+    try {
+      final fcmToken = await fcmRemoteDataSource.getToken();
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await updateFcmToken(fcmToken);
+      }
+    } catch (e) {
+      debugPrint('Error syncing FCM token: $e');
     }
   }
 }

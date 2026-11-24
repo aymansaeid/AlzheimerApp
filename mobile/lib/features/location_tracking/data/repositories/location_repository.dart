@@ -5,7 +5,7 @@ import 'package:mobile/features/location_tracking/data/datasources/location_remo
 import '../../domain/repositories/location_repository.dart';
 import '../models/location_log_model.dart';
 
-@lazySingleton
+@LazySingleton(as: LocationRepository)
 class LocationRepositoryImpl implements LocationRepository {
   final LocationRemoteDataSource remoteDataSource;
   // final NetworkInfo networkInfo; // Varsa internet kontrolü için eklenebilir

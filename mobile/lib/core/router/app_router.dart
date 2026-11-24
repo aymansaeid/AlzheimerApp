@@ -1,50 +1,72 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile/features/auth/presentation/pages/login_screen.dart';
-import 'package:mobile/features/auth/presentation/pages/register_screen.dart';
-import 'package:mobile/features/auth/presentation/pages/splash_screen.dart';
-import 'package:mobile/features/profile/presentation/pages/profile_screen.dart';
-import 'package:mobile/features/caregiver/presentation/pages/caregiver_dashboard_screen.dart';
-import 'package:mobile/features/caregiver/presentation/widgets/caregiver_layout.dart';
-import 'package:mobile/features/geofence/presentation/pages/geofence_alert_screen.dart';
-import 'package:mobile/features/memory/presentation/pages/memory_module_screen.dart';
-import 'package:mobile/features/patient/presentation/pages/patient_dashboard_screen.dart';
-import 'package:mobile/features/patient/presentation/widgets/patient_layout.dart';
-import 'package:mobile/features/care_network/presentation/pages/care_network_screen.dart';
-import 'package:mobile/features/care_network/presentation/pages/user_detail_screen.dart';
-import 'package:mobile/features/medication/presentation/pages/medicine_list_screen.dart';
-import 'package:mobile/features/medication/presentation/pages/medicine_detail_screen.dart';
-import 'package:mobile/features/medication/presentation/pages/medicine_form_screen.dart';
-import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart';
-import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
-import 'package:mobile/features/onboarding/presentation/pages/patient_setup_screen.dart';
-import 'package:mobile/features/onboarding/presentation/pages/caregiver_setup_screen.dart';
-import 'package:mobile/core/di/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mobile/core/router/go_router_refresh_stream.dart';
-import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
+import '../../features/memory_content/features/create_audio_post/presentation/pages/record_audio_screen.dart';
+import '../../features/memory_content/features/create_text_post/presentation/pages/create_post_screen.dart';
+import '../../features/memory_content/features/feed/presentation/pages/feed_screen.dart';
+import 'go_router_refresh_stream.dart';
+import '../../features/auth/presentation/pages/login_screen.dart';
+import '../../features/auth/presentation/pages/register_screen.dart';
+import '../../features/auth/presentation/pages/splash_screen.dart';
+import '../../features/profile/presentation/pages/profile_screen.dart';
+import '../../features/caregiver/presentation/pages/caregiver_dashboard_screen.dart';
+import '../../features/caregiver/presentation/widgets/caregiver_layout.dart';
+import '../../features/patient/presentation/pages/patient_dashboard_screen.dart';
+import '../../features/patient/presentation/widgets/patient_layout.dart';
+import '../../features/care_network/presentation/pages/care_network_screen.dart';
+import '../../features/care_network/presentation/pages/user_detail_screen.dart';
+import '../../features/medication/presentation/pages/medicine_list_screen.dart';
+import '../../features/medication/presentation/pages/medicine_detail_screen.dart';
+import '../../features/medication/presentation/pages/medicine_form_screen.dart';
+import '../../features/medication/presentation/bloc/medicine_bloc.dart';
+import '../../features/memory_content/features/feed/presentation/bloc/memory_bloc.dart';
+import '../../features/caregiver/presentation/bloc/dashboard_bloc.dart';
+import '../../features/onboarding/presentation/pages/patient_setup_screen.dart';
+import '../../features/onboarding/presentation/pages/caregiver_setup_screen.dart';
+import '../di/injection.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/care_network/presentation/bloc/care_network_bloc.dart';
 
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'root',
+);
+
 final appRouter = GoRouter(
+  navigatorKey: _rootNavigatorKey,
   initialLocation: '/splash',
   refreshListenable: GoRouterRefreshStream(getIt<AuthBloc>().stream),
   redirect: (context, state) {
     final authState = getIt<AuthBloc>().state;
-    final isGoingToLogin =
-        state.matchedLocation == '/login' ||
-        state.matchedLocation == '/register';
+    final currentLocation = state.matchedLocation;
+    final isAtAuthPage =
+        currentLocation == '/login' || currentLocation == '/register';
 
-    if (authState is AuthUnauthenticated && !isGoingToLogin) {
-      return '/login';
+    // 1. While controling (AuthInitial, AuthLoading)
+    // Token is being checked or state of token is getting from backend
+    // User must be in the /splash screen
+    if (authState is AuthInitial || authState is AuthLoading) {
+      return currentLocation == '/splash' ? null : '/splash';
     }
 
+    // 2. The login failed or getted an error
+    // (AuthError or AuthUnauthenticated)
+    if (authState is AuthUnauthenticated || authState is AuthError) {
+      // is it already at the login page? If yes, do not redirect
+      // if not redirect to the login page
+      return isAtAuthPage ? null : '/login';
+    }
+
+    // 3. The token is valid and user is authenticated
     if (authState is AuthAuthenticated) {
-      final isAtAuthPage =
-          isGoingToLogin ||
-          state.matchedLocation == '/splash' ||
-          state.matchedLocation == '/';
-      if (isAtAuthPage) {
+      // if the user is in the login or register page, or splash page,
+      // redirect to the appropriate dashboard based on the user's role
+      final shouldRedirectToHome =
+          isAtAuthPage ||
+          currentLocation == '/splash' ||
+          currentLocation == '/';
+
+      if (shouldRedirectToHome) {
         if (authState.user.role == 'patient') {
           return authState.isSetupComplete ? '/patient/home' : '/patient_setup';
         } else {
@@ -55,6 +77,7 @@ final appRouter = GoRouter(
       }
     }
 
+    // 4. If none of the above conditions are met, do not redirect
     return null;
   },
   routes: [
@@ -87,7 +110,10 @@ final appRouter = GoRouter(
     // Patient StatefulShellRoute
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => MultiBlocProvider(
-        providers: [BlocProvider(create: (_) => getIt<MedicineBloc>())],
+        providers: [
+          BlocProvider(create: (_) => getIt<MedicineBloc>()),
+          BlocProvider(create: (_) => getIt<MemoryBloc>()),
+        ],
         child: PatientLayout(navigationShell: navigationShell),
       ),
       branches: [
@@ -147,8 +173,7 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/patient/memory',
               name: 'patient_memory',
-              builder: (context, state) =>
-                  MemoryModuleScreen(onAddMemory: () {}),
+              builder: (context, state) => FeedScreen(),
             ),
           ],
         ),
@@ -172,6 +197,10 @@ final appRouter = GoRouter(
               // key is needed to prevent bloc from being recreated when switching between branches
               key: ValueKey('medicineBloc'),
               create: (_) => getIt<MedicineBloc>(),
+            ),
+            BlocProvider(
+              key: ValueKey('memoryBloc'),
+              create: (_) => getIt<MemoryBloc>(),
             ),
             BlocProvider(
               create: (_) =>
@@ -232,24 +261,56 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // MAP SCREEN
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/caregiver/alerts',
-              name: 'caregiver_alerts',
-              builder: (context, state) => GeofenceAlertScreen(
-                patientName: 'Ahmet Bey',
-                locationAddress: 'Kadıköy',
-                distanceMeters: 50,
-                timeOutside: '5 dk',
-                onDismissAlert: () {},
-                onCallPatient: () {},
-                onOpenLiveMap: () {},
-              ),
+              path: '/caregiver/memory',
+              name: 'caregiver_memory',
+              builder: (context, state) => FeedScreen(),
+              routes: [
+                // Feed üzerinde açılan Metin/Görsel paylaşım ekranı
+                GoRoute(
+                  path: 'create-post',
+                  name: 'create-post',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) {
+                    final patientId = state.uri.queryParameters['patientId'];
+                    return CreatePostScreen(patientId: patientId);
+                  },
+                ),
+                // Feed üzerinde açılan ses kayıt ekranı
+                GoRoute(
+                  path: 'record-audio',
+                  name: 'record-audio',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) {
+                    final patientId = state.uri.queryParameters['patientId'];
+                    return RecordAudioScreen(patientId: patientId);
+                  },
+                ),
+              ],
             ),
           ],
         ),
+
+        // MAP SCREEN
+        // StatefulShellBranch(
+        //   routes: [
+        //     GoRoute(
+        //       path: '/caregiver/alerts',
+        //       name: 'caregiver_alerts',
+        //       builder: (context, state) => GeofenceAlertScreen(
+        //         patientName: 'Ahmet Bey',
+        //         locationAddress: 'Kadıköy',
+        //         distanceMeters: 50,
+        //         timeOutside: '5 dk',
+        //         onDismissAlert: () {},
+        //         onCallPatient: () {},
+        //         onOpenLiveMap: () {},
+        //       ),
+        //     ),
+        //   ],
+        // ),
         StatefulShellBranch(
           routes: [
             GoRoute(

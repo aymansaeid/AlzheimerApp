@@ -94,8 +94,8 @@ class PatientMedicationCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Aldım',
+                  child: Text(
+                    isFuture ? 'Bekleniyor' : 'Alındı',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

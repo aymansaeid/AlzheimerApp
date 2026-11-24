@@ -1,12 +1,22 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_event.dart';
+
+import '../../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../di/injection.dart';
 
 @injectable
 class AuthInterceptor extends Interceptor {
   final FlutterSecureStorage _secureStorage;
 
+  // Eşzamanlı 401 isteklerinde tek refresh çağrısı yapmak için kilit
+  Future<String?>? _refreshTokenFuture;
+
   AuthInterceptor(this._secureStorage);
+
+  static const String _accessTokenKey = 'jwt_token';
+  static const String _refreshPath = '/api/Auth/refresh-my-token';
 
   @override
   Future<void> onRequest(
@@ -15,10 +25,13 @@ class AuthInterceptor extends Interceptor {
   ) async {
     final path = options.path.toLowerCase();
     final isAuthPath =
-        path.contains('/api/auth/login') || path.contains('/api/auth/register');
+        path.contains('/api/auth/login') ||
+        path.contains('/api/auth/register') ||
+        path.contains(_refreshPath.toLowerCase());
 
+    // Refresh isteği ve login/register dışındaki isteklere token ekle
     if (!isAuthPath) {
-      final token = await _secureStorage.read(key: 'jwt_token');
+      final token = await _secureStorage.read(key: _accessTokenKey);
       if (token != null && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
       }
@@ -29,10 +42,89 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    // 401 Unauthorized errors handles here (e.g. trigger token refresh workflow)
-    if (err.response?.statusCode == 401) {
-      // TODO: Implement refresh token workflow as per rules
+    final path = err.requestOptions.path.toLowerCase();
+    final isRefreshRequest = path.contains(_refreshPath.toLowerCase());
+
+    // 1. KRİTİK KURAL: 401 alan istek refresh isteğinin kendisi ise döngüyü kır
+    if (isRefreshRequest) {
+      _refreshTokenFuture = null;
+      await _handleLogout();
+      return handler.reject(err);
     }
+
+    // Normal bir istek 401 aldıysa refresh akışını başlat
+    if (err.response?.statusCode == 401) {
+      try {
+        _refreshTokenFuture ??= _performRefreshToken();
+        final newToken = await _refreshTokenFuture;
+        _refreshTokenFuture = null;
+
+        if (newToken != null && newToken.isNotEmpty) {
+          // Başarısız olan isteğin header'ını yeni token ile güncelle
+          final options = err.requestOptions;
+          options.headers['Authorization'] = 'Bearer $newToken';
+
+          // Aynı Dio ile isteği yeniden yürüt (retry)
+          final dio = getIt<Dio>();
+          final response = await dio.fetch(options);
+          return handler.resolve(response);
+        } else {
+          await _handleLogout();
+          return handler.reject(err);
+        }
+      } catch (e) {
+        _refreshTokenFuture = null;
+        await _handleLogout();
+        return handler.reject(err);
+      }
+    }
+
     return handler.next(err);
+  }
+
+  Future<String?> _performRefreshToken() async {
+    final currentToken = await _secureStorage.read(key: _accessTokenKey);
+    if (currentToken == null || currentToken.isEmpty) {
+      throw Exception('No token found');
+    }
+
+    // getIt içindeki mevcut Dio'yu çağırıyoruz
+    final dio = getIt<Dio>();
+
+    final response = await dio.post(
+      _refreshPath,
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $currentToken',
+          'Accept': '*/*',
+        },
+      ),
+      data: '',
+    );
+
+    if (response.statusCode == 200 && response.data != null) {
+      String? newToken;
+
+      if (response.data is Map<String, dynamic>) {
+        newToken =
+            response.data['token'] ??
+            response.data['accessToken'] ??
+            response.data['data'];
+      } else if (response.data is String) {
+        newToken = (response.data as String).replaceAll('"', '').trim();
+      }
+
+      if (newToken != null && newToken.isNotEmpty) {
+        await _secureStorage.write(key: _accessTokenKey, value: newToken);
+        return newToken;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _handleLogout() async {
+    await _secureStorage.deleteAll();
+    getIt<AuthBloc>().add(AuthLogoutRequested());
   }
 }

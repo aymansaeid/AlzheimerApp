@@ -29,6 +29,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) : super(AuthInitial()) {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
+    on<AuthUserAvatarUpdated>(_onUserAvatarUpdated);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthCheckRequested>(_onCheckAuthStatus);
   }
@@ -51,12 +52,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     final result = await _loginUseCase(event.email, event.password);
 
-    await result.fold((failure) async => emit(AuthError(failure.message)), (
-      user,
-    ) async {
-      final isSetup = await _checkSetupComplete(user);
-      emit(AuthAuthenticated(user, isSetupComplete: isSetup));
-    });
+    await result.fold(
+      (failure) async => emit(AuthError(failure.message)),
+      (user) async {
+        final isSetup = await _checkSetupComplete(user);
+        emit(AuthAuthenticated(user, isSetupComplete: isSetup));
+      },
+    );
   }
 
   Future<void> _onRegisterRequested(
@@ -70,6 +72,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       event.fullName,
       event.phone,
       event.role,
+      avatarUrl: event.avatarUrl,
     );
 
     result.fold(
@@ -78,13 +81,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
+  void _onUserAvatarUpdated(
+    AuthUserAvatarUpdated event,
+    Emitter<AuthState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      final updatedUser = currentState.user.copyWith(
+        avatarUrl: event.avatarUrl,
+        clearAvatarUrl: event.avatarUrl == null,
+      );
+      emit(
+        AuthAuthenticated(
+          updatedUser,
+          isSetupComplete: currentState.isSetupComplete,
+        ),
+      );
+    }
+  }
+
   Future<void> _onLogoutRequested(
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
     await _logoutUseCase();
-
     emit(AuthUnauthenticated());
   }
 
@@ -92,13 +113,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
+    // Zaten giriş yapılmışsa tekrar işlem yapma
     if (state is AuthAuthenticated) return;
+
+    // 1. Splash ekranında bekletmek için Loading yayınla
+    emit(AuthLoading());
+
+    // 2. Storage'dan token kontrolü
     final result = await _authRepository.checkAuthStatus();
-    await result.fold((failure) async => emit(AuthUnauthenticated()), (
-      user,
-    ) async {
-      final isSetup = await _checkSetupComplete(user);
-      emit(AuthAuthenticated(user, isSetupComplete: isSetup));
-    });
+
+    await result.fold(
+      (failure) async {
+        // Token yoksa, süresi dolmuşsa veya geçersizse
+        emit(AuthUnauthenticated());
+      },
+      (user) async {
+        // Token geçerli, kullanıcının kurulum durumunu kontrol et
+        final isSetup = await _checkSetupComplete(user);
+        emit(AuthAuthenticated(user, isSetupComplete: isSetup));
+      },
+    );
   }
 }

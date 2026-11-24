@@ -117,14 +117,16 @@ class PatientDashboardView extends StatelessWidget {
                           )
                         else
                           ...sortedMedicines.map((m) {
-                            final scheduledLocal = m.scheduledAt.toLocal();
-                            final isFuture = scheduledLocal.isAfter(now);
+                            final isFuture = m.scheduledAt.isAfter(now);
+                            final timeStr = DateFormat(
+                              'HH:mm',
+                            ).format(m.scheduledAt);
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: PatientMedicationCard(
                                 name: m.medicineName,
-                                time: _formatTime(m.scheduledAt),
+                                time: timeStr,
                                 isTaken: m.status == 1,
                                 isFuture: isFuture,
                                 onMarkAsTaken: () {
@@ -217,13 +219,6 @@ class PatientDashboardView extends StatelessWidget {
       final formatter = DateFormat('EEEE, d MMMM yyyy');
       return formatter.format(now);
     }
-  }
-
-  String _formatTime(DateTime time) {
-    final localTime = time.toLocal();
-    final hour = localTime.hour.toString().padLeft(2, '0');
-    final minute = localTime.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
   }
 
   Widget _buildSOSButton(ThemeData theme) {

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/di/injection.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/patient_setup/patient_setup_bloc.dart';
 import '../bloc/patient_setup/patient_setup_event.dart';
@@ -186,7 +187,7 @@ class PatientSetupScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 32),
                     ElevatedButton.icon(
                       onPressed: () {
                         context.read<PatientSetupBloc>().add(
@@ -207,6 +208,25 @@ class PatientSetupScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        context.read<AuthBloc>().add(
+                          AuthLogoutRequested(),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.error,
+                        foregroundColor: theme.colorScheme.onError,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Çıkış Yap'),
                     ),
                   ],
                 ),

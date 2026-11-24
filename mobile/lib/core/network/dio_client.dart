@@ -43,7 +43,14 @@ class DioClient {
         onReceiveProgress: onReceiveProgress,
       );
     } catch (e) {
-      rethrow;
+      throw DioException(
+        message: e.toString(),
+        requestOptions: RequestOptions(
+          baseUrl: dotenv.env['BASE_URL'] ?? '',
+          path: path,
+          method: 'GET',
+        ),
+      );
     }
   }
 
@@ -67,7 +74,14 @@ class DioClient {
         onReceiveProgress: onReceiveProgress,
       );
     } catch (e) {
-      rethrow;
+      throw DioException(
+        message: e.toString(),
+        requestOptions: RequestOptions(
+          baseUrl: dotenv.env['BASE_URL'] ?? '',
+          path: path,
+          method: 'POST',
+        ),
+      );
     }
   }
 
@@ -91,7 +105,14 @@ class DioClient {
         onReceiveProgress: onReceiveProgress,
       );
     } catch (e) {
-      rethrow;
+      throw DioException(
+        message: e.toString(),
+        requestOptions: RequestOptions(
+          baseUrl: dotenv.env['BASE_URL'] ?? '',
+          path: path,
+          method: 'PUT',
+        ),
+      );
     }
   }
 
@@ -111,7 +132,14 @@ class DioClient {
         cancelToken: cancelToken,
       );
     } catch (e) {
-      rethrow;
+      throw DioException(
+        message: e.toString(),
+        requestOptions: RequestOptions(
+          baseUrl: dotenv.env['BASE_URL'] ?? '',
+          path: path,
+          method: 'DELETE',
+        ),
+      );
     }
   }
 }
