@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IMedicineLogRepository, MedicineLogRepository>();
         services.AddScoped<IPatientInviteRepository, PatientInviteRepository>();
         services.AddSingleton<IFileStorageService, FirebaseStorageService>();
+        services.AddSingleton<IMedicineScheduleSettings, MedicineScheduleSettings>();
 
         return services;
     }

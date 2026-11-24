@@ -171,9 +171,10 @@ namespace AlzheimerApp.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MedicineId");
-
                     b.HasIndex("PatientId");
+
+                    b.HasIndex("MedicineId", "ScheduledAt")
+                        .IsUnique();
 
                     b.ToTable("MedicineLogs");
                 });

@@ -1,5 +1,6 @@
 ﻿using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Domain.Entities;
+using AlzheimerApp.Domain.Enums;
 using AlzheimerApp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,15 +15,38 @@ public class MedicineLogRepository : IMedicineLogRepository
         _context = context;
     }
 
-    public async Task<List<MedicineLog>> GetLogsByPatientAndDateAsync(Guid patientId, DateTime date)
+    public async Task<List<MedicineLog>> GetLogsByPatientInRangeAsync(Guid patientId, DateTime fromUtc, DateTime toUtc)
     {
-        // .Date strips the time away, so we only search for that specific day
-        var targetDate = date.Date;
-
+        // A UTC range (not ScheduledAt.Date) so the local Turkish day is used and the index can be used.
         return await _context.MedicineLogs
             .Include(ml => ml.Medicine) // Join the Medicine table so we can get the Name and Dosage!
-            .Where(ml => ml.PatientId == patientId && ml.ScheduledAt.Date == targetDate)
+            .Where(ml => ml.PatientId == patientId && ml.ScheduledAt >= fromUtc && ml.ScheduledAt < toUtc)
             .OrderBy(ml => ml.ScheduledAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<MedicineLog>> GetLogsInRangeAsync(DateTime fromUtc, DateTime toUtc)
+    {
+        return await _context.MedicineLogs
+            .Where(ml => ml.ScheduledAt >= fromUtc && ml.ScheduledAt < toUtc)
+            .ToListAsync();
+    }
+
+    public async Task<List<MedicineLog>> GetPendingWithoutReminderAsync(DateTime scheduledBeforeUtc)
+    {
+        return await _context.MedicineLogs
+            .Include(ml => ml.Medicine)
+            .Include(ml => ml.Patient)
+            .Where(ml => ml.Status == MedicineStatus.Pending && !ml.IsAlarmSent && ml.ScheduledAt <= scheduledBeforeUtc)
+            .ToListAsync();
+    }
+
+    public async Task<List<MedicineLog>> GetPendingLogsBeforeAsync(DateTime cutoffUtc)
+    {
+        return await _context.MedicineLogs
+            .Include(ml => ml.Medicine)
+            .Include(ml => ml.Patient)
+            .Where(ml => ml.Status == MedicineStatus.Pending && ml.ScheduledAt <= cutoffUtc)
             .ToListAsync();
     }
 
@@ -43,11 +67,38 @@ public class MedicineLogRepository : IMedicineLogRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<MedicineLog>> GetPendingLogsBeforeAsync(DateTime cutoffDate)
+    public async Task<List<MedicineLog>> AddRangeIgnoringDuplicatesAsync(IReadOnlyCollection<MedicineLog> logs)
     {
-        return await _context.MedicineLogs
-            .Where(ml => ml.Status == Domain.Enums.MedicineStatus.Pending && ml.ScheduledAt < cutoffDate)
-            .ToListAsync();
+        if (logs.Count == 0) return new List<MedicineLog>();
+
+        try
+        {
+            // Fast path: one round-trip for the whole batch.
+            await _context.MedicineLogs.AddRangeAsync(logs);
+            await _context.SaveChangesAsync();
+            return logs.ToList();
+        }
+        catch (DbUpdateException)
+        {
+            // Another process inserted some of them first. Forget the failed batch and insert one by one.
+            foreach (var log in logs) _context.Entry(log).State = EntityState.Detached;
+        }
+
+        var inserted = new List<MedicineLog>();
+        foreach (var log in logs)
+        {
+            try
+            {
+                _context.MedicineLogs.Add(log);
+                await _context.SaveChangesAsync();
+                inserted.Add(log);
+            }
+            catch (DbUpdateException)
+            {
+                _context.Entry(log).State = EntityState.Detached; // duplicate: already exists
+            }
+        }
+        return inserted;
     }
 
     public async Task UpdateRangeAsync(IEnumerable<MedicineLog> logs)
@@ -55,21 +106,19 @@ public class MedicineLogRepository : IMedicineLogRepository
         _context.MedicineLogs.UpdateRange(logs);
         await _context.SaveChangesAsync();
     }
-    public async Task<List<MedicineLog>> GetAllLogsByDateAsync(DateTime date)
-    {
-        var targetDate = date.Date;
-        return await _context.MedicineLogs
-            .Where(ml => ml.ScheduledAt.Date == targetDate)
-            .ToListAsync();
-    }
+
     public async Task<List<MedicineLog>> GetFuturePendingLogsByMedicineIdAsync(Guid medicineId, DateTime fromDate)
     {
-     
         return await _context.MedicineLogs
             .Where(ml => ml.MedicineId == medicineId
-                      && ml.Status == Domain.Enums.MedicineStatus.Pending
+                      && ml.Status == MedicineStatus.Pending
                       && ml.ScheduledAt >= fromDate)
             .ToListAsync();
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await _context.SaveChangesAsync();
     }
 
     public async Task RemoveRangeAsync(IEnumerable<MedicineLog> logs)
@@ -77,5 +126,4 @@ public class MedicineLogRepository : IMedicineLogRepository
         _context.MedicineLogs.RemoveRange(logs);
         await _context.SaveChangesAsync();
     }
-
 }

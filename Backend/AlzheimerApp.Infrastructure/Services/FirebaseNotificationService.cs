@@ -5,26 +5,36 @@ namespace AlzheimerApp.Infrastructure.Services;
 
 public class FirebaseNotificationService : INotificationService
 {
-    public async Task<bool> SendMulticastAlertAsync(List<string> fcmTokens, string title, string body, string alertType)
+    public Task<bool> SendMulticastAlertAsync(List<string> fcmTokens, string title, string body, string alertType)
     {
-        if (fcmTokens == null || !fcmTokens.Any()) return false;
+        return SendMulticastAsync(fcmTokens, title, body, new Dictionary<string, string>
+        {
+            { "alertType", alertType }
+        });
+    }
+
+    public async Task<bool> SendMulticastAsync(List<string> fcmTokens, string title, string body, IReadOnlyDictionary<string, string> data)
+    {
+        var tokens = fcmTokens?.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList();
+        if (tokens == null || tokens.Count == 0) return false;
+
+        var payload = new Dictionary<string, string>(data)
+        {
+            ["click_action"] = "FLUTTER_NOTIFICATION_CLICK" // Tells the mobile app to open when clicked!
+        };
 
         var message = new MulticastMessage()
         {
-            Tokens = fcmTokens,
+            Tokens = tokens,
             Notification = new Notification
             {
                 Title = title,
                 Body = body
             },
-            Data = new Dictionary<string, string>()
-            {
-                { "alertType", alertType },
-                { "click_action", "FLUTTER_NOTIFICATION_CLICK" } // Tells the mobile app to open when clicked!
-            }
+            Data = payload
         };
 
-        // Send to all followers at the exact same time
+        // Send to all devices at the exact same time
         var response = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(message);
 
         return response.SuccessCount > 0;

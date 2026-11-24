@@ -69,8 +69,9 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddHostedService<MedicineStatusSweeperWorker>();
 builder.Services.AddHostedService<MedicineDailyGeneratorWorker>();
+builder.Services.AddHostedService<MedicineAlarmWorker>();
+builder.Services.AddHostedService<MedicineStatusSweeperWorker>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"]!);
@@ -115,7 +116,7 @@ var firebaseCredentials = new Dictionary<string, string>
     { "type", firebaseConfig["Type"] ?? throw new ArgumentNullException("Firebase: Type is missing") },
     { "project_id", firebaseConfig["ProjectId"] ?? throw new ArgumentNullException("Firebase: ProjectId is missing") },
     { "private_key_id", firebaseConfig["PrivateKeyId"] ?? "" },
-    
+
     { "private_key", (firebaseConfig["PrivateKey"] ?? throw new ArgumentNullException("Firebase: PrivateKey is missing")).Replace("\\n", "\n") },
 
     { "client_email", firebaseConfig["ClientEmail"] ?? "" },
@@ -142,6 +143,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<LocationHub>("/hubs/location");
+// Lightweight liveness check (also handy for an uptime pinger so background workers keep running).
+app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }));
 
 using (var scope = app.Services.CreateScope())
 {

@@ -1,91 +1,62 @@
-﻿using AlzheimerApp.Application.Interfaces.Repositories;
-using AlzheimerApp.Domain.Entities;
-using AlzheimerApp.Domain.Enums;
+﻿using AlzheimerApp.Application.Interfaces.Services;
 
 namespace AlzheimerApp.API.BackgroundJobs;
 
+/// <summary>
+/// At startup and every day at 00:01 local time (Europe/Istanbul by default): creates today's Pending dose logs
+/// for every active medicine, so reminders and missed-dose alerts work even if nobody opens the app.
+/// </summary>
 public class MedicineDailyGeneratorWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IMedicineScheduleSettings _settings;
+    private readonly TimeProvider _clock;
     private readonly ILogger<MedicineDailyGeneratorWorker> _logger;
 
-    public MedicineDailyGeneratorWorker(IServiceScopeFactory scopeFactory, ILogger<MedicineDailyGeneratorWorker> logger)
+    public MedicineDailyGeneratorWorker(
+        IServiceScopeFactory scopeFactory,
+        IMedicineScheduleSettings settings,
+        TimeProvider clock,
+        ILogger<MedicineDailyGeneratorWorker> logger)
     {
         _scopeFactory = scopeFactory;
+        _settings = settings;
+        _clock = clock;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Midnight Sweeper is starting up...");
+        _logger.LogInformation("Medicine daily generator started (time zone: {TimeZone}).", _settings.TimeZone.Id);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await GenerateGlobalLogsForTodayAsync(stoppingToken);
+                using var scope = _scopeFactory.CreateScope();
+                var logService = scope.ServiceProvider.GetRequiredService<IMedicineLogService>();
+
+                int created = await logService.GenerateLogsForTodayAsync();
+                _logger.LogInformation("Medicine daily generator created {Count} dose logs for today.", created);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "CRITICAL ERROR: Midnight Sweeper failed to generate logs.");
+                _logger.LogError(ex, "CRITICAL ERROR: Medicine daily generator failed to generate logs.");
             }
 
-            var now = DateTime.UtcNow;
-            var nextRunTime = now.Date.AddDays(1).AddMinutes(1);
-            var delay = nextRunTime - now;
-
-            _logger.LogInformation($"Midnight Sweeper sleeping for {delay.TotalHours:F2} hours. Next run at {nextRunTime} UTC.");
-
-            await Task.Delay(delay, stoppingToken);
+            await Task.Delay(DelayUntilNextLocalRun(), stoppingToken);
         }
     }
 
-    private async Task GenerateGlobalLogsForTodayAsync(CancellationToken stoppingToken)
+    /// <summary>Time until 00:01 tomorrow in the configured time zone.</summary>
+    private TimeSpan DelayUntilNextLocalRun()
     {
-        using var scope = _scopeFactory.CreateScope();
-        var medicineRepo = scope.ServiceProvider.GetRequiredService<IMedicineRepository>();
-        var logRepo = scope.ServiceProvider.GetRequiredService<IMedicineLogRepository>();
+        var nowUtc = _clock.GetUtcNow().UtcDateTime;
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, _settings.TimeZone);
+        var nextLocalRun = DateTime.SpecifyKind(localNow.Date.AddDays(1).AddMinutes(1), DateTimeKind.Unspecified);
+        var nextRunUtc = TimeZoneInfo.ConvertTimeToUtc(nextLocalRun, _settings.TimeZone);
 
-        var today = DateTime.UtcNow.Date;
-        string currentDayNum = ((int)today.DayOfWeek).ToString();
-
-        _logger.LogInformation($"Running Global Generation for {today:yyyy-MM-dd} (Day {currentDayNum})...");
-
-        var allActiveMeds = await medicineRepo.GetAllActiveMedicinesAsync();
-        var existingLogs = await logRepo.GetAllLogsByDateAsync(today);
-
-        var existingMedicineIds = existingLogs.Select(l => l.MedicineId).ToHashSet();
-
-        // 3. TARİH FİLTRESİ EKLENDİ: Gece yarısı üretimi yapılırken de ilacın tarih sınırlarına bakılıyor!
-        var medsForToday = allActiveMeds.Where(m => m.DaysOfWeek.Contains(currentDayNum)
-                                                && today >= m.StartDate.Date
-                                                && today <= (m.EndDate?.Date ?? DateTime.MaxValue))
-                                       .ToList();
-
-        var newLogs = new List<MedicineLog>();
-
-        foreach (var med in medsForToday)
-        {
-            if (!existingMedicineIds.Contains(med.Id))
-            {
-                newLogs.Add(new MedicineLog
-                {
-                    MedicineId = med.Id,
-                    PatientId = med.PatientId,
-                    Status = MedicineStatus.Pending,
-                    ScheduledAt = today.Add(med.ScheduleTime)
-                });
-            }
-        }
-
-        if (newLogs.Any())
-        {
-            await logRepo.AddRangeAsync(newLogs);
-            _logger.LogInformation($"SUCCESS: Auto-generated {newLogs.Count} missing medicine logs for today.");
-        }
-        else
-        {
-            _logger.LogInformation("No new logs needed. System is fully synced.");
-        }
+        var delay = nextRunUtc - nowUtc;
+        return delay > TimeSpan.Zero ? delay : TimeSpan.FromMinutes(1);
     }
 }

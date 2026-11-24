@@ -70,7 +70,10 @@ public class LocationService : ILocationService
         // SADECE VE SADECE şu an dışarıdaysa VE daha önce içerideyken YENİ dışarı çıkmışsa alarm ver!
         if (isCurrentlyOutside && !wasAlreadyOutside)
         {
-            string alertMessage = "EMERGENCY: The patient has left the designated Safe Zone!";
+            var patient = await _userRepository.GetByIdAsync(patientId);
+            string patientName = patient?.FullName ?? "Hasta";
+            string zoneName = activeSafeZones.Count == 1 ? activeSafeZones[0].Name : "Güvenli Alan";
+            string alertMessage = $"{patientName} güvenli bölgenin ({zoneName}) dışına çıktı!";
 
             var alertHistory = new AlertHistory
             {
@@ -90,11 +93,21 @@ public class LocationService : ILocationService
 
             if (tokens.Any())
             {
-                alertSent = await _notificationService.SendMulticastAlertAsync(
+                alertSent = await _notificationService.SendMulticastAsync(
                     tokens,
-                    "Safe Zone Breach!",
+                    "⚠️ Güvenli bölge ihlali!",
                     alertMessage,
-                    AlertType.SafeZoneBreach.ToString());
+                    new Dictionary<string, string>
+                    {
+                        // notification_service.dart switches on "type"
+                        ["type"] = "SAFEZONE_EXIT",
+                        ["alertType"] = AlertType.SafeZoneBreach.ToString(),
+                        ["patientId"] = patientId.ToString(),
+                        ["patientName"] = patientName,
+                        ["zoneName"] = zoneName,
+                        ["latitude"] = request.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        ["longitude"] = request.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    });
             }
         }
 

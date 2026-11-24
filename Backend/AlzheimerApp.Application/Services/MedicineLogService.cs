@@ -1,4 +1,5 @@
-﻿using AlzheimerApp.Application.DTOs.MedicineLogs;
+﻿using AlzheimerApp.Application.Common;
+using AlzheimerApp.Application.DTOs.MedicineLogs;
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
@@ -8,73 +9,74 @@ namespace AlzheimerApp.Application.Services;
 
 public class MedicineLogService : IMedicineLogService
 {
+    // FCM data "type" values the Flutter app (notification_service.dart) switches on.
+    public const string PushTypeMedicationMissed = "MEDICATION_MISSED";
+    public const string PushTypeMedicationReminder = "MEDICATION_REMINDER";
+
     private readonly IMedicineLogRepository _logRepository;
     private readonly IMedicineRepository _medicineRepository;
+    private readonly IPatientFollowerRepository _followerRepository;
+    private readonly IAlertHistoryRepository _alertRepository;
+    private readonly INotificationService _notificationService;
+    private readonly IMedicineScheduleSettings _settings;
+    private readonly TimeProvider _clock;
 
-    public MedicineLogService(IMedicineLogRepository logRepository, IMedicineRepository medicineRepository)
+    public MedicineLogService(
+        IMedicineLogRepository logRepository,
+        IMedicineRepository medicineRepository,
+        IPatientFollowerRepository followerRepository,
+        IAlertHistoryRepository alertRepository,
+        INotificationService notificationService,
+        IMedicineScheduleSettings settings,
+        TimeProvider clock)
     {
         _logRepository = logRepository;
         _medicineRepository = medicineRepository;
+        _followerRepository = followerRepository;
+        _alertRepository = alertRepository;
+        _notificationService = notificationService;
+        _settings = settings;
+        _clock = clock;
     }
+
+    private DateTime UtcNow => _clock.GetUtcNow().UtcDateTime;
+    private TimeZoneInfo Tz => _settings.TimeZone;
+
+    // ------------------------------------------------------------------ daily list (JIT)
 
     public async Task<List<MedicineLogResponse>> GetDailyLogsAsync(Guid patientId, DateTime date)
     {
-        // 1. O gün için veritabanında HALİHAZIRDA var olan logları getir
-        var existingLogs = await _logRepository.GetLogsByPatientAndDateAsync(patientId, date);
+        var localDate = ScheduleCalendar.ResolveLocalDate(date, Tz);
+        var (fromUtc, toUtc) = ScheduleCalendar.LocalDayRangeUtc(localDate, Tz);
 
-        // 2. Hastanın aktif olan tüm ilaçlarını getir
+        // 1. O gün (Türkiye saatiyle) için HALİHAZIRDA var olan loglar
+        var existingLogs = await _logRepository.GetLogsByPatientInRangeAsync(patientId, fromUtc, toUtc);
+
+        // 2. JIT: o gün içilmesi gereken ama logu OLMAYAN ilaçlar için log üret
         var activeMeds = await _medicineRepository.GetActiveMedicinesByPatientIdAsync(patientId);
+        var created = await CreateMissingLogsAsync(activeMeds, localDate, existingLogs);
 
-        // C# DayOfWeek 0 (Pazar) ile 6 (Cumartesi) arasıdır. string'e çeviriyoruz.
-        string currentDayNum = ((int)date.DayOfWeek).ToString();
-
-        // 3. TARİH FİLTRESİ EKLENDİ: Hem gün eşleşmeli hem de sorgulanan tarih ilacın Start/End tarihleri arasında olmalı!
-        var medsForToday = activeMeds.Where(m => m.DaysOfWeek.Contains(currentDayNum)
-                                            && date.Date >= m.StartDate.Date
-                                            && date.Date <= (m.EndDate?.Date ?? DateTime.MaxValue))
-                                   .ToList();
-
-        // 4. JIT LOGIC: Bugün içilmesi gereken ama loglarda OLMAYAN ilaçları bul
-        var existingLogMedicineIds = existingLogs.Select(l => l.MedicineId).ToHashSet();
-        var missingMeds = medsForToday.Where(m => !existingLogMedicineIds.Contains(m.Id)).ToList();
-
-        // 5. Eğer eksik ilaç varsa, SADECE onları üret
-        if (missingMeds.Any())
+        if (created > 0)
         {
-            var newLogs = new List<MedicineLog>();
-
-            foreach (var med in missingMeds)
-            {
-                newLogs.Add(new MedicineLog
-                {
-                    MedicineId = med.Id,
-                    PatientId = patientId,
-                    Status = MedicineStatus.Pending,
-                    ScheduledAt = date.Date.Add(med.ScheduleTime),
-                    Medicine = med
-                });
-            }
-
-            // Yeni üretilenleri veritabanına kaydet
-            await _logRepository.AddRangeAsync(newLogs);
-
-            // Mevcut listeye yeni üretilenleri de ekle ki ekrana hepsi gitsin
-            existingLogs.AddRange(newLogs);
+            // Re-read so concurrent inserts (worker) are included exactly once, with Medicine loaded.
+            existingLogs = await _logRepository.GetLogsByPatientInRangeAsync(patientId, fromUtc, toUtc);
         }
 
-        // 6. Artık existingLogs hem eskileri hem yenileri içeriyor, frontend'e gönder
-        return existingLogs.Select(l => new MedicineLogResponse
-        {
-            Id = l.Id,
-            MedicineId = l.MedicineId,
-            MedicineName = l.Medicine?.Name ?? "Unknown Medicine",
-            Dosage = l.Medicine?.Dosage ?? "",
-            Instructions = l.Medicine?.Instructions,
-            Status = l.Status,
-            ScheduledAt = l.ScheduledAt,
-            TakenAt = l.TakenAt,
-            Note = l.Note
-        }).ToList();
+        // 3. Frontend'e gönder (ScheduledAt UTC'dir; uygulama yerel saate çevirir)
+        return existingLogs
+            .OrderBy(l => l.ScheduledAt)
+            .Select(l => new MedicineLogResponse
+            {
+                Id = l.Id,
+                MedicineId = l.MedicineId,
+                MedicineName = l.Medicine?.Name ?? "Unknown Medicine",
+                Dosage = l.Medicine?.Dosage ?? "",
+                Instructions = l.Medicine?.Instructions,
+                Status = l.Status,
+                ScheduledAt = l.ScheduledAt,
+                TakenAt = l.TakenAt,
+                Note = l.Note
+            }).ToList();
     }
 
     public async Task UpdateLogStatusAsync(Guid logId, UpdateLogStatusRequest request)
@@ -84,28 +86,171 @@ public class MedicineLogService : IMedicineLogService
 
         log.Status = request.Status;
         log.Note = request.Note;
-
-        if (request.Status == MedicineStatus.Taken)
-        {
-            log.TakenAt = DateTime.UtcNow;
-        }
+        log.TakenAt = request.Status == MedicineStatus.Taken ? UtcNow : null;
 
         await _logRepository.UpdateAsync(log);
     }
 
-    public async Task MarkOverdueLogsAsMissedAsync()
+    // ------------------------------------------------------------------ generation
+
+    public async Task<int> GenerateLogsForTodayAsync()
     {
-        var startOfToday = DateTime.UtcNow.Date;
-        var overdueLogs = await _logRepository.GetPendingLogsBeforeAsync(startOfToday);
+        var localToday = ScheduleCalendar.LocalDate(UtcNow, Tz);
+        var (fromUtc, toUtc) = ScheduleCalendar.LocalDayRangeUtc(localToday, Tz);
 
-        if (!overdueLogs.Any()) return;
+        var allActiveMeds = await _medicineRepository.GetAllActiveMedicinesAsync();
+        var existingLogs = await _logRepository.GetLogsInRangeAsync(fromUtc, toUtc);
 
+        return await CreateMissingLogsAsync(allActiveMeds, localToday, existingLogs);
+    }
+
+    public async Task EnsureTodayLogsForPatientAsync(Guid patientId)
+    {
+        var localToday = ScheduleCalendar.LocalDate(UtcNow, Tz);
+        var (fromUtc, toUtc) = ScheduleCalendar.LocalDayRangeUtc(localToday, Tz);
+
+        var meds = await _medicineRepository.GetActiveMedicinesByPatientIdAsync(patientId);
+        var existingLogs = await _logRepository.GetLogsByPatientInRangeAsync(patientId, fromUtc, toUtc);
+
+        await CreateMissingLogsAsync(meds, localToday, existingLogs);
+    }
+
+    /// <summary>One log per medicine per local day; already-existing doses are skipped.</summary>
+    private async Task<int> CreateMissingLogsAsync(IEnumerable<Medicine> meds, DateOnly localDate, IEnumerable<MedicineLog> existingLogs)
+    {
+        var existing = existingLogs.Select(l => (l.MedicineId, l.ScheduledAt)).ToHashSet();
+        var medicinesWithLogToday = existingLogs.Select(l => l.MedicineId).ToHashSet();
+
+        var newLogs = new List<MedicineLog>();
+        foreach (var med in meds)
+        {
+            var dueUtc = ScheduleCalendar.DoseTimeUtc(med, localDate, Tz);
+            if (dueUtc == null) continue;
+
+            // Keep "one dose per medicine per day": an edited time does not add a second dose for today.
+            if (medicinesWithLogToday.Contains(med.Id) || existing.Contains((med.Id, dueUtc.Value))) continue;
+
+            newLogs.Add(new MedicineLog
+            {
+                MedicineId = med.Id,
+                PatientId = med.PatientId,
+                Status = MedicineStatus.Pending,
+                ScheduledAt = dueUtc.Value
+            });
+        }
+
+        var inserted = await _logRepository.AddRangeIgnoringDuplicatesAsync(newLogs);
+        return inserted.Count;
+    }
+
+    // ------------------------------------------------------------------ reminder to the patient (+15 min)
+
+    public async Task<int> SendDueRemindersAsync()
+    {
+        var now = UtcNow;
+        var dueLogs = await _logRepository.GetPendingWithoutReminderAsync(now - _settings.ReminderDelay);
+        if (dueLogs.Count == 0) return 0;
+
+        // Mark first, so a crash or FCM error can never cause the same reminder to be sent twice.
+        foreach (var log in dueLogs) log.IsAlarmSent = true;
+        await _logRepository.SaveChangesAsync();
+
+        int sent = 0;
+        foreach (var log in dueLogs)
+        {
+            // Too old (server was asleep, or the dose was created late): skip silently instead of a stale push.
+            if (now - (log.ScheduledAt + _settings.ReminderDelay) > _settings.NotificationWindow) continue;
+
+            var token = log.Patient?.FcmToken;
+            if (string.IsNullOrWhiteSpace(token)) continue;
+
+            var medicineName = log.Medicine?.Name ?? "İlacınız";
+            var dosage = string.IsNullOrWhiteSpace(log.Medicine?.Dosage) ? "" : $" ({log.Medicine!.Dosage})";
+            var time = ScheduleCalendar.FormatLocalTime(log.ScheduledAt, Tz);
+
+            await _notificationService.SendMulticastAsync(
+                new List<string> { token },
+                "💊 İlacınızı aldınız mı?",
+                $"Saat {time} {medicineName}{dosage} dozunuz bekliyor. Aldıysanız uygulamadan işaretleyin.",
+                new Dictionary<string, string>
+                {
+                    ["type"] = PushTypeMedicationReminder,
+                    ["alertType"] = AlertType.MedicineReminder.ToString(),
+                    ["patientId"] = log.PatientId.ToString(),
+                    ["medicineLogId"] = log.Id.ToString(),
+                    ["medicineName"] = medicineName,
+                    ["scheduledTime"] = time
+                });
+            sent++;
+        }
+
+        return sent;
+    }
+
+    // ------------------------------------------------------------------ missed → care team (+60 min)
+
+    public async Task<int> MarkOverdueLogsAsMissedAsync()
+    {
+        var now = UtcNow;
+        var overdueLogs = await _logRepository.GetPendingLogsBeforeAsync(now - _settings.MissedAfter);
+        if (overdueLogs.Count == 0) return 0;
+
+        // 1. Status change first: Pending → Missed happens once, so the alert below is sent at most once.
         foreach (var log in overdueLogs)
         {
             log.Status = MedicineStatus.Missed;
             log.Note = "System Auto-Update: Patient did not confirm taking this medication.";
         }
+        await _logRepository.SaveChangesAsync();
 
-        await _logRepository.UpdateRangeAsync(overdueLogs);
+        // 2. Alert only recent ones; doses found long after the fact are just recorded as Missed.
+        var toAlert = overdueLogs
+            .Where(l => now - (l.ScheduledAt + _settings.MissedAfter) <= _settings.NotificationWindow)
+            .GroupBy(l => l.PatientId);
+
+        foreach (var patientLogs in toAlert)
+        {
+            var followers = await _followerRepository.GetFollowersByPatientIdAsync(patientLogs.Key);
+            var tokens = followers
+                .Where(f => f.Follower != null && !string.IsNullOrEmpty(f.Follower.FcmToken))
+                .Select(f => f.Follower!.FcmToken!)
+                .ToList();
+
+            foreach (var log in patientLogs)
+            {
+                var patientName = log.Patient?.FullName ?? "Hasta";
+                var medicineName = log.Medicine?.Name ?? "ilacını";
+                var time = ScheduleCalendar.FormatLocalTime(log.ScheduledAt, Tz);
+                var message = $"{patientName}, saat {time} {medicineName} dozunu almadı.";
+
+                await _alertRepository.AddAsync(new AlertHistory
+                {
+                    PatientId = log.PatientId,
+                    AlertType = AlertType.MedicineMissed,
+                    Message = message,
+                    IsRead = false,
+                    SentAt = now
+                });
+
+                if (tokens.Count == 0) continue;
+
+                await _notificationService.SendMulticastAsync(
+                    tokens,
+                    "💊 İlaç alınmadı",
+                    message,
+                    new Dictionary<string, string>
+                    {
+                        ["type"] = PushTypeMedicationMissed,
+                        ["alertType"] = AlertType.MedicineMissed.ToString(),
+                        ["patientId"] = log.PatientId.ToString(),
+                        ["patientName"] = patientName,
+                        ["medicineLogId"] = log.Id.ToString(),
+                        ["medicineName"] = medicineName,
+                        ["scheduledTime"] = time
+                    });
+            }
+        }
+
+        return overdueLogs.Count;
     }
 }

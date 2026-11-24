@@ -71,5 +71,11 @@ public class ApplicationDbContext : DbContext
         // This composite index also covers the PatientId foreign key, so EF drops the old single-column one.
         modelBuilder.Entity<LocationLog>()
             .HasIndex(l => new { l.PatientId, l.RecordedAt });
+
+        // One dose per medicine per moment: the daily worker and on-demand generation can never create duplicates.
+        modelBuilder.Entity<MedicineLog>()
+            .HasIndex(ml => new { ml.MedicineId, ml.ScheduledAt })
+            .IsUnique();
+
     }
 }

@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IAlertService, AlertService>();
         services.AddScoped<IMedicineLogService, MedicineLogService>();
         services.AddScoped<IPatientService, PatientService>();
+        services.AddSingleton(TimeProvider.System);
 
         return services;
     }

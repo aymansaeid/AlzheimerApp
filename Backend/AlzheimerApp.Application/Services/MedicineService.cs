@@ -8,13 +8,14 @@ namespace AlzheimerApp.Application.Services;
 public class MedicineService : IMedicineService
 {
     private readonly IMedicineRepository _medicineRepository;
-
     private readonly IMedicineLogRepository _logRepository;
+    private readonly IMedicineLogService _logService;
 
-    public MedicineService(IMedicineRepository medicineRepository, IMedicineLogRepository logRepository)
+    public MedicineService(IMedicineRepository medicineRepository, IMedicineLogRepository logRepository, IMedicineLogService logService)
     {
         _medicineRepository = medicineRepository;
         _logRepository = logRepository;
+        _logService = logService;
     }
 
     public async Task<MedicineResponse> AddMedicineAsync(MedicineRequest request)
@@ -35,6 +36,7 @@ public class MedicineService : IMedicineService
         };
 
         var savedEntity = await _medicineRepository.AddAsync(medicine);
+        await _logService.EnsureTodayLogsForPatientAsync(savedEntity.PatientId);
         return MapToResponse(savedEntity);
     }
 
@@ -80,6 +82,7 @@ public class MedicineService : IMedicineService
         {
             await _logRepository.RemoveRangeAsync(futureLogs);
         }
+        await _logService.EnsureTodayLogsForPatientAsync(medicine.PatientId);
     }
 
     public async Task DeleteMedicineAsync(Guid id)
