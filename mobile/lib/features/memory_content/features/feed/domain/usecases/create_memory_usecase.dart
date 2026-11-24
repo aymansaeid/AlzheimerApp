@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import '../entities/memory_content.dart';
 import '../repositories/file_storage_repository.dart';
@@ -54,7 +55,11 @@ class CreateMemoryUseCase {
       if (fileUrl.isNotEmpty) {
         try {
           await _fileStorage.deleteFile(fileUrl);
-        } catch (_) {}
+        } catch (deleteError) {
+          debugPrint(
+            'Rollback sırasında Firebase Storage dosyası silinemedi ($fileUrl): $deleteError',
+          );
+        }
       }
       rethrow;
     }

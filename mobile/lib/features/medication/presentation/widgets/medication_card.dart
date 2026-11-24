@@ -7,6 +7,7 @@ class MedicationCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onMarkAsTaken;
   final bool isPatient;
+  final DateTime? currentDateTime;
 
   const MedicationCard({
     super.key,
@@ -14,6 +15,7 @@ class MedicationCard extends StatelessWidget {
     required this.onTap,
     this.onMarkAsTaken,
     required this.isPatient,
+    this.currentDateTime,
   });
 
   @override
@@ -24,8 +26,16 @@ class MedicationCard extends StatelessWidget {
     final isMissed = medication.status == 2;
 
     // Parse scheduled time and convert to local time
+    final now = currentDateTime ?? DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
     final scheduledLocal = medication.scheduledAt.toLocal();
-    final isFuture = scheduledLocal.isAfter(DateTime.now());
+    final scheduledDay = DateTime(
+      scheduledLocal.year,
+      scheduledLocal.month,
+      scheduledLocal.day,
+    );
+    final isFuture = scheduledLocal.isAfter(now);
+    final isPastDay = scheduledDay.isBefore(todayStart);
 
     // Role Check via constructor parameter
 
@@ -108,7 +118,32 @@ class MedicationCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   if (isPending) ...[
-                    if (isPatient)
+                    if (isPatient) ...[
+                      if (isPastDay) ...[
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.red,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Bu ilaç zamanında alınmadı',
+                                  style: TextStyle(
+                                    color: Colors.red.shade700,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       ElevatedButton.icon(
                         onPressed: isFuture ? null : onMarkAsTaken,
                         icon: const Icon(Icons.check, size: 16, color: Colors.white),
@@ -120,7 +155,7 @@ class MedicationCard extends StatelessWidget {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
+                          backgroundColor: isPastDay ? Colors.red : Colors.green,
                           disabledBackgroundColor: Colors.grey.shade300,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -130,93 +165,70 @@ class MedicationCard extends StatelessWidget {
                             vertical: 8,
                           ),
                         ),
+                      ),
+                    ] else if (isPastDay)
+                      Flexible(
+                        child: _buildStatusBadge(
+                          icon: Icons.warning_amber_rounded,
+                          label: 'Bu ilaç zamanında alınmadı',
+                          color: Colors.red,
+                        ),
                       )
                     else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.hourglass_empty, color: Colors.orange, size: 16),
-                            SizedBox(width: 4),
-                            Text(
-                              'Bekliyor',
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
+                      _buildStatusBadge(
+                        icon: Icons.hourglass_empty,
+                        label: 'Bekliyor',
+                        color: Colors.orange,
+                      ),
                   ] else if (isTaken)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
-                        border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.green, size: 16),
-                          SizedBox(width: 4),
-                          Text(
-                            'Alındı',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
+                    _buildStatusBadge(
+                      icon: Icons.check_circle,
+                      label: 'Alındı',
+                      color: Colors.green,
                     )
                   else if (isMissed)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.error, color: Colors.red, size: 16),
-                          SizedBox(width: 4),
-                          Text(
-                            'Kaçırıldı',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
+                    _buildStatusBadge(
+                      icon: Icons.error,
+                      label: 'Kaçırıldı',
+                      color: Colors.red,
+                    ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
