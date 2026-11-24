@@ -8,6 +8,7 @@ class DashboardLovedOneModel extends LovedOne {
     required super.relationshipType,
     required super.isPrimary,
     required super.joinedAt,
+    super.profilePhotoUrl,
   });
 
   factory DashboardLovedOneModel.fromJson(Map<String, dynamic> json) {
@@ -18,6 +19,11 @@ class DashboardLovedOneModel extends LovedOne {
       relationshipType: (json['relationshipType'] ?? json['relationship_type'] ?? '').toString(),
       isPrimary: json['isPrimary'] == true || json['is_primary'] == true,
       joinedAt: (json['joinedAt'] ?? json['joined_at'] ?? '').toString(),
+      profilePhotoUrl: (json['profilePhotoUrl'] ??
+              json['profile_photo_url'] ??
+              json['avatarUrl'] ??
+              json['avatar_url'])
+          ?.toString(),
     );
   }
 
@@ -29,6 +35,7 @@ class DashboardLovedOneModel extends LovedOne {
       'relationshipType': relationshipType,
       'isPrimary': isPrimary,
       'joinedAt': joinedAt,
+      'profilePhotoUrl': profilePhotoUrl,
     };
   }
 }

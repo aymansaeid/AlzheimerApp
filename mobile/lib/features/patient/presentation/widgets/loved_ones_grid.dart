@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/avatar_circle.dart';
 import '../../domain/entities/loved_one.dart';
 
 class LovedOnesGrid extends StatelessWidget {
@@ -35,34 +36,52 @@ class LovedOnesGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.4,
+        childAspectRatio: 1.15,
       ),
       itemCount: lovedOnes.length,
       itemBuilder: (context, i) {
         final p = lovedOnes[i];
+        final trimmedUrl = p.profilePhotoUrl?.trim();
+        final hasPhoto = trimmedUrl != null && trimmedUrl.isNotEmpty;
+
+        final fallback = Container(
+          width: double.infinity,
+          height: double.infinity,
+          color: _getColor(i),
+          child: Center(
+            child: AvatarCircle(
+              initials: _getInitials(p.fullName),
+              size: 64,
+              backgroundColor:
+                  theme.colorScheme.primary.withValues(alpha: 0.2),
+              textStyle: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        );
+
         return AppCard(
           padding: EdgeInsets.zero,
           onTap: () => onMemoryPersonTapped(p.fullName),
           child: Column(
             children: [
               Expanded(
-                child: Container(
-                  color: _getColor(i),
-                  child: Center(
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-                      foregroundColor: theme.colorScheme.primary,
-                      child: Text(
-                        _getInitials(p.fullName),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                child: hasPhoto
+                    ? Image.network(
+                        trimmedUrl,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return fallback;
+                        },
+                        errorBuilder: (context, error, stackTrace) => fallback,
+                      )
+                    : fallback,
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

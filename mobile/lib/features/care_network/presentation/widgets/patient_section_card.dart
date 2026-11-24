@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/avatar_circle.dart';
 import '../../domain/entities/care_team_member.dart';
 import '../../../caregiver/domain/entities/followed_patient.dart';
 import 'team_member_list_item.dart';
@@ -46,15 +47,17 @@ class PatientSectionCard extends StatelessWidget {
             // Patient Header
             Row(
               children: [
-                CircleAvatar(
+                AvatarCircle(
+                  initials: patient.fullName.isNotEmpty
+                      ? patient.fullName[0].toUpperCase()
+                      : 'H',
+                  size: 64,
+                  imageUrl: patient.profilePhotoUrl,
                   backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(
-                    patient.fullName.isNotEmpty
-                        ? patient.fullName[0].toUpperCase()
-                        : 'H',
-                    style: TextStyle(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
+                  textStyle: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onPrimaryContainer,
                   ),
                 ),
                 const SizedBox(width: 12),

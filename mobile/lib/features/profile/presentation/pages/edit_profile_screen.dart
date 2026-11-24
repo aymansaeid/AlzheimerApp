@@ -3,11 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:mobile/core/widgets/app_text_field.dart';
 import 'package:mobile/core/widgets/profile_picture_widget.dart';
+import 'package:mobile/features/auth/domain/entities/user.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_event.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
 
-import '../../domain/entities/profile_user.dart';
+import '../../domain/entities/profile_update_entity.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -25,7 +26,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _fullNameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
-  final _passwordController = TextEditingController();
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -42,7 +44,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _fullNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _passwordController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
     super.dispose();
   }
 
@@ -53,6 +56,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
     }
     return parts[0][0].toUpperCase();
+  }
+
+  void _onSave(BuildContext context, User user) {
+    if (!_formKey.currentState!.validate()) return;
+
+    final newFullName = _fullNameController.text.trim();
+    final newEmail = _emailController.text.trim();
+    final newPhone = _phoneController.text.trim();
+    final newPassword = _newPasswordController.text;
+    final currentPassword = _currentPasswordController.text;
+
+    final fullNameChanged = newFullName != user.fullName;
+    final emailChanged = newEmail != user.email;
+    final phoneChanged = newPhone != (user.phone ?? '');
+    final passwordChanged = newPassword.isNotEmpty;
+
+    if (!fullNameChanged &&
+        !emailChanged &&
+        !phoneChanged &&
+        !passwordChanged) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Herhangi bir değişiklik yapılmadı.')),
+      );
+      return;
+    }
+
+    context.read<ProfileBloc>().add(
+          ProfileUpdateRequested(
+            user: ProfileUpdateEntity(
+              fullName: fullNameChanged ? newFullName : null,
+              email: emailChanged ? newEmail : null,
+              phone: phoneChanged ? newPhone : null,
+              currentPassword:
+                  (emailChanged || passwordChanged) ? currentPassword : null,
+              newPassword: passwordChanged ? newPassword : null,
+            ),
+          ),
+        );
   }
 
   @override
@@ -90,13 +131,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       );
                 }
 
-                if (profileState.profileUpdated) {
+                if (profileState.updatedProfile != null) {
+                  final updated = profileState.updatedProfile!;
+                  context.read<AuthBloc>().add(
+                        AuthUserProfileUpdated(
+                          fullName: updated.fullName,
+                          email: updated.email,
+                          phone: updated.phone,
+                        ),
+                      );
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Profil bilgileri güncellendi.'),
                     ),
                   );
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(true);
                 }
 
                 if (profileState.errorMessage != null) {
@@ -153,7 +202,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           controller: _fullNameController,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Lütfen ad ve soyadınızı giriniz';
+                              return 'Ad soyad boş bırakılamaz';
                             }
                             return null;
                           },
@@ -165,12 +214,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Bu alan boş bırakılamaz';
+                            if (value == null || value.trim().isEmpty) {
+                              return 'E-posta alanı boş bırakılamaz';
                             }
                             if (!RegExp(
                               r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                            ).hasMatch(value)) {
+                            ).hasMatch(value.trim())) {
                               return 'Geçerli bir e-posta adresi giriniz';
                             }
                             return null;
@@ -178,17 +227,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         const SizedBox(height: 16),
                         AppTextField(
-                          label: 'Telefon',
+                          label: 'Telefon (Temizlemek için boş bırakın)',
                           icon: Icons.phone_outlined,
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Güvenlik (E-posta veya şifre değişikliği için)',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextField(
+                          label: 'Mevcut Şifre',
+                          icon: Icons.lock_outline,
+                          controller: _currentPasswordController,
+                          obscureText: true,
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Telefon alanı boş bırakılamaz';
-                            }
-                            if (!RegExp(r'^(?:\+90|0)?\d{10}$')
-                                .hasMatch(value)) {
-                              return 'Geçerli bir Türkiye telefon numarası giriniz';
+                            final emailChanged =
+                                _emailController.text.trim() != user.email;
+                            final passwordChanged =
+                                _newPasswordController.text.isNotEmpty;
+                            if ((emailChanged || passwordChanged) &&
+                                (value == null || value.isEmpty)) {
+                              return 'E-posta veya şifre değiştirmek için mevcut şifrenizi girin';
                             }
                             return null;
                           },
@@ -196,14 +261,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         const SizedBox(height: 16),
                         AppTextField(
                           label: 'Yeni Şifre (Opsiyonel)',
-                          icon: Icons.lock_outline,
-                          controller: _passwordController,
+                          icon: Icons.lock_reset_outlined,
+                          controller: _newPasswordController,
                           obscureText: true,
                           validator: (value) {
                             if (value != null &&
                                 value.isNotEmpty &&
                                 value.length < 6) {
-                              return 'Şifre en az 6 karakter olmalıdır';
+                              return 'Yeni şifre en az 6 karakter olmalıdır';
                             }
                             return null;
                           },
@@ -212,29 +277,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ElevatedButton(
                           onPressed: profileState.isUpdatingProfile
                               ? null
-                              : () {
-                                  if (_formKey.currentState!.validate()) {
-                                    final passwordText =
-                                        _passwordController.text.trim();
-                                    context.read<ProfileBloc>().add(
-                                          ProfileUpdateRequested(
-                                            user: ProfileUser(
-                                              fullName:
-                                                  _fullNameController.text
-                                                      .trim(),
-                                              email:
-                                                  _emailController.text.trim(),
-                                              phone:
-                                                  _phoneController.text.trim(),
-                                              password: passwordText.isEmpty
-                                                  ? null
-                                                  : passwordText,
-                                              avatarUrl: user.avatarUrl,
-                                            ),
-                                          ),
-                                        );
-                                  }
-                                },
+                              : () => _onSave(context, user),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(

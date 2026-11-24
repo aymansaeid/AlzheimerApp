@@ -7,6 +7,7 @@ class LovedOne extends Equatable {
   final String relationshipType;
   final bool isPrimary;
   final String joinedAt;
+  final String? profilePhotoUrl;
 
   const LovedOne({
     required this.followerId,
@@ -15,6 +16,7 @@ class LovedOne extends Equatable {
     required this.relationshipType,
     required this.isPrimary,
     required this.joinedAt,
+    this.profilePhotoUrl,
   });
 
   @override
@@ -25,5 +27,6 @@ class LovedOne extends Equatable {
         relationshipType,
         isPrimary,
         joinedAt,
+        profilePhotoUrl,
       ];
 }

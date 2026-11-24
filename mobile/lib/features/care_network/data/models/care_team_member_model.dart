@@ -39,7 +39,11 @@ class CareTeamMemberModel extends CareTeamMember {
       joinedAt: parsedDate,
       email: json['email']?.toString(),
       phoneNumber: (json['phone'] ?? json['phoneNumber'] ?? json['phone_number'])?.toString(),
-      avatarUrl: json['avatarUrl']?.toString() ?? json['avatar_url']?.toString(),
+      avatarUrl: (json['profilePhotoUrl'] ??
+              json['profile_photo_url'] ??
+              json['avatarUrl'] ??
+              json['avatar_url'])
+          ?.toString(),
       relationshipType: (json['relationshipType'] ?? json['relationship_type'])?.toString(),
     );
   }

@@ -6,6 +6,7 @@ class FollowedPatientModel extends FollowedPatient {
     required super.fullName,
     required super.isPrimaryAdmin,
     required super.joinedAt,
+    super.profilePhotoUrl,
   });
 
   factory FollowedPatientModel.fromJson(Map<String, dynamic> json) {
@@ -14,6 +15,11 @@ class FollowedPatientModel extends FollowedPatient {
       fullName: (json['fullName'] ?? json['full_name'] ?? '').toString(),
       isPrimaryAdmin: json['isPrimaryAdmin'] ?? json['is_primary_admin'] ?? false,
       joinedAt: DateTime.parse((json['joinedAt'] ?? json['joined_at']).toString()),
+      profilePhotoUrl: (json['profilePhotoUrl'] ??
+              json['profile_photo_url'] ??
+              json['avatarUrl'] ??
+              json['avatar_url'])
+          ?.toString(),
     );
   }
 
@@ -23,6 +29,7 @@ class FollowedPatientModel extends FollowedPatient {
       'fullName': fullName,
       'isPrimaryAdmin': isPrimaryAdmin,
       'joinedAt': joinedAt.toIso8601String(),
+      'profilePhotoUrl': profilePhotoUrl,
     };
   }
 }

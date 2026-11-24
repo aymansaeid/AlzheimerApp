@@ -119,7 +119,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileUpdateRequested event,
     Emitter<ProfileState> emit,
   ) async {
-    emit(state.copyWith(isUpdatingProfile: true, clearError: true));
+    emit(
+      state.copyWith(
+        isUpdatingProfile: true,
+        clearError: true,
+        clearUpdatedProfile: true,
+      ),
+    );
 
     final result = await _updateProfileUseCase(event.user);
 
@@ -130,10 +136,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           errorMessage: failure.message,
         ),
       ),
-      (_) => emit(
+      (updatedUser) => emit(
         state.copyWith(
           isUpdatingProfile: false,
-          profileUpdated: true,
+          updatedProfile: updatedUser,
         ),
       ),
     );

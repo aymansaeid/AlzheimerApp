@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/avatar_circle.dart';
 import '../../domain/entities/followed_patient.dart';
 
 class PatientSelector extends StatelessWidget {
@@ -27,7 +28,7 @@ class PatientSelector extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SizedBox(
-      height: 76,
+      height: 92,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: patients.length,
@@ -68,28 +69,21 @@ class PatientSelector extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
+                      AvatarCircle(
+                        initials: _getInitials(patient.fullName),
+                        size: 64,
+                        imageUrl: patient.profilePhotoUrl,
+                        backgroundColor: isSelected
+                            ? Colors.white.withValues(alpha: 0.2)
+                            : theme.colorScheme.primary.withValues(
+                                alpha: 0.1,
+                              ),
+                        textStyle: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                           color: isSelected
-                              ? Colors.white.withValues(alpha: 0.2)
-                              : theme.colorScheme.primary.withValues(
-                                  alpha: 0.1,
-                                ),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            _getInitials(patient.fullName),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? Colors.white
-                                  : theme.colorScheme.primary,
-                            ),
-                          ),
+                              ? Colors.white
+                              : theme.colorScheme.primary,
                         ),
                       ),
                       const SizedBox(width: 12),
