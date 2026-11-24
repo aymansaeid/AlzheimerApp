@@ -39,7 +39,10 @@ class UserModel extends User {
       role: mappedRole,
       fullName: (json['fullName']).toString(),
       phone: json['phone'] ?? json['phoneNumber'] ?? json['phone_number'],
-      avatarUrl: json['avatarUrl'] ?? json['avatar_url'],
+      avatarUrl: json['profilePhotoUrl'] ??
+          json['profile_photo_url'] ??
+          json['avatarUrl'] ??
+          json['avatar_url'],
       fcmToken: json['fcmToken'] ?? json['fcm_token'],
       isActive: json['isActive'] ?? json['is_active'] ?? true,
       createdAt: parsedDate,

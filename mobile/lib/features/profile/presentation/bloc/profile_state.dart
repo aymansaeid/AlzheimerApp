@@ -1,11 +1,13 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/profile_update_entity.dart';
+
 class ProfileState extends Equatable {
   final bool isAvatarLoading;
   final bool isUpdatingProfile;
   final String? updatedAvatarUrl;
   final bool avatarRemoved;
-  final bool profileUpdated;
+  final ProfileUpdateEntity? updatedProfile;
   final String? errorMessage;
   final String? permissionDeniedType;
 
@@ -14,7 +16,7 @@ class ProfileState extends Equatable {
     this.isUpdatingProfile = false,
     this.updatedAvatarUrl,
     this.avatarRemoved = false,
-    this.profileUpdated = false,
+    this.updatedProfile,
     this.errorMessage,
     this.permissionDeniedType,
   });
@@ -25,7 +27,8 @@ class ProfileState extends Equatable {
     String? updatedAvatarUrl,
     bool clearUpdatedAvatarUrl = false,
     bool? avatarRemoved,
-    bool? profileUpdated,
+    ProfileUpdateEntity? updatedProfile,
+    bool clearUpdatedProfile = false,
     String? errorMessage,
     bool clearError = false,
     String? permissionDeniedType,
@@ -38,7 +41,9 @@ class ProfileState extends Equatable {
           ? null
           : (updatedAvatarUrl ?? this.updatedAvatarUrl),
       avatarRemoved: avatarRemoved ?? false,
-      profileUpdated: profileUpdated ?? false,
+      updatedProfile: clearUpdatedProfile
+          ? null
+          : (updatedProfile ?? this.updatedProfile),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       permissionDeniedType: clearPermissionDenied
           ? null
@@ -52,7 +57,7 @@ class ProfileState extends Equatable {
         isUpdatingProfile,
         updatedAvatarUrl,
         avatarRemoved,
-        profileUpdated,
+        updatedProfile,
         errorMessage,
         permissionDeniedType,
       ];

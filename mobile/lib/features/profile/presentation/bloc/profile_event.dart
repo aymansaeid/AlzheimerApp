@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../domain/entities/profile_user.dart';
+import '../../domain/entities/profile_update_entity.dart';
 
 abstract class ProfileEvent extends Equatable {
   const ProfileEvent();
@@ -35,7 +35,7 @@ class ProfilePictureRemoveRequested extends ProfileEvent {
 }
 
 class ProfileUpdateRequested extends ProfileEvent {
-  final ProfileUser user;
+  final ProfileUpdateEntity user;
 
   const ProfileUpdateRequested({required this.user});
 

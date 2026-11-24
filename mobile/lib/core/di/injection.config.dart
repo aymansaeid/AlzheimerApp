@@ -303,6 +303,13 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i1031.GetFollowedPatients>(
       () => _i1031.GetFollowedPatients(gh<_i445.DashboardRepository>()),
     );
+    gh.lazySingleton<_i894.ProfileRepository>(
+      () => _i334.ProfileRepositoryImpl(
+        gh<_i847.ProfileRemoteDataSource>(),
+        gh<_i314.FileStorageRepository>(),
+        gh<_i558.FlutterSecureStorage>(),
+      ),
+    );
     gh.lazySingleton<_i83.CareNetworkRepository>(
       () => _i517.CareNetworkRepositoryImpl(
         gh<_i485.CareNetworkRemoteDataSource>(),
@@ -372,12 +379,6 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i105.NotificationService(
         gh<_i1068.NotificationRepository>(),
         gh<_i558.FlutterSecureStorage>(),
-      ),
-    );
-    gh.lazySingleton<_i894.ProfileRepository>(
-      () => _i334.ProfileRepositoryImpl(
-        gh<_i847.ProfileRemoteDataSource>(),
-        gh<_i314.FileStorageRepository>(),
       ),
     );
     gh.lazySingleton<_i188.LoginUseCase>(

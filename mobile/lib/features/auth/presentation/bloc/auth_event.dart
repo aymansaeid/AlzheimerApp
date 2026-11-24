@@ -54,6 +54,21 @@ class AuthUserAvatarUpdated extends AuthEvent {
   List<Object?> get props => [avatarUrl];
 }
 
+class AuthUserProfileUpdated extends AuthEvent {
+  final String? fullName;
+  final String? email;
+  final String? phone;
+
+  const AuthUserProfileUpdated({
+    this.fullName,
+    this.email,
+    this.phone,
+  });
+
+  @override
+  List<Object?> get props => [fullName, email, phone];
+}
+
 class AuthLogoutRequested extends AuthEvent {}
 
 class AuthCheckRequested extends AuthEvent {}

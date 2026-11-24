@@ -30,6 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthUserAvatarUpdated>(_onUserAvatarUpdated);
+    on<AuthUserProfileUpdated>(_onUserProfileUpdated);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthCheckRequested>(_onCheckAuthStatus);
   }
@@ -90,6 +91,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final updatedUser = currentState.user.copyWith(
         avatarUrl: event.avatarUrl,
         clearAvatarUrl: event.avatarUrl == null,
+      );
+      emit(
+        AuthAuthenticated(
+          updatedUser,
+          isSetupComplete: currentState.isSetupComplete,
+        ),
+      );
+    }
+  }
+
+  void _onUserProfileUpdated(
+    AuthUserProfileUpdated event,
+    Emitter<AuthState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      final updatedUser = currentState.user.copyWith(
+        fullName: event.fullName,
+        email: event.email,
+        phone: event.phone,
+        clearPhone: event.phone != null && event.phone!.isEmpty,
       );
       emit(
         AuthAuthenticated(
