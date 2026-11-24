@@ -8,4 +8,6 @@ public interface ILocationService
     Task<LocationLog> LogLocationAsync(LocationRequest dto);
     Task<LocationLogResponse?> GetLatestLocationAsync(Guid patientId);
     Task<List<LocationLogResponse>> GetLocationHistoryAsync(Guid patientId, DateTime startTime, DateTime endTime);
+
+    Task<List<PatientLatestLocationResponse>> GetLatestLocationsForCareTeamAsync(Guid requesterId, bool isSystemAdmin, CancellationToken cancellationToken = default);
 }

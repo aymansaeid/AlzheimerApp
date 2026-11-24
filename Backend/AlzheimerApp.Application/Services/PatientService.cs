@@ -31,6 +31,7 @@ public class PatientService : IPatientService
         return new PatientDashboardResponse
         {
             PatientName = patient.FullName,
+            ProfilePhotoUrl = patient.ProfilePhotoUrl,
             TodayMedicines = todayLogs,
             LovedOnes = careTeam
         };

@@ -66,5 +66,10 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();
+
+        // "Latest location per patient" lookups (single + bulk endpoints) become an index seek.
+        // This composite index also covers the PatientId foreign key, so EF drops the old single-column one.
+        modelBuilder.Entity<LocationLog>()
+            .HasIndex(l => new { l.PatientId, l.RecordedAt });
     }
 }

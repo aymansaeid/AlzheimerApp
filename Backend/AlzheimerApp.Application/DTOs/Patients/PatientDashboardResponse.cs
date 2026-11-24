@@ -6,6 +6,7 @@ namespace AlzheimerApp.Application.DTOs.Patients;
 public class PatientDashboardResponse
 {
     public string PatientName { get; set; } = string.Empty;
+    public string? ProfilePhotoUrl { get; set; }
 
     public List<MedicineLogResponse> TodayMedicines { get; set; } = new();
 

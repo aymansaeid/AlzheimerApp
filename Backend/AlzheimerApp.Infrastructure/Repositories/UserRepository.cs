@@ -36,4 +36,13 @@ public class UserRepository : IUserRepository
         _context.Users.Update(user);
         await _context.SaveChangesAsync();
     }
+    public async Task<string?> GetProfilePhotoUrlAsync(Guid userId)
+    {
+        // Reads a single column instead of loading (and tracking) the whole user.
+        return await _context.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.ProfilePhotoUrl)
+            .FirstOrDefaultAsync();
+    }
 }
