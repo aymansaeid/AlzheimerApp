@@ -59,25 +59,66 @@ public static class ScheduleCalendar
     }
 
     /// <summary>
-    /// The UTC instant this medicine is due on <paramref name="localDate"/>, or <c>null</c> if it is not due that day
-    /// (wrong weekday, outside start/end dates, or a dose time that had already passed when the medicine was created).
+    /// Every UTC instant this medicine is due on <paramref name="localDate"/> (one per schedule time), sorted.
+    /// Empty if it is not due that day (inactive, wrong weekday, outside start/end dates).
+    /// With <paramref name="skipBeforeCreation"/>, dose times that had already passed when the medicine was
+    /// created are left out (a medicine added at 15:00 with a 09:00 dose starts tomorrow instead of being "missed").
     /// </summary>
-    public static DateTime? DoseTimeUtc(Medicine medicine, DateOnly localDate, TimeZoneInfo timeZone)
+    public static List<DateTime> DoseTimesUtc(Medicine medicine, DateOnly localDate, TimeZoneInfo timeZone, bool skipBeforeCreation = true)
     {
-        if (!medicine.IsActive) return null;
-        if (!IsScheduledOn(medicine.DaysOfWeek, localDate.DayOfWeek)) return null;
+        var result = new List<DateTime>();
 
-        if (localDate < LocalDate(medicine.StartDate, timeZone)) return null;
-        if (medicine.EndDate.HasValue && localDate > LocalDate(medicine.EndDate.Value, timeZone)) return null;
+        if (!medicine.IsActive) return result;
+        if (!IsScheduledOn(medicine.DaysOfWeek, localDate.DayOfWeek)) return result;
+        if (localDate < LocalDate(medicine.StartDate, timeZone)) return result;
+        if (medicine.EndDate.HasValue && localDate > LocalDate(medicine.EndDate.Value, timeZone)) return result;
 
-        var dueUtc = LocalToUtc(localDate, medicine.ScheduleTime, timeZone);
-
-        // A medicine added at 15:00 with a 09:00 dose starts tomorrow, instead of appearing as "missed" today.
-        if (dueUtc < EnsureUtc(medicine.CreatedAt)) return null;
-
-        return dueUtc;
+        var createdAt = EnsureUtc(medicine.CreatedAt);
+        foreach (var time in medicine.ScheduleTimes.Distinct().OrderBy(t => t))
+        {
+            var dueUtc = LocalToUtc(localDate, time, timeZone);
+            if (skipBeforeCreation && dueUtc < createdAt) continue;
+            result.Add(dueUtc);
+        }
+        return result;
     }
 
+    /// <summary>
+    /// Validates and normalizes a weekday list ("1, 3,5,7" → "0,1,3,5"; 7 = Sunday = 0).
+    /// </summary>
+    /// <exception cref="ArgumentException">Empty, or contains something other than 0–7.</exception>
+    public static string NormalizeDaysOfWeek(string? daysOfWeek)
+    {
+        var days = new SortedSet<int>();
+        foreach (var part in (daysOfWeek ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!int.TryParse(part, out var n) || n < 0 || n > 7)
+                throw new ArgumentException("daysOfWeek must be a comma-separated list of 0–6 (0 = Sunday; 7 is also accepted as Sunday).");
+            days.Add(n % 7);
+        }
+
+        if (days.Count == 0) throw new ArgumentException("Select at least one day (daysOfWeek).");
+        return string.Join(",", days);
+    }
+
+    /// <summary>
+    /// Validates and normalizes schedule times: at least one, at most 12, each within a day, duplicates removed, sorted.
+    /// </summary>
+    /// <exception cref="ArgumentException">Invalid list.</exception>
+    public static List<TimeSpan> NormalizeScheduleTimes(IEnumerable<TimeSpan>? times)
+    {
+        var list = (times ?? Enumerable.Empty<TimeSpan>())
+            .Select(t => TimeSpan.FromMinutes(Math.Floor(t.TotalMinutes))) // drop seconds
+            .ToList();
+
+        if (list.Count == 0) throw new ArgumentException("Add at least one time (scheduleTimes).");
+        if (list.Any(t => t < TimeSpan.Zero || t >= TimeSpan.FromDays(1)))
+            throw new ArgumentException("Each schedule time must be between 00:00 and 23:59.");
+
+        var normalized = list.Distinct().OrderBy(t => t).ToList();
+        if (normalized.Count > 12) throw new ArgumentException("A medicine can have at most 12 times per day.");
+        return normalized;
+    }
     private static DateTime EnsureUtc(DateTime value) => value.Kind switch
     {
         DateTimeKind.Utc => value,

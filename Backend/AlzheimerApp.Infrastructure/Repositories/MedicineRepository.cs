@@ -25,7 +25,7 @@ public class MedicineRepository : IMedicineRepository
     {
         return await _context.Medicines
             .Where(m => m.PatientId == patientId && m.IsActive)
-            .OrderBy(m => m.ScheduleTime) // Order by time of day!
+           .OrderBy(m => m.Name) // Order by name!
             .ToListAsync();
     }
 

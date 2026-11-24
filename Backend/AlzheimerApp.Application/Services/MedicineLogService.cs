@@ -106,37 +106,39 @@ public class MedicineLogService : IMedicineLogService
 
     public async Task EnsureTodayLogsForPatientAsync(Guid patientId)
     {
-        var localToday = ScheduleCalendar.LocalDate(UtcNow, Tz);
+        var now = UtcNow;
+        var localToday = ScheduleCalendar.LocalDate(now, Tz);
         var (fromUtc, toUtc) = ScheduleCalendar.LocalDayRangeUtc(localToday, Tz);
 
         var meds = await _medicineRepository.GetActiveMedicinesByPatientIdAsync(patientId);
         var existingLogs = await _logRepository.GetLogsByPatientInRangeAsync(patientId, fromUtc, toUtc);
 
-        await CreateMissingLogsAsync(meds, localToday, existingLogs);
+        // Called right after a medicine is added/edited: only doses still ahead today, never "already missed" ones.
+        await CreateMissingLogsAsync(meds, localToday, existingLogs, notBeforeUtc: now);
     }
 
-    /// <summary>One log per medicine per local day; already-existing doses are skipped.</summary>
-    private async Task<int> CreateMissingLogsAsync(IEnumerable<Medicine> meds, DateOnly localDate, IEnumerable<MedicineLog> existingLogs)
+    /// <summary>One log per medicine per schedule time per local day; already-existing doses are skipped.</summary>
+    private async Task<int> CreateMissingLogsAsync(
+        IEnumerable<Medicine> meds, DateOnly localDate, IEnumerable<MedicineLog> existingLogs, DateTime? notBeforeUtc = null)
     {
         var existing = existingLogs.Select(l => (l.MedicineId, l.ScheduledAt)).ToHashSet();
-        var medicinesWithLogToday = existingLogs.Select(l => l.MedicineId).ToHashSet();
 
         var newLogs = new List<MedicineLog>();
         foreach (var med in meds)
         {
-            var dueUtc = ScheduleCalendar.DoseTimeUtc(med, localDate, Tz);
-            if (dueUtc == null) continue;
-
-            // Keep "one dose per medicine per day": an edited time does not add a second dose for today.
-            if (medicinesWithLogToday.Contains(med.Id) || existing.Contains((med.Id, dueUtc.Value))) continue;
-
-            newLogs.Add(new MedicineLog
+            foreach (var dueUtc in ScheduleCalendar.DoseTimesUtc(med, localDate, Tz))
             {
-                MedicineId = med.Id,
-                PatientId = med.PatientId,
-                Status = MedicineStatus.Pending,
-                ScheduledAt = dueUtc.Value
-            });
+                if (notBeforeUtc.HasValue && dueUtc < notBeforeUtc.Value) continue;
+                if (existing.Contains((med.Id, dueUtc))) continue;
+
+                newLogs.Add(new MedicineLog
+                {
+                    MedicineId = med.Id,
+                    PatientId = med.PatientId,
+                    Status = MedicineStatus.Pending,
+                    ScheduledAt = dueUtc
+                });
+            }
         }
 
         var inserted = await _logRepository.AddRangeIgnoringDuplicatesAsync(newLogs);

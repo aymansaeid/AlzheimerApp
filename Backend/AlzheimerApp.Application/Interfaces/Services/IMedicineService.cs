@@ -4,8 +4,18 @@ namespace AlzheimerApp.Application.Interfaces.Services;
 
 public interface IMedicineService
 {
-    Task<MedicineResponse> AddMedicineAsync(MedicineRequest request);
+    /// <exception cref="ArgumentException">Validation failed.</exception>
+    Task<MedicineResponse> AddMedicineAsync(Guid creatorId, MedicineRequest request);
+
     Task<List<MedicineResponse>> GetPatientMedicinesAsync(Guid patientId);
-    Task UpdateMedicineAsync(Guid id, UpdateMedicineRequest request);
+
+    /// <exception cref="KeyNotFoundException">No medicine with this id.</exception>
+    Task<MedicineResponse> GetMedicineAsync(Guid id);
+
+    /// <exception cref="ArgumentException">Validation failed.</exception>
+    /// <exception cref="KeyNotFoundException">No medicine with this id.</exception>
+    Task<MedicineResponse> UpdateMedicineAsync(Guid id, UpdateMedicineRequest request);
+
+    /// <exception cref="KeyNotFoundException">No medicine with this id.</exception>
     Task DeleteMedicineAsync(Guid id);
 }
