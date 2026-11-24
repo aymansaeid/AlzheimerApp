@@ -46,7 +46,7 @@ final appRouter = GoRouter(
     // Token is being checked or state of token is getting from backend
     // User must be in the /splash screen
     if (authState is AuthInitial || authState is AuthLoading) {
-      return currentLocation == '/splash' ? null : '/splash';
+      return (currentLocation == '/splash' || isAtAuthPage) ? null : '/splash';
     }
 
     // 2. The login failed or getted an error

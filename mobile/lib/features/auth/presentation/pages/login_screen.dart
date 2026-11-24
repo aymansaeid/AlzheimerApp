@@ -143,23 +143,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () async {
-                          await context.pushNamed('register');
+                        onPressed: state is AuthLoading
+                            ? null
+                            : () async {
+                                await context.pushNamed('register');
 
-                          if (!context.mounted) return;
+                                if (!context.mounted) return;
 
-                          FocusScope.of(context).unfocus();
+                                FocusScope.of(context).unfocus();
 
-                          _emailFocusNode.unfocus();
-                          _passwordFocusNode.unfocus();
+                                _emailFocusNode.unfocus();
+                                _passwordFocusNode.unfocus();
 
-                          _emailController.clear();
-                          _passwordController.clear();
+                                _emailController.clear();
+                                _passwordController.clear();
 
-                          _formKey.currentState?.reset();
+                                _formKey.currentState?.reset();
 
-                          setState(() {});
-                        },
+                                setState(() {});
+                              },
                         child: Text(
                           'Kayıt Ol',
                           style: theme.textTheme.bodyLarge?.copyWith(

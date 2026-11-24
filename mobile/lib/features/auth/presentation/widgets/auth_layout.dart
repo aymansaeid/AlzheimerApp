@@ -6,6 +6,7 @@ class AuthLayout extends StatelessWidget {
   final String subtitle;
   final bool showLogo;
   final VoidCallback? onBack;
+  final bool isBackEnabled;
   final bool titleInAppBar;
 
   const AuthLayout({
@@ -15,6 +16,7 @@ class AuthLayout extends StatelessWidget {
     required this.subtitle,
     this.showLogo = true,
     this.onBack,
+    this.isBackEnabled = true,
     this.titleInAppBar = false,
   });
 
@@ -38,7 +40,7 @@ class AuthLayout extends StatelessWidget {
               surfaceTintColor: Colors.transparent,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                onPressed: onBack,
+                onPressed: isBackEnabled ? onBack : null,
               ),
             )
           : null,
