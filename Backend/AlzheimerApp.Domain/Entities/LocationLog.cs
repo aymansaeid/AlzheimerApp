@@ -13,4 +13,11 @@ public class LocationLog
     public DateTime RecordedAt { get; set; } = DateTime.UtcNow;
     public bool IsOutsideZone { get; set; }
     public bool AlertSent { get; set; }
+
+    /// <summary>Phone battery level (0–100) when the location was recorded. Null for old clients.</summary>
+    public int? BatteryLevel { get; set; }
+
+    /// <summary>Whether the phone was charging when the location was recorded. Null if unknown.</summary>
+    public bool? IsCharging { get; set; }
+
 }

@@ -31,9 +31,16 @@ public class LocationService : ILocationService
         _userRepository = userRepository;
     }
 
-    public async Task<LocationLog> LogLocationAsync(LocationRequest request)
+    public async Task<LocationLogResponse> LogLocationAsync(Guid patientId, LocationRequest request)
     {
-        var activeSafeZones = await _safeZoneRepository.GetActiveSafeZonesByPatientIdAsync(request.PatientId);
+        // 0. Girdi doğrulama (hatalı GPS/pil verisi güvenli bölge hesabını bozmasın)
+        if (request.Latitude is < -90 or > 90 || request.Longitude is < -180 or > 180)
+            throw new ArgumentException("Latitude must be between -90 and 90, longitude between -180 and 180.");
+
+        if (request.BatteryLevel is < 0 or > 100)
+            throw new ArgumentException("Battery level must be between 0 and 100.");
+
+        var activeSafeZones = await _safeZoneRepository.GetActiveSafeZonesByPatientIdAsync(patientId);
         bool isCurrentlyOutside = false;
         bool alertSent = false;
 
@@ -52,9 +59,9 @@ public class LocationService : ILocationService
             }
         }
 
-        // 2. SPAM ENGELLEYİCİ MANTIK (YENİ EKLENEN KISIM)
+        // 2. SPAM ENGELLEYİCİ MANTIK
         // Hastanın veritabanındaki en son kaydedilen konumunu getir
-        var lastLocation = await _locationRepository.GetLastLocationByPatientIdAsync(request.PatientId);
+        var lastLocation = await _locationRepository.GetLastLocationByPatientIdAsync(patientId);
 
         // Eğer hastanın önceki konumu zaten "Dışarıda" ise, tekrar bildirim atmamıza gerek yok (wasOutside = true)
         bool wasAlreadyOutside = lastLocation != null && lastLocation.IsOutsideZone;
@@ -67,7 +74,7 @@ public class LocationService : ILocationService
 
             var alertHistory = new AlertHistory
             {
-                PatientId = request.PatientId,
+                PatientId = patientId,
                 AlertType = AlertType.SafeZoneBreach,
                 Message = alertMessage,
                 IsRead = false,
@@ -75,7 +82,7 @@ public class LocationService : ILocationService
             };
             await _alertRepository.AddAsync(alertHistory);
 
-            var followers = await _followerRepository.GetFollowersByPatientIdAsync(request.PatientId);
+            var followers = await _followerRepository.GetFollowersByPatientIdAsync(patientId);
             var tokens = followers
                 .Where(f => f.Follower != null && !string.IsNullOrEmpty(f.Follower.FcmToken))
                 .Select(f => f.Follower!.FcmToken!)
@@ -94,17 +101,27 @@ public class LocationService : ILocationService
         // 3. Konumu her halükarda logla (Harita çizimi için bu şart)
         var locationLog = new LocationLog
         {
-            PatientId = request.PatientId,
+            PatientId = patientId,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
             AccuracyMeters = request.AccuracyMeters,
             RecordedAt = DateTime.UtcNow,
             IsOutsideZone = isCurrentlyOutside, // Güncel durumu kaydet
-            AlertSent = alertSent
+            AlertSent = alertSent,
+            BatteryLevel = request.BatteryLevel,
+            IsCharging = request.IsCharging
         };
 
-        return await _locationRepository.AddAsync(locationLog);
+        var saved = await _locationRepository.AddAsync(locationLog);
+        return MapToResponse(saved, profilePhotoUrl: null);
     }
+
+    public async Task<bool> CanTrackPatientAsync(Guid userId, bool isSystemAdmin, Guid patientId)
+    {
+        if (isSystemAdmin || userId == patientId) return true;
+        return await _followerRepository.RelationshipExistsAsync(patientId, userId);
+    }
+
     public async Task<LocationLogResponse?> GetLatestLocationAsync(Guid patientId)
     {
         var lastLocation = await _locationRepository.GetLastLocationByPatientIdAsync(patientId);
@@ -112,17 +129,7 @@ public class LocationService : ILocationService
         if (lastLocation == null) return null;
 
         var profilePhotoUrl = await _userRepository.GetProfilePhotoUrlAsync(patientId);
-
-        return new LocationLogResponse
-        {
-            PatientId = lastLocation.PatientId,
-            ProfilePhotoUrl = profilePhotoUrl,
-            Latitude = lastLocation.Latitude,
-            Longitude = lastLocation.Longitude,
-            AccuracyMeters = lastLocation.AccuracyMeters,
-            RecordedAt = lastLocation.RecordedAt,
-            IsOutsideZone = lastLocation.IsOutsideZone
-        };
+        return MapToResponse(lastLocation, profilePhotoUrl);
     }
 
     public async Task<List<LocationLogResponse>> GetLocationHistoryAsync(Guid patientId, DateTime startTime, DateTime endTime)
@@ -133,16 +140,7 @@ public class LocationService : ILocationService
         // One lookup for the whole history instead of one per point.
         var profilePhotoUrl = await _userRepository.GetProfilePhotoUrlAsync(patientId);
 
-        return history.Select(l => new LocationLogResponse
-        {
-            PatientId = l.PatientId,
-            ProfilePhotoUrl = profilePhotoUrl,
-            Latitude = l.Latitude,
-            Longitude = l.Longitude,
-            AccuracyMeters = l.AccuracyMeters,
-            RecordedAt = l.RecordedAt,
-            IsOutsideZone = l.IsOutsideZone
-        }).ToList();
+        return history.Select(l => MapToResponse(l, profilePhotoUrl)).ToList();
     }
 
     public async Task<List<PatientLatestLocationResponse>> GetLatestLocationsForCareTeamAsync(Guid requesterId, bool isSystemAdmin, CancellationToken cancellationToken = default)
@@ -151,6 +149,19 @@ public class LocationService : ILocationService
         Guid? followerFilter = isSystemAdmin ? null : requesterId;
         return await _locationRepository.GetLatestLocationsForPatientsAsync(followerFilter, cancellationToken);
     }
+
+    private static LocationLogResponse MapToResponse(LocationLog log, string? profilePhotoUrl) => new()
+    {
+        PatientId = log.PatientId,
+        ProfilePhotoUrl = profilePhotoUrl,
+        Latitude = log.Latitude,
+        Longitude = log.Longitude,
+        AccuracyMeters = log.AccuracyMeters,
+        RecordedAt = log.RecordedAt,
+        IsOutsideZone = log.IsOutsideZone,
+        BatteryLevel = log.BatteryLevel,
+        IsCharging = log.IsCharging
+    };
 
     private double CalculateDistanceMeters(double lat1, double lon1, double lat2, double lon2)
     {

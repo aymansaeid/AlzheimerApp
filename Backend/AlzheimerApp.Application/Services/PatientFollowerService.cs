@@ -185,6 +185,8 @@ public class PatientFollowerService : IPatientFollowerService
             LastLongitude = lastLocation?.Longitude,
             IsCurrentlyOutside = lastLocation?.IsOutsideZone ?? false,
             LastSeenAt = lastLocation?.RecordedAt,
+            BatteryLevel = lastLocation?.BatteryLevel,
+            IsCharging = lastLocation?.IsCharging,
             UnreadAlertCount = unreadCount,
             LatestAlert = latestAlert != null ? new AlertResponse
             {

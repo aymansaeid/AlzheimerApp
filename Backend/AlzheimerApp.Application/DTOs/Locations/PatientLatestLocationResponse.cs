@@ -31,4 +31,10 @@ public class LatestLocationResponse
     /// Patients with no active safe zone are always reported as <c>true</c>.
     /// </summary>
     public bool IsInsideSafeZone { get; set; }
+
+    /// <summary>Phone battery level (0–100) at that moment, or null if the app did not send it.</summary>
+    public int? BatteryLevel { get; set; }
+
+    /// <summary>Whether the phone was charging at that moment, or null if unknown.</summary>
+    public bool? IsCharging { get; set; }
 }

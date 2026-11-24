@@ -63,6 +63,12 @@ namespace AlzheimerApp.Infrastructure.Migrations
                     b.Property<bool>("AlertSent")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("BatteryLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<bool?>("IsCharging")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsOutsideZone")
                         .HasColumnType("boolean");
 

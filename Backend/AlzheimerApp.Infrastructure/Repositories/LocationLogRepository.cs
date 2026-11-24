@@ -85,7 +85,13 @@ public class LocationLogRepository : ILocationLogRepository
                     .Select(l => (double?)l.Longitude).FirstOrDefault(),
                 IsOutsideZone = u.LocationLogs
                     .OrderByDescending(l => l.RecordedAt).ThenByDescending(l => l.Id)
-                    .Select(l => (bool?)l.IsOutsideZone).FirstOrDefault()
+                    .Select(l => (bool?)l.IsOutsideZone).FirstOrDefault(),
+                BatteryLevel = u.LocationLogs
+                    .OrderByDescending(l => l.RecordedAt).ThenByDescending(l => l.Id)
+                    .Select(l => l.BatteryLevel).FirstOrDefault(),
+                IsCharging = u.LocationLogs
+                    .OrderByDescending(l => l.RecordedAt).ThenByDescending(l => l.Id)
+                    .Select(l => l.IsCharging).FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 
@@ -97,13 +103,15 @@ public class LocationLogRepository : ILocationLogRepository
             ProfilePhotoUrl = r.ProfilePhotoUrl,
             LatestLocation = r.Timestamp == null
                 ? null
-                : new LatestLocationResponse
-                {
-                    Latitude = r.Latitude ?? 0,
-                    Longitude = r.Longitude ?? 0,
-                    Timestamp = r.Timestamp.Value,
-                    IsInsideSafeZone = !(r.IsOutsideZone ?? false)
-                }
+                 : new LatestLocationResponse
+                 {
+                     Latitude = r.Latitude ?? 0,
+                     Longitude = r.Longitude ?? 0,
+                     Timestamp = r.Timestamp.Value,
+                     IsInsideSafeZone = !(r.IsOutsideZone ?? false),
+                     BatteryLevel = r.BatteryLevel,
+                     IsCharging = r.IsCharging
+                 }
         }).ToList();
     }
 }

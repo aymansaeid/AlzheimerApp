@@ -9,4 +9,10 @@ public class LocationLogResponse
     public double AccuracyMeters { get; set; }
     public DateTime RecordedAt { get; set; }
     public bool IsOutsideZone { get; set; }
+
+    /// <summary>Phone battery level (0–100), or null if the app did not send it.</summary>
+    public int? BatteryLevel { get; set; }
+
+    /// <summary>Whether the phone was charging, or null if unknown.</summary>
+    public bool? IsCharging { get; set; }
 }

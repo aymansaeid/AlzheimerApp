@@ -90,6 +90,21 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(secretKey)
     };
+    // SignalR: WebSocket/SSE clients cannot send an Authorization header, so they pass the JWT
+    // as ?access_token=... . Accept it ONLY for hub endpoints; REST endpoints still require the header.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+
+    };
 });
 
 // FIREBASE INITIALIZATION 

@@ -17,6 +17,8 @@ public class FollowerDashboardResponse
     public double? LastLongitude { get; set; }
     public bool IsCurrentlyOutside { get; set; }
     public DateTime? LastSeenAt { get; set; }
+    public int? BatteryLevel { get; set; }
+    public bool? IsCharging { get; set; }
 
     // Alert Summary
     public int UnreadAlertCount { get; set; }
