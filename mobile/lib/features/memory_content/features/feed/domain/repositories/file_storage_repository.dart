@@ -8,6 +8,6 @@ abstract class FileStorageRepository {
     required String folderPath,
   });
 
-  /// Yüklenen dosyayı sunucudan (ör. Firebase Storage) siler.
+  /// Yüklenen dosyayı indirme URL'i üzerinden sunucudan (ör. Firebase Storage) siler.
   Future<void> deleteFile(String fileUrl);
 }

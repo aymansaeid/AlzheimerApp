@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 
 import '../../domain/repositories/file_storage_repository.dart';
@@ -50,12 +51,16 @@ class FirebaseStorageRepositoryImpl implements FileStorageRepository {
 
   @override
   Future<void> deleteFile(String fileUrl) async {
+    if (fileUrl.isEmpty) return;
     try {
-      if (fileUrl.isEmpty) return;
       final ref = _firebaseStorage.refFromURL(fileUrl);
       await ref.delete();
-    } catch (_) {
-      // Temizleme işlemi sessizce yutulabilir veya loglanabilir
+    } on FirebaseException catch (e) {
+      debugPrint('FirebaseStorage silme hatası ($fileUrl): [${e.code}] ${e.message}');
+      throw Exception('Firebase silme hatası: ${e.message}');
+    } catch (e) {
+      debugPrint('FirebaseStorage silme hatası ($fileUrl): $e');
+      throw Exception('Dosya silinirken bilinmeyen bir hata oluştu: $e');
     }
   }
 }
