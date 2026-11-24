@@ -17,6 +17,7 @@ abstract class AuthRemoteDataSource {
     required String password,
     required int role,
     String? phone,
+    String? avatarUrl,
   });
 
   Future<void> updateFcmToken(String fcmToken);
@@ -61,6 +62,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
     required int role,
     String? phone,
+    String? avatarUrl,
   }) async {
     try {
       final registerDto = RegisterDto(
@@ -69,6 +71,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         fullName: fullName,
         phone: phone,
         role: role,
+        avatarUrl: avatarUrl,
       );
       final response = await dio.post(
         '/api/Auth/register',

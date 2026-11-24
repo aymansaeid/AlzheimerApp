@@ -9,6 +9,10 @@
 	<!-- Fotoğraf galerisi izni -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Gönderinize fotoğraf ekleyebilmek için galeri erişimine ihtiyaç duyulmaktadır.</string>
+
+	<!-- Kamera izni -->
+	<key>NSCameraUsageDescription</key>
+	<string>Profil fotoğrafı çekebilmek için kamera erişimine ihtiyaç duyulmaktadır.</string>
 	
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>

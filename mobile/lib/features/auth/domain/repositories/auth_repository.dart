@@ -10,8 +10,9 @@ abstract class AuthRepository {
     String password,
     String fullName,
     String phone,
-    int role,
-  );
+    int role, {
+    String? avatarUrl,
+  });
   Future<Either<Failure, void>> updateFcmToken(String fcmToken);
   Future<Either<Failure, User>> checkAuthStatus();
   Future<Either<Failure, void>> logout();

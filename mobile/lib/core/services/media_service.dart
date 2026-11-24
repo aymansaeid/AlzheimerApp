@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:injectable/injectable.dart';
 
 abstract class MediaService {
-  Future<File?> pickAndCropImage();
+  Future<File?> pickAndCropImage({ImageSource source = ImageSource.gallery});
 }
 
 @LazySingleton(as: MediaService)
@@ -17,11 +17,16 @@ class MediaServiceImpl implements MediaService {
   MediaServiceImpl(this._picker, this._cropper);
 
   @override
-  Future<File?> pickAndCropImage() async {
-    // 1. Galeriden görsel seçimi
+  Future<File?> pickAndCropImage({
+    ImageSource source = ImageSource.gallery,
+  }) async {
+    // 1. Kamera veya galeriden görsel seçimi
+    // Kamera seçildiğinde native kamera overlay olarak açılır ve çekim sonrası
+    // native önizleme (İptal / Fotoğrafı Kullan) ekranı gösterilir.
     final XFile? pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
+      source: source,
       imageQuality: 85,
+      preferredCameraDevice: CameraDevice.front,
     );
 
     if (pickedFile == null) return null;

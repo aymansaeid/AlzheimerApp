@@ -18,11 +18,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FocusNode _passwordFocusNode = FocusNode();
+  final FocusNode _emailFocusNode = FocusNode();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -70,6 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildTextField(
+                    focusNode: _emailFocusNode,
                     theme: theme,
                     label: 'E-posta',
                     icon: Icons.email_outlined,
@@ -89,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
+                    focusNode: _passwordFocusNode,
                     theme: theme,
                     label: 'Şifre',
                     icon: Icons.lock_outline,
@@ -137,7 +143,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.goNamed('register'),
+                        onPressed: () async {
+                          await context.pushNamed('register');
+
+                          if (!context.mounted) return;
+
+                          FocusScope.of(context).unfocus();
+
+                          _emailFocusNode.unfocus();
+                          _passwordFocusNode.unfocus();
+
+                          _emailController.clear();
+                          _passwordController.clear();
+
+                          _formKey.currentState?.reset();
+
+                          setState(() {});
+                        },
                         child: Text(
                           'Kayıt Ol',
                           style: theme.textTheme.bodyLarge?.copyWith(
@@ -158,6 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildTextField({
+    required FocusNode focusNode,
     required ThemeData theme,
     required String label,
     required IconData icon,
@@ -170,6 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
+      focusNode: focusNode,
       style: theme.textTheme.bodyLarge,
       validator: validator,
       decoration: InputDecoration(

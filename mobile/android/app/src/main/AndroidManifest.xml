@@ -11,6 +11,9 @@
 <!-- Mikrofon izni (Ses kaydı için) -->
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+<!-- Kamera izni (Profil fotoğrafı çekimi için) -->
+<uses-permission android:name="android.permission.CAMERA" />
+
 <!-- Galeri erişimi (Android 13 öncesi) -->
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 

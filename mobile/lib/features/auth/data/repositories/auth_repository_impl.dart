@@ -37,10 +37,23 @@ class AuthRepositoryImpl implements AuthRepository {
       final token = (data['token']) as String;
 
       if (token.isNotEmpty) {
-        // Store the token and user ID in secure storage
+        // Store the token and user info in secure storage
         try {
           await secureStorage.write(key: 'jwt_token', value: token);
           await secureStorage.write(key: 'user_id', value: user.id);
+          if (user.phone != null && user.phone!.isNotEmpty) {
+            await secureStorage.write(key: 'user_phone', value: user.phone);
+          } else {
+            await secureStorage.delete(key: 'user_phone');
+          }
+          if (user.avatarUrl != null && user.avatarUrl!.isNotEmpty) {
+            await secureStorage.write(
+              key: 'user_avatar_url',
+              value: user.avatarUrl,
+            );
+          } else {
+            await secureStorage.delete(key: 'user_avatar_url');
+          }
         } catch (e) {
           debugPrint('Login: Exception while writing to secure storage: $e');
         }
@@ -62,8 +75,9 @@ class AuthRepositoryImpl implements AuthRepository {
     String password,
     String fullName,
     String phone,
-    int role,
-  ) async {
+    int role, {
+    String? avatarUrl,
+  }) async {
     try {
       final data = await remoteDataSource.register(
         fullName: fullName,
@@ -71,6 +85,7 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
         role: role,
         phone: phone,
+        avatarUrl: avatarUrl,
       );
 
       // Automatically log in the user using the credentials they just signed up with
@@ -84,6 +99,9 @@ class AuthRepositoryImpl implements AuthRepository {
         userJson['fullName'] = fullName;
         userJson['email'] = email;
         userJson['id'] = data['userId'] ?? data['id'] ?? '';
+        if (avatarUrl != null && avatarUrl.isNotEmpty) {
+          userJson['avatarUrl'] = avatarUrl;
+        }
 
         final user = UserModel.fromJson(userJson);
         return Right(user);
@@ -147,10 +165,21 @@ class AuthRepositoryImpl implements AuthRepository {
         mappedRole = 'patient';
       }
 
+      final storedPhone = await secureStorage.read(key: 'user_phone');
+      final storedAvatarUrl = await secureStorage.read(key: 'user_avatar_url');
+      final payloadPhone =
+          payload['phone'] ?? payload['phoneNumber'] ?? payload['phone_number'];
+      final resolvedPhone =
+          (storedPhone != null && storedPhone.isNotEmpty)
+              ? storedPhone
+              : payloadPhone?.toString();
+
       final user = UserModel(
         id: payload['sub'] ?? '',
         email: payload['email'] ?? '',
         fullName: payload['FullName'] ?? '',
+        phone: resolvedPhone,
+        avatarUrl: storedAvatarUrl,
         role: mappedRole,
         isActive: true,
         createdAt: DateTime.now(),
@@ -183,6 +212,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await secureStorage.delete(key: 'jwt_token');
       await secureStorage.delete(key: 'user_id');
+      await secureStorage.delete(key: 'user_phone');
+      await secureStorage.delete(key: 'user_avatar_url');
     } catch (e) {
       debugPrint('Error deleting token: $e');
     }

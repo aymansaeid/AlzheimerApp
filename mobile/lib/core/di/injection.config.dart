@@ -28,6 +28,7 @@ import '../../features/auth/domain/usecases/login_usecase.dart' as _i188;
 import '../../features/auth/domain/usecases/logout_usecase.dart' as _i48;
 import '../../features/auth/domain/usecases/register_usecase.dart' as _i941;
 import '../../features/auth/presentation/bloc/auth_bloc.dart' as _i797;
+import '../../features/auth/presentation/cubit/register_cubit.dart' as _i759;
 import '../../features/care_network/data/datasources/care_network_remote_data_source.dart'
     as _i485;
 import '../../features/care_network/data/repositories/care_network_repository_impl.dart'
@@ -164,6 +165,19 @@ import '../../features/patient/domain/usecases/get_patient_dashboard_usecase.dar
     as _i647;
 import '../../features/patient/presentation/bloc/patient_dashboard_bloc.dart'
     as _i490;
+import '../../features/profile/data/datasources/profile_remote_data_source.dart'
+    as _i847;
+import '../../features/profile/data/repositories/profile_repository_impl.dart'
+    as _i334;
+import '../../features/profile/domain/repositories/profile_repository.dart'
+    as _i894;
+import '../../features/profile/domain/usecases/add_profile_picture_usecase.dart'
+    as _i55;
+import '../../features/profile/domain/usecases/remove_profile_picture_usecase.dart'
+    as _i514;
+import '../../features/profile/domain/usecases/update_profile_usecase.dart'
+    as _i478;
+import '../../features/profile/presentation/bloc/profile_bloc.dart' as _i469;
 import '../network/dio_client.dart' as _i667;
 import '../network/interceptors/auth_interceptor.dart' as _i745;
 import '../network/interceptors/logging_interceptor.dart' as _i344;
@@ -194,6 +208,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i184.ImageCropper>(() => registerModule.imageCropper);
     gh.lazySingleton<_i750.FeedAudioCoordinator>(
       () => _i750.FeedAudioCoordinator(),
+    );
+    gh.lazySingleton<_i847.ProfileRemoteDataSource>(
+      () => _i847.ProfileRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i757.NotificationRemoteDataSource>(
       () => _i757.NotificationRemoteDataSourceImpl(),
@@ -357,6 +374,12 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i558.FlutterSecureStorage>(),
       ),
     );
+    gh.lazySingleton<_i894.ProfileRepository>(
+      () => _i334.ProfileRepositoryImpl(
+        gh<_i847.ProfileRemoteDataSource>(),
+        gh<_i314.FileStorageRepository>(),
+      ),
+    );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),
     );
@@ -425,6 +448,22 @@ extension GetItInjectableX on _i174.GetIt {
       () =>
           _i86.FeedBloc(gh<_i320.GetFeedUseCase>(), gh<_i400.AddPostUseCase>()),
     );
+    gh.lazySingleton<_i55.AddProfilePictureUseCase>(
+      () => _i55.AddProfilePictureUseCase(gh<_i894.ProfileRepository>()),
+    );
+    gh.lazySingleton<_i514.RemoveProfilePictureUseCase>(
+      () => _i514.RemoveProfilePictureUseCase(gh<_i894.ProfileRepository>()),
+    );
+    gh.lazySingleton<_i478.UpdateProfileUseCase>(
+      () => _i478.UpdateProfileUseCase(gh<_i894.ProfileRepository>()),
+    );
+    gh.factory<_i759.RegisterCubit>(
+      () => _i759.RegisterCubit(
+        gh<_i586.MediaService>(),
+        gh<_i165.PermissionService>(),
+        gh<_i314.FileStorageRepository>(),
+      ),
+    );
     gh.factory<_i784.RecordAudioCubit>(
       () => _i784.RecordAudioCubit(
         gh<_i492.AudioRecordService>(),
@@ -482,6 +521,15 @@ extension GetItInjectableX on _i174.GetIt {
         leaveTeamUseCase: gh<_i1027.LeaveTeamUseCase>(),
         acceptInviteUseCase: gh<_i702.AcceptInviteUseCase>(),
         transferAdminUseCase: gh<_i754.TransferAdminUseCase>(),
+      ),
+    );
+    gh.factory<_i469.ProfileBloc>(
+      () => _i469.ProfileBloc(
+        gh<_i55.AddProfilePictureUseCase>(),
+        gh<_i514.RemoveProfilePictureUseCase>(),
+        gh<_i478.UpdateProfileUseCase>(),
+        gh<_i586.MediaService>(),
+        gh<_i165.PermissionService>(),
       ),
     );
     return this;

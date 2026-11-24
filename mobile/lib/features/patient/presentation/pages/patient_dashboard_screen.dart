@@ -221,13 +221,6 @@ class PatientDashboardView extends StatelessWidget {
     }
   }
 
-  String _formatTime(DateTime time) {
-    final localTime = time.toLocal();
-    final hour = localTime.hour.toString().padLeft(2, '0');
-    final minute = localTime.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
   Widget _buildSOSButton(ThemeData theme) {
     return SizedBox(
       width: double.infinity,

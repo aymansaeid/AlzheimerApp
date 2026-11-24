@@ -4,6 +4,7 @@ class RegisterDto {
   final String fullName;
   final String? phone;
   final int role;
+  final String? avatarUrl;
 
   RegisterDto({
     required this.email,
@@ -11,6 +12,7 @@ class RegisterDto {
     required this.fullName,
     required this.phone,
     required this.role,
+    this.avatarUrl,
   });
 
   Map<String, dynamic> toJson() {
@@ -20,6 +22,7 @@ class RegisterDto {
       'fullName': fullName,
       'phone': phone,
       'role': role,
+      if (avatarUrl != null && avatarUrl!.isNotEmpty) 'avatarUrl': avatarUrl,
     };
   }
 }

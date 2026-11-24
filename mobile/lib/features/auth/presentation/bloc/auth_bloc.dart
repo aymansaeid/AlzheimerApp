@@ -29,6 +29,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) : super(AuthInitial()) {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
+    on<AuthUserAvatarUpdated>(_onUserAvatarUpdated);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthCheckRequested>(_onCheckAuthStatus);
   }
@@ -71,12 +72,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       event.fullName,
       event.phone,
       event.role,
+      avatarUrl: event.avatarUrl,
     );
 
     result.fold(
       (failure) => emit(AuthError(failure.message)),
       (user) => emit(AuthAuthenticated(user, isSetupComplete: false)),
     );
+  }
+
+  void _onUserAvatarUpdated(
+    AuthUserAvatarUpdated event,
+    Emitter<AuthState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      final updatedUser = currentState.user.copyWith(
+        avatarUrl: event.avatarUrl,
+        clearAvatarUrl: event.avatarUrl == null,
+      );
+      emit(
+        AuthAuthenticated(
+          updatedUser,
+          isSetupComplete: currentState.isSetupComplete,
+        ),
+      );
+    }
   }
 
   Future<void> _onLogoutRequested(

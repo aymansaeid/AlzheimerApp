@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 abstract class PermissionService {
   Future<bool> requestGalleryPermission();
+  Future<bool> requestCameraPermission();
   Future<bool> requestMicrophonePermission();
   Future<bool> openSettings();
 }
@@ -49,6 +50,15 @@ class PermissionServiceImpl implements PermissionService {
     }
 
     return status.isGranted || status.isLimited;
+  }
+
+  @override
+  Future<bool> requestCameraPermission() async {
+    final status = await Permission.camera.status;
+    if (status.isGranted) return true;
+
+    final result = await Permission.camera.request();
+    return result.isGranted;
   }
 
   @override

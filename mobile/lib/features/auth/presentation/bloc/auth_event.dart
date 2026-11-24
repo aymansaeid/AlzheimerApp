@@ -23,6 +23,7 @@ class AuthRegisterRequested extends AuthEvent {
   final String fullName;
   final String phone;
   final int role;
+  final String? avatarUrl;
 
   const AuthRegisterRequested({
     required this.email,
@@ -30,10 +31,27 @@ class AuthRegisterRequested extends AuthEvent {
     required this.fullName,
     required this.phone,
     required this.role,
+    this.avatarUrl,
   });
 
   @override
-  List<Object?> get props => [email, password, fullName, phone, role];
+  List<Object?> get props => [
+        email,
+        password,
+        fullName,
+        phone,
+        role,
+        avatarUrl,
+      ];
+}
+
+class AuthUserAvatarUpdated extends AuthEvent {
+  final String? avatarUrl;
+
+  const AuthUserAvatarUpdated(this.avatarUrl);
+
+  @override
+  List<Object?> get props => [avatarUrl];
 }
 
 class AuthLogoutRequested extends AuthEvent {}
