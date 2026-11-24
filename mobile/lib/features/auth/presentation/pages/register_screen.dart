@@ -187,13 +187,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
               final isBusy =
                   authState is AuthLoading || registerState.isLoading;
 
-              return AuthLayout(
-                title: 'Hesap Oluştur',
-                subtitle: 'Sisteme katılmak için bilgilerinizi girin',
-                showLogo: false,
-                titleInAppBar: true,
-                onBack: () => _goToLogin(context),
-                child: Form(
+              return PopScope(
+                canPop: !isBusy,
+                child: AuthLayout(
+                  title: 'Hesap Oluştur',
+                  subtitle: 'Sisteme katılmak için bilgilerinizi girin',
+                  showLogo: false,
+                  titleInAppBar: true,
+                  onBack: () => _goToLogin(context),
+                  isBackEnabled: !isBusy,
+                  child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -324,7 +327,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           TextButton(
-                            onPressed: () => _goToLogin(context),
+                            onPressed: isBusy ? null : () => _goToLogin(context),
                             child: Text(
                               'Giriş Yap',
                               style: theme.textTheme.bodyLarge?.copyWith(
@@ -338,6 +341,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                 ),
+              ),
               );
             },
           );
