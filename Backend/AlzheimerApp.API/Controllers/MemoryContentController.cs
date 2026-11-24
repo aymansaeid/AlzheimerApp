@@ -35,6 +35,7 @@ public class MemoryContentController : ControllerBase
     /// 1. Upload the physical file directly from Flutter to Firebase Storage.
     /// 2. Get the download URL from Firebase.
     /// 3. Pass that URL into the `fileUrl` property of this request.
+    /// fileUrl is optional: omit it (or send null) for memories that have no file.
     /// 
     /// **ContentType Mapping:**
     /// * `0` = Photo

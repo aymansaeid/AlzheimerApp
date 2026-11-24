@@ -5,6 +5,8 @@ public class MemoryProfileResponse
     public string PersonName { get; set; } = string.Empty;
     public string Relationship { get; set; } = string.Empty;
     public Guid UploaderId { get; set; }
+    public string? UploaderName { get; set; }
+    public string? UploaderProfilePhotoUrl { get; set; }
     public string? CoverPhotoUrl { get; set; }
     public int MemoryCount { get; set; }
 

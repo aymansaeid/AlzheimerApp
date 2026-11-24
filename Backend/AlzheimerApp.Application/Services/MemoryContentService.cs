@@ -10,11 +10,13 @@ public class MemoryContentService : IMemoryContentService
 {
     private readonly IMemoryContentRepository _contentRepository;
 
-    public MemoryContentService(IMemoryContentRepository contentRepository)
+    private readonly IUserRepository _userRepository;
+
+    public MemoryContentService(IMemoryContentRepository contentRepository, IUserRepository userRepository)
     {
         _contentRepository = contentRepository;
+        _userRepository = userRepository;
     }
-
     public async Task<MemoryContentResponse> AddContentAsync(MemoryContentRequest request)
     {
         var memoryContent = new MemoryContent
@@ -24,7 +26,7 @@ public class MemoryContentService : IMemoryContentService
             ContentType = request.ContentType,
             Title = request.Title,
             Description = request.Description,
-            FileUrl = request.FileUrl,
+            FileUrl = string.IsNullOrWhiteSpace(request.FileUrl) ? null : request.FileUrl.Trim(),
             PersonName = request.PersonName,
             Relationship = request.Relationship,
             IsActive = true,
@@ -32,6 +34,9 @@ public class MemoryContentService : IMemoryContentService
         };
 
         var savedEntity = await _contentRepository.AddAsync(memoryContent);
+
+        // The new entity has no Uploader loaded; fetch it so the response carries name + photo.
+        savedEntity.Uploader ??= await _userRepository.GetByIdAsync(savedEntity.UploadedBy);
         return MapToResponse(savedEntity);
     }
 
@@ -70,6 +75,8 @@ public class MemoryContentService : IMemoryContentService
                 PersonName = string.IsNullOrWhiteSpace(g.Key.PersonName) ? "Bilinmiyor" : g.Key.PersonName,
                 Relationship = string.IsNullOrWhiteSpace(g.Key.Relationship) ? "" : g.Key.Relationship,
                 UploaderId = g.Key.UploadedBy,
+                UploaderName = g.FirstOrDefault()?.Uploader?.FullName,
+                UploaderProfilePhotoUrl = g.FirstOrDefault()?.Uploader?.ProfilePhotoUrl,
                 CoverPhotoUrl = coverPhoto,
                 MemoryCount = g.Count(),
                 LatestVoiceRecordUrl = latestVoice?.FileUrl,
@@ -94,7 +101,7 @@ public class MemoryContentService : IMemoryContentService
         content.ContentType = request.ContentType;
         content.Title = request.Title;
         content.Description = request.Description;
-        content.FileUrl = request.FileUrl;
+        content.FileUrl = string.IsNullOrWhiteSpace(request.FileUrl) ? null : request.FileUrl.Trim();
         content.PersonName = request.PersonName;
         content.Relationship = request.Relationship;
         content.IsActive = request.IsActive;
@@ -122,7 +129,11 @@ public class MemoryContentService : IMemoryContentService
             FileUrl = content.FileUrl,
             PersonName = content.PersonName,
             Relationship = content.Relationship,
-            CreatedAt = content.CreatedAt
+            IsActive = content.IsActive,
+            CreatedAt = content.CreatedAt,
+            UploaderId = content.UploadedBy,
+            UploaderName = content.Uploader?.FullName,
+            UploaderProfilePhotoUrl = content.Uploader?.ProfilePhotoUrl
         };
     }
 }

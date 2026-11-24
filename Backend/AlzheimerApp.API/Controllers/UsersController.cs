@@ -1,4 +1,6 @@
-﻿using AlzheimerApp.Application.DTOs.Users;
+﻿using AlzheimerApp.Application.Common;
+using AlzheimerApp.Application.DTOs.Auth;
+using AlzheimerApp.Application.DTOs.Users;
 using AlzheimerApp.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +28,87 @@ public class UsersController : ControllerBase
         _userService = userService;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Updates the logged-in user's own profile (any role: Patient, Follower or Admin).
+    /// </summary>
+    /// <remarks>
+    /// **Partial update:** send only the fields you want to change. Omitted / `null` fields stay as they are.
+    ///
+    /// | Field | Rule |
+    /// |---|---|
+    /// | `fullName` | Cannot be empty. |
+    /// | `phone` | Free text. `""` clears it. |
+    /// | `email` | Must be a valid, unused address. **Requires `currentPassword`.** |
+    /// | `newPassword` | Min. 6 characters. **Requires `currentPassword`.** |
+    /// | `profilePhotoUrl` | An `https://` URL (e.g. after uploading to Firebase Storage from the app). `""` removes the photo. |
+    ///
+    /// The user is taken from the JWT token. Do not send a `userId`.
+    ///
+    /// **Token note:** the JWT contains the e-mail and full name as claims. After changing them, call
+    /// `POST /api/Auth/refresh-my-token` if the app reads those values from the token.
+    ///
+    /// Sample request (change name and phone only):
+    ///
+    ///     PUT /api/Users/me
+    ///     {
+    ///        "fullName": "Ekrem Baş",
+    ///        "phone": "+90 555 123 45 67"
+    ///     }
+    ///
+    /// Sample request (change password):
+    ///
+    ///     PUT /api/Users/me
+    ///     {
+    ///        "currentPassword": "OldPassword123!",
+    ///        "newPassword": "NewPassword456!"
+    ///     }
+    /// </remarks>
+    /// <param name="request">The fields to change.</param>
+    /// <response code="200">Profile updated. Returns the updated user (same shape as the `user` object of login).</response>
+    /// <response code="400">If validation fails or `currentPassword` is missing or wrong.</response>
+    /// <response code="401">If the JWT token is missing, expired, or invalid.</response>
+    /// <response code="404">If the user in the token no longer exists.</response>
+    /// <response code="409">If the new e-mail address is already used by another account.</response>
+    [HttpPut("me")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileRequest request)
+    {
+        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+        {
+            return Unauthorized(new { Error = "Invalid token claims." });
+        }
+
+        try
+        {
+            var updatedUser = await _userService.UpdateProfileAsync(userId, request);
+            return Ok(updatedUser);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { Error = ex.Message });
+        }
+        catch (ConflictException ex)
+        {
+            return Conflict(new { Error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Profile update failed for user {UserId}.", userId);
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { Error = "The profile could not be updated. Please try again later." });
+        }
+    }
+
 
     /// <summary>
     /// Uploads or replaces the logged-in user's profile photo.

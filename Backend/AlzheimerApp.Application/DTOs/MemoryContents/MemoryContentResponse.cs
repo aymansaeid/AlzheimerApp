@@ -9,8 +9,14 @@ public class MemoryContentResponse
     public MemoryContentType ContentType { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string FileUrl { get; set; } = string.Empty;
+    public string? FileUrl { get; set; }
     public string? PersonName { get; set; }
     public string? Relationship { get; set; }
+    public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Uploader (care team member who added the memory) — for the feed post header.
+    public Guid UploaderId { get; set; }
+    public string? UploaderName { get; set; }
+    public string? UploaderProfilePhotoUrl { get; set; }
 }

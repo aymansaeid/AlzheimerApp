@@ -1,4 +1,5 @@
-﻿using AlzheimerApp.Application.DTOs.Auth;
+﻿using AlzheimerApp.Application.Common;
+using AlzheimerApp.Application.DTOs.Auth;
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
@@ -24,10 +25,13 @@ public class AuthService : IAuthService
             throw new Exception("A user with this email already exists.");
         }
 
-        // 2. Hash the password securely
+        // 2. Optional profile photo URL (must be https if provided)
+        var profilePhotoUrl = PhotoUrlValidator.Normalize(dto.ProfilePhotoUrl);
+
+        // 3. Hash the password securely
         string passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
-        // 3. Create the Domain Entity
+        // 4. Create the Domain Entity
         var user = new User
         {
             Email = dto.Email,
@@ -35,10 +39,11 @@ public class AuthService : IAuthService
             FullName = dto.FullName,
             Phone = dto.Phone,
             Role = dto.Role,
+            ProfilePhotoUrl = profilePhotoUrl,
             IsActive = true
         };
 
-        // 4. Save to database
+        // 5. Save to database
         return await _userRepository.AddAsync(user);
     }
 

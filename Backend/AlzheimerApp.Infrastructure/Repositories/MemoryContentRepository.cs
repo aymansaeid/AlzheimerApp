@@ -24,6 +24,7 @@ public class MemoryContentRepository : IMemoryContentRepository
     public async Task<List<MemoryContent>> GetActiveContentByPatientIdAsync(Guid patientId, Guid? uploaderId = null, string? personName = null, int? contentType = null)
     {
         var query = _context.MemoryContents
+            .Include(mc => mc.Uploader) // name + profile photo for the feed post header
             .Where(mc => mc.PatientId == patientId && mc.IsActive)
             .AsQueryable();
 

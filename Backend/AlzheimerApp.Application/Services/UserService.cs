@@ -1,7 +1,8 @@
 ﻿using AlzheimerApp.Application.DTOs.Users;
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
-
+using AlzheimerApp.Application.Common;
+using AlzheimerApp.Application.DTOs.Auth;
 namespace AlzheimerApp.Application.Services;
 
 public class UserService : IUserService
@@ -10,6 +11,7 @@ public class UserService : IUserService
     public const long MaxProfilePhotoBytes = 5 * 1024 * 1024;
 
     private const string ProfilePhotoFolder = "profile-photos";
+    private const int MinPasswordLength = 6;
 
     // Extension -> canonical image format. jpg and jpeg are the same format.
     private static readonly Dictionary<string, ImageFormat> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -36,6 +38,65 @@ public class UserService : IUserService
 
         user.FcmToken = token;
         await _userRepository.UpdateAsync(user);
+    }
+
+    public async Task<UserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request)
+    {
+        var user = await _userRepository.GetByIdAsync(userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        bool changesEmail = request.Email != null
+                            && !string.Equals(request.Email.Trim(), user.Email, StringComparison.Ordinal);
+        bool changesPassword = request.NewPassword != null;
+
+        // 1. Sensitive changes need the current password, so a stolen/forgotten-open session
+        //    cannot be used to take over the account.
+        if (changesEmail || changesPassword)
+        {
+            if (string.IsNullOrEmpty(request.CurrentPassword))
+                throw new ArgumentException("Current password is required to change the e-mail or password.");
+
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+                throw new ArgumentException("Current password is incorrect.");
+        }
+
+        // 2. Validate everything before touching the entity.
+        string? fullName = null;
+        if (request.FullName != null)
+        {
+            fullName = request.FullName.Trim();
+            if (fullName.Length == 0)
+                throw new ArgumentException("Full name cannot be empty.");
+        }
+
+        string? email = null;
+        if (changesEmail)
+        {
+            email = request.Email!.Trim();
+            if (!System.Net.Mail.MailAddress.TryCreate(email, out var parsed) || parsed.Address != email)
+                throw new ArgumentException("The e-mail address is not valid.");
+
+            var owner = await _userRepository.GetByEmailAsync(email);
+            if (owner != null && owner.Id != user.Id)
+                throw new ConflictException("This e-mail address is already used by another account.");
+        }
+
+        if (changesPassword && request.NewPassword!.Length < MinPasswordLength)
+            throw new ArgumentException($"The new password must be at least {MinPasswordLength} characters.");
+
+        // Empty string = remove photo; null = unchanged.
+        bool changesPhoto = request.ProfilePhotoUrl != null;
+        var photoUrl = changesPhoto ? PhotoUrlValidator.Normalize(request.ProfilePhotoUrl) : null;
+
+        // 3. Apply.
+        if (fullName != null) user.FullName = fullName;
+        if (request.Phone != null) user.Phone = request.Phone.Trim();
+        if (email != null) user.Email = email;
+        if (changesPassword) user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword!);
+        if (changesPhoto) user.ProfilePhotoUrl = photoUrl;
+
+        await _userRepository.UpdateAsync(user);
+        return UserDto.FromEntity(user);
     }
 
     public async Task<ProfilePhotoResponse> UpdateProfilePhotoAsync(Guid userId, ProfilePhotoUploadRequest request, CancellationToken cancellationToken = default)

@@ -188,7 +188,6 @@ namespace AlzheimerApp.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("FileUrl")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
