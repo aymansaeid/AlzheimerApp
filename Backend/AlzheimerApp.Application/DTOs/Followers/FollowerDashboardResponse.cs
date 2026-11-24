@@ -9,6 +9,9 @@ public class FollowerDashboardResponse
     public Guid PatientId { get; set; }
     public string PatientName { get; set; } = string.Empty;
 
+    public string? ProfilePhotoUrl { get; set; }
+
+
     // Real-time Status
     public double? LastLatitude { get; set; }
     public double? LastLongitude { get; set; }

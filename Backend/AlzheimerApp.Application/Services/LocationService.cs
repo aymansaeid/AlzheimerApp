@@ -13,19 +13,22 @@ public class LocationService : ILocationService
     private readonly IPatientFollowerRepository _followerRepository;
     private readonly INotificationService _notificationService;
     private readonly IAlertHistoryRepository _alertRepository;
+    private readonly IUserRepository _userRepository;
 
     public LocationService(
         ILocationLogRepository locationRepository,
         ISafeZoneRepository safeZoneRepository,
         IPatientFollowerRepository followerRepository,
         INotificationService notificationService,
-        IAlertHistoryRepository alertRepository)
+        IAlertHistoryRepository alertRepository,
+        IUserRepository userRepository)
     {
         _locationRepository = locationRepository;
         _safeZoneRepository = safeZoneRepository;
         _followerRepository = followerRepository;
         _notificationService = notificationService;
         _alertRepository = alertRepository;
+        _userRepository = userRepository;
     }
 
     public async Task<LocationLog> LogLocationAsync(LocationRequest request)
@@ -108,9 +111,12 @@ public class LocationService : ILocationService
 
         if (lastLocation == null) return null;
 
+        var profilePhotoUrl = await _userRepository.GetProfilePhotoUrlAsync(patientId);
+
         return new LocationLogResponse
         {
             PatientId = lastLocation.PatientId,
+            ProfilePhotoUrl = profilePhotoUrl,
             Latitude = lastLocation.Latitude,
             Longitude = lastLocation.Longitude,
             AccuracyMeters = lastLocation.AccuracyMeters,
@@ -122,16 +128,28 @@ public class LocationService : ILocationService
     public async Task<List<LocationLogResponse>> GetLocationHistoryAsync(Guid patientId, DateTime startTime, DateTime endTime)
     {
         var history = await _locationRepository.GetLocationHistoryAsync(patientId, startTime, endTime);
+        if (history.Count == 0) return new List<LocationLogResponse>();
+
+        // One lookup for the whole history instead of one per point.
+        var profilePhotoUrl = await _userRepository.GetProfilePhotoUrlAsync(patientId);
 
         return history.Select(l => new LocationLogResponse
         {
             PatientId = l.PatientId,
+            ProfilePhotoUrl = profilePhotoUrl,
             Latitude = l.Latitude,
             Longitude = l.Longitude,
             AccuracyMeters = l.AccuracyMeters,
             RecordedAt = l.RecordedAt,
             IsOutsideZone = l.IsOutsideZone
         }).ToList();
+    }
+
+    public async Task<List<PatientLatestLocationResponse>> GetLatestLocationsForCareTeamAsync(Guid requesterId, bool isSystemAdmin, CancellationToken cancellationToken = default)
+    {
+        // System admins see every patient; caregivers only see patients they are linked to.
+        Guid? followerFilter = isSystemAdmin ? null : requesterId;
+        return await _locationRepository.GetLatestLocationsForPatientsAsync(followerFilter, cancellationToken);
     }
 
     private double CalculateDistanceMeters(double lat1, double lon1, double lat2, double lon2)

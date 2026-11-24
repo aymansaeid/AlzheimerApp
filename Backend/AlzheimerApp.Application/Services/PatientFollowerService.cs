@@ -176,6 +176,7 @@ public class PatientFollowerService : IPatientFollowerService
         {
             PatientId = patient.Id,
             PatientName = patient.FullName,
+            ProfilePhotoUrl = patient.ProfilePhotoUrl,
 
             // Pass the specific permissions flag back down
             CurrentUserIsAdmin = relationship.IsPrimary,
@@ -253,6 +254,7 @@ public async Task<List<CareTeamMemberResponse>> GetCareTeamAsync(Guid patientId)
         FollowerId = r.FollowerId,
         FullName = r.Follower?.FullName ?? "Unknown Member",
         Phone = r.Follower?.Phone ?? "No Phone Linked",
+        ProfilePhotoUrl = r.Follower?.ProfilePhotoUrl,
         RelationshipType = r.Relationship,
         IsPrimary = r.IsPrimary,
         JoinedAt = r.CreatedAt
@@ -309,6 +311,7 @@ public async Task RemoveFollowerAsync(Guid patientId, Guid adminId, Guid followe
         {
             PatientId = l.PatientId,
             FullName = l.Patient?.FullName ?? "Unknown Patient",
+            ProfilePhotoUrl = l.Patient?.ProfilePhotoUrl,
             IsPrimaryAdmin = l.IsPrimary,
             JoinedAt = l.CreatedAt
         }).ToList();

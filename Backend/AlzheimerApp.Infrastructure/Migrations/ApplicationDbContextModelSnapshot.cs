@@ -80,7 +80,7 @@ namespace AlzheimerApp.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PatientId");
+                    b.HasIndex("PatientId", "RecordedAt");
 
                     b.ToTable("LocationLogs");
                 });
@@ -321,9 +321,6 @@ namespace AlzheimerApp.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AvatarUrl")
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -347,6 +344,9 @@ namespace AlzheimerApp.Infrastructure.Migrations
 
                     b.Property<string>("Phone")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProfilePhotoUrl")
                         .HasColumnType("text");
 
                     b.Property<int>("Role")

@@ -71,10 +71,10 @@ public class AuthController : ControllerBase
     ///        "password": "StrongPassword123!"
     ///     }
     /// </remarks>
-    /// <response code="200">Returns the JWT token and user details.</response>
+    /// <response code="200">Returns the JWT token and user details (including `profilePhotoUrl`, which may be null).</response>
     /// <response code="401">If the email or password is incorrect.</response>
     [HttpPost("login")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
@@ -83,10 +83,10 @@ public class AuthController : ControllerBase
             var user = await _authService.LoginAsync(dto);
             var token = GenerateJwtToken(user);
 
-            return Ok(new
+            return Ok(new AuthResponse
             {
                 Token = token,
-                User = new { user.Id, user.FullName, user.Email, user.Role }
+                User = UserDto.FromEntity(user)
             });
         }
         catch (Exception ex)
@@ -98,19 +98,24 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Generates a fresh JWT Token with updated database claims (like new roles).
     /// </summary>
+    /// <remarks>
+    /// Also returns the latest user profile, including a freshly uploaded `profilePhotoUrl`.
+    /// </remarks>
     [Authorize]
     [HttpPost("refresh-my-token")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RefreshMyToken()
     {
         try
         {
-            // 1. Mevcut token içinden kullanıcının ID'sini (Sub) bul
-            var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-            if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized(new { Error = "Invalid token claims." });
-
-            var userId = Guid.Parse(userIdClaim);
+            // 1. Mevcut token içinden kullanıcının ID'sini bul.
+            // JwtBearer, "sub" claim'ini varsayılan olarak ClaimTypes.NameIdentifier'a eşler;
+            // ham "sub" yalnızca MapInboundClaims kapatılırsa görünür. İkisini de destekliyoruz.
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                              ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized(new { Error = "Invalid token claims." });
 
             // 2. AuthService üzerinden veritabanındaki EN GÜNCEL kullanıcı verisini çek
             var freshUser = await _authService.GetFreshUserByIdAsync(userId);
@@ -119,10 +124,10 @@ public class AuthController : ControllerBase
             var newToken = GenerateJwtToken(freshUser);
 
             // 4. Yeni token'ı ve güncel bilgileri frontend'e gönder
-            return Ok(new
+            return Ok(new AuthResponse
             {
                 Token = newToken,
-                User = new { freshUser.Id, freshUser.FullName, freshUser.Email, freshUser.Role }
+                User = UserDto.FromEntity(freshUser)
             });
         }
         catch (Exception ex)

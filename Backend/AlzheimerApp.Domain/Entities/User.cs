@@ -10,7 +10,7 @@ public class User
     public UserRole Role { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
-    public string? AvatarUrl { get; set; }
+    public string? ProfilePhotoUrl { get; set; }
     public string? FcmToken { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
