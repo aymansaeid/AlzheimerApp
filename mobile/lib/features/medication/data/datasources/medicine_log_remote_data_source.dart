@@ -20,9 +20,8 @@ class MedicineLogRemoteDataSourceImpl implements MedicineLogRemoteDataSource {
     DateTime date,
   ) async {
     try {
-      // POSTGRESQL İÇİN KUSURSUZ UTC GECE YARISI FORMATI
       final cleanDate =
-          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}T00:00:00Z";
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
       final response = await dio.get(
         '/api/MedicineLogs/patient/$patientId/date/$cleanDate',
@@ -70,6 +69,9 @@ class MedicineLogRemoteDataSourceImpl implements MedicineLogRemoteDataSource {
   String _parseProblemDetails(DioException e) {
     if (e.response?.data is Map<String, dynamic>) {
       final data = e.response!.data as Map<String, dynamic>;
+      if (data.containsKey('error') && data['error'] != null) {
+        return data['error'].toString();
+      }
       if (data.containsKey('detail') && data['detail'] != null) {
         return data['detail'].toString();
       }

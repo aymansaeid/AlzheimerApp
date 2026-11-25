@@ -138,12 +138,7 @@ final appRouter = GoRouter(
                   name: 'patient_medication_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final initialMedicineJson =
-                        state.extra as Map<String, dynamic>?;
-                    return MedicineDetailScreen(
-                      medicationId: id,
-                      initialMedicineJson: initialMedicineJson,
-                    );
+                    return MedicineDetailScreen(medicationId: id);
                   },
                 ),
                 GoRoute(
@@ -155,12 +150,9 @@ final appRouter = GoRouter(
                     final patientId = authState is AuthAuthenticated
                         ? authState.user.id
                         : '';
-                    final initialMedicineJson =
-                        state.extra as Map<String, dynamic>?;
                     return MedicineFormScreen(
                       medicationId: id,
                       patientId: patientId,
-                      initialMedicineJson: initialMedicineJson,
                     );
                   },
                 ),
@@ -233,12 +225,7 @@ final appRouter = GoRouter(
                   name: 'caregiver_medication_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final initialMedicineJson =
-                        state.extra as Map<String, dynamic>?;
-                    return MedicineDetailScreen(
-                      medicationId: id,
-                      initialMedicineJson: initialMedicineJson,
-                    );
+                    return MedicineDetailScreen(medicationId: id);
                   },
                 ),
                 GoRoute(
@@ -248,12 +235,9 @@ final appRouter = GoRouter(
                     final id = state.uri.queryParameters['id'];
                     final patientId =
                         state.uri.queryParameters['patientId'] ?? '';
-                    final initialMedicineJson =
-                        state.extra as Map<String, dynamic>?;
                     return MedicineFormScreen(
                       medicationId: id,
                       patientId: patientId,
-                      initialMedicineJson: initialMedicineJson,
                     );
                   },
                 ),

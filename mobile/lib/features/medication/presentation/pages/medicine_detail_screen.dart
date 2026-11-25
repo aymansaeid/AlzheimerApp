@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_state.dart';
-import 'package:mobile/features/medication/data/models/medicine_model.dart';
 import 'package:mobile/features/medication/domain/entities/medicine.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -16,12 +15,10 @@ import '../widgets/medicine_detail_action_buttons.dart';
 
 class MedicineDetailScreen extends StatefulWidget {
   final String medicationId;
-  final Map<String, dynamic>? initialMedicineJson;
 
   const MedicineDetailScreen({
     super.key,
     required this.medicationId,
-    this.initialMedicineJson,
   });
 
   @override
@@ -30,18 +27,6 @@ class MedicineDetailScreen extends StatefulWidget {
 
 class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
   Medicine? _medicine;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialMedicineJson != null) {
-      try {
-        _medicine = MedicineModel.fromJson(widget.initialMedicineJson!);
-      } catch (e) {
-        debugPrint('Error parsing initial medicine json: $e');
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +81,6 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                         medication.medicineId.isNotEmpty) {
                       context.read<MedicineBloc>().add(
                         LoadMedicineDetailsEvent(
-                          patientId: state.patientId ?? '',
                           medicineId: medication.medicineId,
                         ),
                       );
@@ -107,7 +91,6 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
             },
             builder: (context, state) {
               if (state is MedicineLoaded || state is MedicineDetailsLoaded) {
-                // Find medication log by ID
                 final List<MedicineLog> medicinesList = state is MedicineLoaded
                     ? state.medicines
                     : [];
@@ -116,68 +99,36 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                   medication = medicinesList.firstWhere(
                     (m) => m.id == widget.medicationId,
                   );
-                } catch (_) {
-                  // Fallback if detail state doesn't have lists yet
-                }
-
-                if (medication == null && _medicine != null) {
-                  // Reconstruct simple log helper from medicine details if needed
-                  final timeParts = _medicine!.scheduleTime.split(':');
-                  final hour = timeParts.isNotEmpty
-                      ? (int.tryParse(timeParts[0]) ?? 8)
-                      : 8;
-                  final minute = timeParts.length > 1
-                      ? (int.tryParse(timeParts[1]) ?? 0)
-                      : 0;
-                  medication = MedicineLog(
-                    id: _medicine!.id,
-                    medicineId: _medicine!.id,
-                    medicineName: _medicine!.name,
-                    dosage: _medicine!.dosage,
-                    status: _medicine!.isTaken ? 1 : 0,
-                    scheduledAt: DateTime.now().copyWith(
-                      hour: hour,
-                      minute: minute,
-                    ),
-                  );
-                }
-
-                if (medication != null && _medicine != null) {
-                  try {
-                    final timeParts = _medicine!.scheduleTime.split(':');
-                    if (timeParts.isNotEmpty) {
-                      final hour = int.parse(timeParts[0]);
-                      final minute = timeParts.length > 1
-                          ? int.parse(timeParts[1])
-                          : 0;
-                      medication = medication.copyWith(
-                        scheduledAt: DateTime(
-                          medication.scheduledAt.year,
-                          medication.scheduledAt.month,
-                          medication.scheduledAt.day,
-                          hour,
-                          minute,
-                        ),
-                      );
-                    }
-                  } catch (_) {}
-                }
+                } catch (_) {}
 
                 if (medication == null) {
                   return const Center(child: Text('İlaç kaydı bulunamadı.'));
                 }
 
-                final timeStr = DateFormat(
-                  'HH:mm',
-                ).format(medication.scheduledAt);
+                Medicine? matchedMedicine = _medicine;
+                if (matchedMedicine == null && state is MedicineLoaded) {
+                  matchedMedicine = state.allMedicines
+                      .cast<Medicine?>()
+                      .firstWhere(
+                        (m) => m?.id == medication!.medicineId,
+                        orElse: () => null,
+                      );
+                }
 
-                // Calculate isFuture exactly once
                 final scheduledLocal = medication.scheduledAt.toLocal();
+                final timeStr = DateFormat('HH:mm').format(scheduledLocal);
                 final isFuture = scheduledLocal.isAfter(DateTime.now());
 
                 final selectedDate = state is MedicineLoaded
                     ? state.selectedDate
                     : DateTime.now();
+
+                final instructions =
+                    (medication.instructions?.trim().isNotEmpty == true)
+                    ? medication.instructions!.trim()
+                    : (matchedMedicine?.instructions?.trim().isNotEmpty == true
+                          ? matchedMedicine!.instructions!.trim()
+                          : null);
 
                 return SafeArea(
                   child: Column(
@@ -215,7 +166,8 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
 
                               // Name
                               Text(
-                                _medicine?.name ?? medication.medicineName,
+                                matchedMedicine?.name ??
+                                    medication.medicineName,
                                 style: const TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
@@ -234,7 +186,8 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                     icon: Icons.science,
                                     label: 'Dozaj',
                                     value:
-                                        _medicine?.dosage ?? medication.dosage,
+                                        matchedMedicine?.dosage ??
+                                        medication.dosage,
                                   ),
                                   MedicineInfoChip(
                                     icon: Icons.access_time,
@@ -253,8 +206,8 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                               ),
 
                               // Instructions Card
-                              if (_medicine != null &&
-                                  _medicine!.instructions.isNotEmpty) ...[
+                              if (instructions != null &&
+                                  instructions.isNotEmpty) ...[
                                 const SizedBox(height: 24),
                                 Container(
                                   width: double.infinity,
@@ -297,7 +250,7 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                       ),
                                       const SizedBox(height: 12),
                                       Text(
-                                        _medicine!.instructions,
+                                        instructions,
                                         style: const TextStyle(
                                           fontSize: 16,
                                           color: Colors.black54,

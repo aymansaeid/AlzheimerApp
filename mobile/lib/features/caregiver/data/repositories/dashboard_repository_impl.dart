@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:injectable/injectable.dart';
 import 'package:mobile/core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
@@ -9,9 +10,12 @@ import '../datasources/dashboard_remote_data_source.dart';
 
 @LazySingleton(as: DashboardRepository)
 class DashboardRepositoryImpl implements DashboardRepository {
-  final DashboardRemoteDataSource remoteDataSource;
+  static const _selectedPatientIdKey = 'selected_patient_id';
 
-  DashboardRepositoryImpl(this.remoteDataSource);
+  final DashboardRemoteDataSource remoteDataSource;
+  final FlutterSecureStorage secureStorage;
+
+  DashboardRepositoryImpl(this.remoteDataSource, this.secureStorage);
 
   @override
   Future<Either<Failure, DashboardSummary>> getPatientDashboardSummary(
@@ -39,5 +43,30 @@ class DashboardRepositoryImpl implements DashboardRepository {
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
+  }
+
+  @override
+  Future<String?> getLastSelectedPatientId() async {
+    try {
+      final value = await secureStorage.read(key: _selectedPatientIdKey);
+      if (value == null || value.isEmpty) return null;
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> saveLastSelectedPatientId(String patientId) async {
+    try {
+      await secureStorage.write(key: _selectedPatientIdKey, value: patientId);
+    } catch (_) {}
+  }
+
+  @override
+  Future<void> clearLastSelectedPatientId() async {
+    try {
+      await secureStorage.delete(key: _selectedPatientIdKey);
+    } catch (_) {}
   }
 }

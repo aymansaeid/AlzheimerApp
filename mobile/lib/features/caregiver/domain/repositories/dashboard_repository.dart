@@ -8,4 +8,7 @@ abstract class DashboardRepository {
     String patientId,
   );
   Future<Either<Failure, List<FollowedPatient>>> getMyPatients();
+  Future<String?> getLastSelectedPatientId();
+  Future<void> saveLastSelectedPatientId(String patientId);
+  Future<void> clearLastSelectedPatientId();
 }

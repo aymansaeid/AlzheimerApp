@@ -6,6 +6,7 @@ import 'package:injectable/injectable.dart';
 import 'package:mobile/features/auth/domain/repositories/auth_repository.dart';
 
 import '../../../core/di/injection.dart';
+import '../../../core/router/app_router.dart';
 import '../domain/repository/notification_repository.dart';
 
 @lazySingleton
@@ -82,9 +83,19 @@ class NotificationService {
         body: '$patientName saat$timeText $medicineName dozunu henüz almadı!',
         payload: jsonEncode(message.data),
       );
+    }
+    // 2b. Senaryo: Hastaya İlaç Hatırlatma (MEDICATION_REMINDER)
+    else if (type == 'MEDICATION_REMINDER') {
+      final medicineName = message.data['medicineName'] ?? 'İlacınız';
+      final scheduledTime = message.data['scheduledTime'] ?? '';
+      final timeText = scheduledTime.isNotEmpty ? ' ($scheduledTime)' : '';
 
-      // Varsa hasta takip / ilaç takip Bloc'una event atılabilir:
-      // getIt<MedicationBloc>().add(MedicationMissedEvent(message.data));
+      await _repository.showLocalNotification(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: '💊 İlacınızı aldınız mı?',
+        body: '$medicineName$timeText dozunu alma zamanı geldi.',
+        payload: jsonEncode(message.data),
+      );
     }
     // 3. Senaryo: Admin Yetkisi Devri (ROLE_UPDATED)
     else if (type == 'ROLE_UPDATED' || type == 'ADMIN_GRANTED') {
@@ -111,11 +122,10 @@ class NotificationService {
       debugPrint('SAFEZONE_EXIT for patient: $patientId');
       // Harita takip rotasına yönlendir
       // getIt<AppRouter>().push('/patient-tracking/$patientId');
+    } else if (type == 'MEDICATION_REMINDER') {
+      appRouter.go('/patient/medications');
     } else if (type == 'MEDICATION_MISSED' || type == 'MEDICATION_DELAYED') {
-      final patientId = message.data['patientId'];
-      debugPrint('MEDICATION alert for patient: $patientId');
-      // Hasta detayındaki ilaç takip sekmesine yönlendir
-      // getIt<AppRouter>().push('/patient-medications/$patientId');
+      appRouter.go('/caregiver/medications');
     }
   }
 }

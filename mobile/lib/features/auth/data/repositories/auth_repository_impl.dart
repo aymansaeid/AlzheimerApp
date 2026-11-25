@@ -214,6 +214,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await secureStorage.delete(key: 'user_id');
       await secureStorage.delete(key: 'user_phone');
       await secureStorage.delete(key: 'user_avatar_url');
+      await secureStorage.delete(key: 'selected_patient_id');
     } catch (e) {
       debugPrint('Error deleting token: $e');
     }

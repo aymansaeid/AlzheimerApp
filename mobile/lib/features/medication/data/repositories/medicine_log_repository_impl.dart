@@ -3,9 +3,9 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../domain/entities/medicine_log.dart';
 import '../../domain/repositories/medicine_log_repository.dart';
 import '../datasources/medicine_log_remote_data_source.dart';
-import '../models/medicine_log_model.dart';
 
 @LazySingleton(as: MedicineLogRepository)
 class MedicineLogRepositoryImpl implements MedicineLogRepository {
@@ -14,7 +14,7 @@ class MedicineLogRepositoryImpl implements MedicineLogRepository {
   MedicineLogRepositoryImpl(this.remoteDataSource);
 
   @override
-  Future<Either<Failure, List<MedicineLogModel>>> getDailyLogs(
+  Future<Either<Failure, List<MedicineLog>>> getDailyLogs(
     String patientId,
     DateTime date,
   ) async {

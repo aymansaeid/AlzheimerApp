@@ -78,7 +78,9 @@ class PatientDashboardView extends StatelessWidget {
                   ..sort((a, b) {
                     if (a.status == 1 && b.status != 1) return 1;
                     if (a.status != 1 && b.status == 1) return -1;
-                    return a.scheduledAt.compareTo(b.scheduledAt);
+                    return a.scheduledAt.toLocal().compareTo(
+                      b.scheduledAt.toLocal(),
+                    );
                   });
 
             final now = DateTime.now();
@@ -121,10 +123,11 @@ class PatientDashboardView extends StatelessWidget {
                           )
                         else
                           ...sortedMedicines.map((m) {
-                            final isFuture = m.scheduledAt.isAfter(now);
+                            final scheduledLocal = m.scheduledAt.toLocal();
+                            final isFuture = scheduledLocal.isAfter(now);
                             final timeStr = DateFormat(
                               'HH:mm',
-                            ).format(m.scheduledAt);
+                            ).format(scheduledLocal);
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8),
