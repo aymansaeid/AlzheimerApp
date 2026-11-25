@@ -2,12 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:mobile/core/errors/exceptions.dart';
+import 'package:mobile/features/auth/data/models/refresh_token_response.dart';
 
 import '../../domain/entities/profile_update_entity.dart';
 
 abstract class ProfileRemoteDataSource {
   Future<ProfileUpdateEntity> updateProfile(ProfileUpdateEntity user);
-  Future<String?> refreshMyToken(String currentToken);
+  Future<RefreshTokenResponse?> refreshMyToken(String currentToken);
 }
 
 @LazySingleton(as: ProfileRemoteDataSource)
@@ -57,7 +58,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   }
 
   @override
-  Future<String?> refreshMyToken(String currentToken) async {
+  Future<RefreshTokenResponse?> refreshMyToken(String currentToken) async {
     try {
       final response = await dio.post(
         '/api/Auth/refresh-my-token',
@@ -71,13 +72,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        if (response.data is Map<String, dynamic>) {
-          final data = response.data as Map<String, dynamic>;
-          return (data['token'] ?? data['accessToken'] ?? data['data'])
-              ?.toString();
-        } else if (response.data is String) {
-          return (response.data as String).replaceAll('"', '').trim();
-        }
+        return RefreshTokenResponse.fromDynamic(response.data);
       }
       return null;
     } catch (e) {

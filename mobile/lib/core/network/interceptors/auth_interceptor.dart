@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/features/auth/data/models/refresh_token_response.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_event.dart';
 
 import '../../../features/auth/presentation/bloc/auth_bloc.dart';
@@ -103,20 +104,14 @@ class AuthInterceptor extends Interceptor {
     );
 
     if (response.statusCode == 200 && response.data != null) {
-      String? newToken;
-
-      if (response.data is Map<String, dynamic>) {
-        newToken =
-            response.data['token'] ??
-            response.data['accessToken'] ??
-            response.data['data'];
-      } else if (response.data is String) {
-        newToken = (response.data as String).replaceAll('"', '').trim();
-      }
-
-      if (newToken != null && newToken.isNotEmpty) {
-        await _secureStorage.write(key: _accessTokenKey, value: newToken);
-        return newToken;
+      final parsed = RefreshTokenResponse.fromDynamic(response.data);
+      if (parsed.token != null && parsed.token!.isNotEmpty) {
+        await syncRefreshedSession(
+          response: parsed,
+          secureStorage: _secureStorage,
+          authBloc: getIt<AuthBloc>(),
+        );
+        return parsed.token;
       }
     }
 

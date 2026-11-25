@@ -3,8 +3,11 @@ import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/core/di/injection.dart';
 import 'package:mobile/core/errors/exceptions.dart';
 import 'package:mobile/core/errors/failures.dart';
+import 'package:mobile/features/auth/data/models/refresh_token_response.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:mobile/features/memory_content/features/feed/domain/repositories/file_storage_repository.dart';
 
 import '../../domain/entities/profile_update_entity.dart';
@@ -34,10 +37,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
       if (user.email != null || user.fullName != null) {
         final currentToken = await _secureStorage.read(key: 'jwt_token');
         if (currentToken != null && currentToken.isNotEmpty) {
-          final newToken =
+          final refreshResult =
               await _remoteDataSource.refreshMyToken(currentToken);
-          if (newToken != null && newToken.isNotEmpty) {
-            await _secureStorage.write(key: 'jwt_token', value: newToken);
+          if (refreshResult != null) {
+            await syncRefreshedSession(
+              response: refreshResult,
+              secureStorage: _secureStorage,
+              authBloc: getIt<AuthBloc>(),
+            );
           }
         }
       }
