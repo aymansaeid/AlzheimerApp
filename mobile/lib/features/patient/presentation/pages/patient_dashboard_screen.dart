@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/widgets/section_title.dart';
 import '../../../../core/widgets/avatar_circle.dart';
-import '../../../medication/data/models/medicine_log_model.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../../medication/presentation/bloc/medicine_bloc.dart';
+import '../../../medication/presentation/bloc/medicine_event.dart';
+import '../../../medication/presentation/bloc/medicine_state.dart';
 import '../bloc/patient_dashboard_bloc.dart';
 import '../widgets/loved_ones_grid.dart';
 import '../widgets/patient_medication_card.dart';
@@ -72,16 +77,16 @@ class PatientDashboardView extends StatelessWidget {
           } else if (state is PatientDashboardLoaded) {
             final dashboard = state.dashboardData;
 
-            // Sorting today's medicines: un-taken first, taken (status == 1) last. Within both, sort by schedule time.
+            // Only show un-taken medicines on the dashboard, sorted by local schedule time.
             final sortedMedicines =
-                List<MedicineLogModel>.from(dashboard.todayMedicines)
-                  ..sort((a, b) {
-                    if (a.status == 1 && b.status != 1) return 1;
-                    if (a.status != 1 && b.status == 1) return -1;
-                    return a.scheduledAt.toLocal().compareTo(
+                dashboard.todayMedicines
+                    .where((m) => m.status != 1)
+                    .toList()
+                  ..sort(
+                    (a, b) => a.scheduledAt.toLocal().compareTo(
                       b.scheduledAt.toLocal(),
-                    );
-                  });
+                    ),
+                  );
 
             final now = DateTime.now();
 
@@ -114,7 +119,9 @@ class PatientDashboardView extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 20.0),
                             child: Center(
                               child: Text(
-                                'Bugün için planlanmış ilaç yok.',
+                                dashboard.todayMedicines.isNotEmpty
+                                    ? 'Bugünkü tüm ilaçlarınızı aldınız.'
+                                    : 'Bugün için planlanmış ilaç yok.',
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -136,6 +143,37 @@ class PatientDashboardView extends StatelessWidget {
                                 time: timeStr,
                                 isTaken: m.status == 1,
                                 isFuture: isFuture,
+                                onTap: () async {
+                                  final medicineBloc = context
+                                      .read<MedicineBloc>();
+                                  if (medicineBloc.state is MedicineInitial) {
+                                    final authState = context
+                                        .read<AuthBloc>()
+                                        .state;
+                                    if (authState is AuthAuthenticated) {
+                                      medicineBloc.add(
+                                        LoadDailyMedicinesEvent(
+                                          authState.user.id,
+                                          DateTime.now(),
+                                          loadMedicinesList: true,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                  final result = await context.pushNamed<bool>(
+                                    'patient_medication_detail',
+                                    pathParameters: {'id': m.id},
+                                    queryParameters: {
+                                      'date': DateTime.now().toIso8601String(),
+                                    },
+                                    extra: m,
+                                  );
+                                  if (result == true && context.mounted) {
+                                    context.read<PatientDashboardBloc>().add(
+                                      const LoadPatientDashboardEvent(),
+                                    );
+                                  }
+                                },
                                 onMarkAsTaken: () {
                                   context.read<PatientDashboardBloc>().add(
                                     DashboardMedicineTakenEvent(m.id, 1),

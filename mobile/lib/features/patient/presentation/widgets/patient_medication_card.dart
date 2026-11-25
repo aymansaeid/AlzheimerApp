@@ -6,6 +6,7 @@ class PatientMedicationCard extends StatelessWidget {
   final String time;
   final bool isTaken;
   final bool isFuture;
+  final VoidCallback? onTap;
   final VoidCallback? onMarkAsTaken;
 
   const PatientMedicationCard({
@@ -14,6 +15,7 @@ class PatientMedicationCard extends StatelessWidget {
     required this.time,
     required this.isTaken,
     required this.isFuture,
+    this.onTap,
     this.onMarkAsTaken,
   });
 
@@ -22,6 +24,7 @@ class PatientMedicationCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AppCard(
+      onTap: onTap,
       color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
       child: Row(
         children: [

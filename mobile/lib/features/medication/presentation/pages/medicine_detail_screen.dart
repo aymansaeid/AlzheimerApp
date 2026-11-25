@@ -15,10 +15,12 @@ import '../widgets/medicine_detail_action_buttons.dart';
 
 class MedicineDetailScreen extends StatefulWidget {
   final String medicationId;
+  final MedicineLog? initialMedicationLog;
 
   const MedicineDetailScreen({
     super.key,
     required this.medicationId,
+    this.initialMedicationLog,
   });
 
   @override
@@ -90,199 +92,195 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
               }
             },
             builder: (context, state) {
-              if (state is MedicineLoaded || state is MedicineDetailsLoaded) {
-                final List<MedicineLog> medicinesList = state is MedicineLoaded
-                    ? state.medicines
-                    : [];
-                MedicineLog? medication;
+              MedicineLog? medication;
+              if (state is MedicineLoaded) {
                 try {
-                  medication = medicinesList.firstWhere(
+                  medication = state.medicines.firstWhere(
                     (m) => m.id == widget.medicationId,
                   );
                 } catch (_) {}
+              }
+              medication ??= widget.initialMedicationLog;
 
-                if (medication == null) {
+              if (medication == null) {
+                if (state is MedicineLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state is MedicineLoaded || state is MedicineDetailsLoaded) {
                   return const Center(child: Text('İlaç kaydı bulunamadı.'));
                 }
+                return const Center(child: Text('Veri bulunamadı.'));
+              }
 
-                Medicine? matchedMedicine = _medicine;
-                if (matchedMedicine == null && state is MedicineLoaded) {
-                  matchedMedicine = state.allMedicines
-                      .cast<Medicine?>()
-                      .firstWhere(
-                        (m) => m?.id == medication!.medicineId,
-                        orElse: () => null,
-                      );
-                }
+              Medicine? matchedMedicine = _medicine;
+              if (matchedMedicine == null && state is MedicineLoaded) {
+                matchedMedicine = state.allMedicines
+                    .cast<Medicine?>()
+                    .firstWhere(
+                      (m) => m?.id == medication!.medicineId,
+                      orElse: () => null,
+                    );
+              }
 
-                final scheduledLocal = medication.scheduledAt.toLocal();
-                final timeStr = DateFormat('HH:mm').format(scheduledLocal);
-                final isFuture = scheduledLocal.isAfter(DateTime.now());
+              final scheduledLocal = medication.scheduledAt.toLocal();
+              final timeStr = DateFormat('HH:mm').format(scheduledLocal);
+              final isFuture = scheduledLocal.isAfter(DateTime.now());
 
-                final selectedDate = state is MedicineLoaded
-                    ? state.selectedDate
-                    : DateTime.now();
+              final selectedDate = state is MedicineLoaded
+                  ? state.selectedDate
+                  : DateTime.now();
 
-                final instructions =
-                    (medication.instructions?.trim().isNotEmpty == true)
-                    ? medication.instructions!.trim()
-                    : (matchedMedicine?.instructions?.trim().isNotEmpty == true
-                          ? matchedMedicine!.instructions!.trim()
-                          : null);
+              final instructions =
+                  (medication.instructions?.trim().isNotEmpty == true)
+                  ? medication.instructions!.trim()
+                  : (matchedMedicine?.instructions?.trim().isNotEmpty == true
+                        ? matchedMedicine!.instructions!.trim()
+                        : null);
 
-                return SafeArea(
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Large Pill Icon
+              return SafeArea(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Large Pill Icon
+                            Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: 0.05,
+                                    ),
+                                    blurRadius: 15,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.medication,
+                                size: 64,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Name
+                            Text(
+                              matchedMedicine?.name ?? medication.medicineName,
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Info Chips
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                MedicineInfoChip(
+                                  icon: Icons.science,
+                                  label: 'Dozaj',
+                                  value:
+                                      matchedMedicine?.dosage ??
+                                      medication.dosage,
+                                ),
+                                MedicineInfoChip(
+                                  icon: Icons.access_time,
+                                  label: 'Saat',
+                                  value: timeStr,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Status Info Card
+                            MedicineStatusInfoCard(
+                              medication: medication,
+                              isFuture: isFuture,
+                              isPatient: isPatient,
+                            ),
+
+                            // Instructions Card
+                            if (instructions != null &&
+                                instructions.isNotEmpty) ...[
+                              const SizedBox(height: 24),
                               Container(
-                                width: 120,
-                                height: 120,
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  shape: BoxShape.circle,
+                                  borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withValues(
                                         alpha: 0.05,
                                       ),
                                       blurRadius: 15,
-                                      spreadRadius: 5,
+                                      spreadRadius: 2,
                                     ),
                                   ],
                                 ),
-                                child: Icon(
-                                  Icons.medication,
-                                  size: 64,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-
-                              // Name
-                              Text(
-                                matchedMedicine?.name ??
-                                    medication.medicineName,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 32),
-
-                              // Info Chips
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  MedicineInfoChip(
-                                    icon: Icons.science,
-                                    label: 'Dozaj',
-                                    value:
-                                        matchedMedicine?.dosage ??
-                                        medication.dosage,
-                                  ),
-                                  MedicineInfoChip(
-                                    icon: Icons.access_time,
-                                    label: 'Saat',
-                                    value: timeStr,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 32),
-
-                              // Status Info Card
-                              MedicineStatusInfoCard(
-                                medication: medication,
-                                isFuture: isFuture,
-                                isPatient: isPatient,
-                              ),
-
-                              // Instructions Card
-                              if (instructions != null &&
-                                  instructions.isNotEmpty) ...[
-                                const SizedBox(height: 24),
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.05,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          color: Theme.of(context).primaryColor,
                                         ),
-                                        blurRadius: 15,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.info_outline,
-                                            color: Theme.of(
-                                              context,
-                                            ).primaryColor,
+                                        const SizedBox(width: 8),
+                                        const Text(
+                                          'Kullanım Talimatı',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
                                           ),
-                                          const SizedBox(width: 8),
-                                          const Text(
-                                            'Kullanım Talimatı',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        instructions,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.black54,
-                                          height: 1.4,
                                         ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      instructions,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black54,
+                                        height: 1.4,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ],
-                          ),
+                          ],
                         ),
                       ),
+                    ),
 
-                      // Bottom Action Buttons
-                      Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: MedicineDetailActionButtons(
-                          medication: medication,
-                          isPatient: isPatient,
-                          isFuture: isFuture,
-                          selectedDate: selectedDate,
-                        ),
+                    // Bottom Action Buttons
+                    Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: MedicineDetailActionButtons(
+                        medication: medication,
+                        isPatient: isPatient,
+                        isFuture: isFuture,
+                        selectedDate: selectedDate,
                       ),
-                    ],
-                  ),
-                );
-              } else if (state is MedicineLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              return const Center(child: Text('Veri bulunamadı.'));
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         );

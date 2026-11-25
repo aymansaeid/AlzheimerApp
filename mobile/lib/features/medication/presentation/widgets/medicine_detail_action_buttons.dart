@@ -63,7 +63,7 @@ class MedicineDetailActionButtons extends StatelessWidget {
                 context.read<MedicineBloc>().add(
                   MarkAsTakenEvent(id: medication.id, date: DateTime.now()),
                 );
-                context.pop();
+                context.pop(true);
               }
             : null,
         style: ElevatedButton.styleFrom(
