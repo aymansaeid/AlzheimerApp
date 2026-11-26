@@ -13,6 +13,9 @@ public class LocationHub : Hub
 {
     private readonly ILocationService _locationService;
 
+    /// <summary>SignalR group of everyone watching one patient (location updates and safe zone changes).</summary>
+    public static string GroupFor(Guid patientId) => $"PatientTracker_{patientId}";
+
     public LocationHub(ILocationService locationService)
     {
         _locationService = locationService;
@@ -31,13 +34,11 @@ public class LocationHub : Hub
 
         // We group connections by Patient ID.
         // This way, we only send updates to the family members of THIS specific patient.
-        string groupName = $"PatientTracker_{patientId}";
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+        await Groups.AddToGroupAsync(Context.ConnectionId, GroupFor(patientId));
     }
 
     public async Task UnsubscribeFromPatientTracking(Guid patientId)
     {
-        string groupName = $"PatientTracker_{patientId}";
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupFor(patientId));
     }
 }
