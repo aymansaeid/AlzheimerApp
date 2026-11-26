@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/di/injection.dart';
 import '../../../../core/widgets/section_title.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/followed_patient.dart';
-import '../../domain/usecases/get_followed_patients.dart';
+import '../../../medication/presentation/bloc/medicine_bloc.dart';
+import '../../../medication/presentation/bloc/medicine_event.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../widgets/patient_selector.dart';
 import '../widgets/safety_status_card.dart';
@@ -20,12 +20,27 @@ class CaregiverDashboardScreen extends StatefulWidget {
       _CaregiverDashboardScreenState();
 }
 
-class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
+class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen>
+    with WidgetsBindingObserver {
   String? _selectedPatientId;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<DashboardBloc>().add(const RefreshFollowedPatients());
+    }
   }
 
   @override
@@ -66,7 +81,6 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                 context.read<DashboardBloc>().add(
                   LoadDashboard(_selectedPatientId),
                 );
-                getIt<GetFollowedPatients>().call();
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -229,6 +243,13 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
     );
   }
 
+  void _openMedicationsTab(BuildContext context, String patientId) {
+    context.read<MedicineBloc>().add(
+      LoadDailyMedicinesEvent(patientId, DateTime.now()),
+    );
+    context.goNamed('caregiver_medications');
+  }
+
   Widget _buildMedicationComplianceCard(
     BuildContext context,
     ThemeData theme,
@@ -241,33 +262,38 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
     if (total == 0) {
       return Card(
         elevation: 0,
+        clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(
             color: theme.colorScheme.outline.withValues(alpha: 0.1),
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(
-                  Icons.medication_outlined,
-                  size: 48,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.4,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _openMedicationsTab(context, summary.patientId),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.medication_outlined,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.4,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Bugün için planlanmış ilaç yok',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
+                  const SizedBox(height: 12),
+                  Text(
+                    'Bugün için planlanmış ilaç yok',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -276,10 +302,14 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
 
     return Card(
       elevation: 2,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _openMedicationsTab(context, summary.patientId),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -377,6 +407,7 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                 ],
               ),
           ],
+          ),
         ),
       ),
     );

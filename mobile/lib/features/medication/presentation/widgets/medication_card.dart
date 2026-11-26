@@ -20,7 +20,8 @@ class MedicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeStr = DateFormat('HH:mm').format(medication.scheduledAt);
+    final scheduledLocal = medication.scheduledAt.toLocal();
+    final timeStr = DateFormat('HH:mm').format(scheduledLocal);
     final isPending = medication.status == 0;
     final isTaken = medication.status == 1;
     final isMissed = medication.status == 2;
@@ -28,7 +29,6 @@ class MedicationCard extends StatelessWidget {
     // Parse scheduled time and convert to local time
     final now = currentDateTime ?? DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final scheduledLocal = medication.scheduledAt.toLocal();
     final scheduledDay = DateTime(
       scheduledLocal.year,
       scheduledLocal.month,

@@ -6,6 +6,7 @@ import '../models/medicine_model.dart';
 abstract class MedicineRemoteDataSource {
   Future<MedicineModel> addMedicine(MedicineModel medicine);
   Future<List<MedicineModel>> getMedicines(String patientId);
+  Future<MedicineModel> getMedicineById(String id);
   Future<MedicineModel> updateMedicine(MedicineModel medicine);
   Future<void> deleteMedicine(String id);
 }
@@ -21,7 +22,7 @@ class MedicineRemoteDataSourceImpl implements MedicineRemoteDataSource {
     try {
       final response = await dio.post(
         '/api/Medicine',
-        data: medicine.toJson(),
+        data: medicine.toCreateJson(),
       );
       return MedicineModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -49,11 +50,23 @@ class MedicineRemoteDataSourceImpl implements MedicineRemoteDataSource {
   }
 
   @override
+  Future<MedicineModel> getMedicineById(String id) async {
+    try {
+      final response = await dio.get('/api/Medicine/$id');
+      return MedicineModel.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ServerException(message: _parseProblemDetails(e));
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  @override
   Future<MedicineModel> updateMedicine(MedicineModel medicine) async {
     try {
       final response = await dio.put(
         '/api/Medicine/${medicine.id}',
-        data: medicine.toJson(),
+        data: medicine.toUpdateJson(),
       );
       if (response.data is Map<String, dynamic>) {
         return MedicineModel.fromJson(response.data as Map<String, dynamic>);
@@ -80,6 +93,9 @@ class MedicineRemoteDataSourceImpl implements MedicineRemoteDataSource {
   String _parseProblemDetails(DioException e) {
     if (e.response?.data is Map<String, dynamic>) {
       final data = e.response!.data as Map<String, dynamic>;
+      if (data.containsKey('error') && data['error'] != null) {
+        return data['error'].toString();
+      }
       if (data.containsKey('detail') && data['detail'] != null) {
         return data['detail'].toString();
       }

@@ -5,6 +5,7 @@ class MedicineLog extends Equatable {
   final String medicineId;
   final String medicineName;
   final String dosage;
+  final String? instructions;
   final int status; // 0=Pending, 1=Taken, 2=Missed
   final DateTime scheduledAt;
   final DateTime? takenAt;
@@ -15,6 +16,7 @@ class MedicineLog extends Equatable {
     required this.medicineId,
     required this.medicineName,
     required this.dosage,
+    this.instructions,
     required this.status,
     required this.scheduledAt,
     this.takenAt,
@@ -26,6 +28,8 @@ class MedicineLog extends Equatable {
     String? medicineId,
     String? medicineName,
     String? dosage,
+    String? instructions,
+    bool clearInstructions = false,
     int? status,
     DateTime? scheduledAt,
     DateTime? takenAt,
@@ -36,6 +40,9 @@ class MedicineLog extends Equatable {
       medicineId: medicineId ?? this.medicineId,
       medicineName: medicineName ?? this.medicineName,
       dosage: dosage ?? this.dosage,
+      instructions: clearInstructions
+          ? null
+          : (instructions ?? this.instructions),
       status: status ?? this.status,
       scheduledAt: scheduledAt ?? this.scheduledAt,
       takenAt: takenAt ?? this.takenAt,
@@ -49,6 +56,7 @@ class MedicineLog extends Equatable {
         medicineId,
         medicineName,
         dosage,
+        instructions,
         status,
         scheduledAt,
         takenAt,

@@ -120,39 +120,43 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
           continue;
         }
 
-        final parts = med.scheduleTime.trim().split(':');
-        if (parts.length < 2) {
-          continue;
-        }
-        final hour = int.tryParse(parts[0]);
-        final minute = int.tryParse(parts[1]);
-        if (hour == null || minute == null) {
-          continue;
-        }
-
-        final id = _generateId(med.id, med.scheduleTime);
-        expectedIds.add(id);
-
+        final instr = med.instructions?.trim() ?? '';
         final title = '💊 İlaç Vakti: ${med.name}';
         final body = med.dosage.isNotEmpty
-            ? '${med.dosage} alma zamanı. ${med.instructions}'.trim()
-            : 'İlacınızı alma zamanı. ${med.instructions}'.trim();
-        final payload = jsonEncode({
-          'type': _medType,
-          'medicineId': med.id,
-          'scheduleTime': med.scheduleTime,
-        });
+            ? '${med.dosage} alma zamanı. $instr'.trim()
+            : 'İlacınızı alma zamanı. $instr'.trim();
 
-        final existing = existingMap[id];
-        final isUnchanged =
-            existing != null &&
-            existing.title == title &&
-            existing.body == body &&
-            existing.payload == payload;
+        for (final time in med.scheduleTimes) {
+          final parts = time.trim().split(':');
+          if (parts.length < 2) {
+            continue;
+          }
+          final hour = int.tryParse(parts[0]);
+          final minute = int.tryParse(parts[1]);
+          if (hour == null || minute == null) {
+            continue;
+          }
 
-        if (!isUnchanged) {
-          if (existing != null) await _localPlugin.cancel(id: id);
-          await _scheduleDaily(id, title, body, hour, minute, payload);
+          final id = _generateId(med.id, time);
+          expectedIds.add(id);
+
+          final payload = jsonEncode({
+            'type': _medType,
+            'medicineId': med.id,
+            'scheduleTime': time,
+          });
+
+          final existing = existingMap[id];
+          final isUnchanged =
+              existing != null &&
+              existing.title == title &&
+              existing.body == body &&
+              existing.payload == payload;
+
+          if (!isUnchanged) {
+            if (existing != null) await _localPlugin.cancel(id: id);
+            await _scheduleDaily(id, title, body, hour, minute, payload);
+          }
         }
       }
 

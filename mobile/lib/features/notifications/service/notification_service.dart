@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -6,12 +7,20 @@ import 'package:injectable/injectable.dart';
 import 'package:mobile/features/auth/domain/repositories/auth_repository.dart';
 
 import '../../../core/di/injection.dart';
+import '../../../core/router/app_router.dart';
 import '../domain/repository/notification_repository.dart';
 
 @lazySingleton
 class NotificationService {
   final NotificationRepository _repository;
   final FlutterSecureStorage _secureStorage;
+
+  final StreamController<String> _careTeamUpdatedController =
+      StreamController<String>.broadcast();
+
+  /// Emits FCM `type` (`ROLE_UPDATED`, `CARE_TEAM_REMOVED`, `CARE_TEAM_JOINED`)
+  /// when care-team membership or primary-admin status changes.
+  Stream<String> get onCareTeamUpdated => _careTeamUpdatedController.stream;
 
   NotificationService(
     this._repository,
@@ -82,13 +91,34 @@ class NotificationService {
         body: '$patientName saat$timeText $medicineName dozunu henüz almadı!',
         payload: jsonEncode(message.data),
       );
-
-      // Varsa hasta takip / ilaç takip Bloc'una event atılabilir:
-      // getIt<MedicationBloc>().add(MedicationMissedEvent(message.data));
     }
-    // 3. Senaryo: Admin Yetkisi Devri (ROLE_UPDATED)
-    else if (type == 'ROLE_UPDATED' || type == 'ADMIN_GRANTED') {
-      // getIt<AuthBloc>().add(const AuthEvent.refreshRole());
+    // 2b. Senaryo: Hastaya İlaç Hatırlatma (MEDICATION_REMINDER)
+    else if (type == 'MEDICATION_REMINDER') {
+      final medicineName = message.data['medicineName'] ?? 'İlacınız';
+      final scheduledTime = message.data['scheduledTime'] ?? '';
+      final timeText = scheduledTime.isNotEmpty ? ' ($scheduledTime)' : '';
+
+      await _repository.showLocalNotification(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: '💊 İlacınızı aldınız mı?',
+        body: '$medicineName$timeText dozunu alma zamanı geldi.',
+        payload: jsonEncode(message.data),
+      );
+    }
+    // 3. Senaryo: Ekip / Admin Yetkisi Değişikliği (ROLE_UPDATED, CARE_TEAM_REMOVED, CARE_TEAM_JOINED)
+    else if (type == 'ROLE_UPDATED' ||
+        type == 'ADMIN_GRANTED' ||
+        type == 'CARE_TEAM_REMOVED' ||
+        type == 'CARE_TEAM_JOINED') {
+      _careTeamUpdatedController.add(type.toString());
+      if (message.notification != null) {
+        await _repository.showLocalNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: message.notification!.title ?? 'Ekip Güncellemesi',
+          body: message.notification!.body ?? '',
+          payload: jsonEncode(message.data),
+        );
+      }
     }
     // Standart bildirim (eğer özel type eşleşmediyse ve notification alanı doluysa)
     else if (message.notification != null) {
@@ -111,11 +141,15 @@ class NotificationService {
       debugPrint('SAFEZONE_EXIT for patient: $patientId');
       // Harita takip rotasına yönlendir
       // getIt<AppRouter>().push('/patient-tracking/$patientId');
+    } else if (type == 'MEDICATION_REMINDER') {
+      appRouter.go('/patient/medications');
     } else if (type == 'MEDICATION_MISSED' || type == 'MEDICATION_DELAYED') {
-      final patientId = message.data['patientId'];
-      debugPrint('MEDICATION alert for patient: $patientId');
-      // Hasta detayındaki ilaç takip sekmesine yönlendir
-      // getIt<AppRouter>().push('/patient-medications/$patientId');
+      appRouter.go('/caregiver/medications');
+    } else if (type == 'ROLE_UPDATED' ||
+        type == 'ADMIN_GRANTED' ||
+        type == 'CARE_TEAM_REMOVED' ||
+        type == 'CARE_TEAM_JOINED') {
+      _careTeamUpdatedController.add(type.toString());
     }
   }
 }

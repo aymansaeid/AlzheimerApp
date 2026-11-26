@@ -15,6 +15,7 @@ import '../../features/patient/presentation/pages/patient_dashboard_screen.dart'
 import '../../features/patient/presentation/widgets/patient_layout.dart';
 import '../../features/care_network/presentation/pages/care_network_screen.dart';
 import '../../features/care_network/presentation/pages/user_detail_screen.dart';
+import '../../features/medication/domain/entities/medicine_log.dart';
 import '../../features/medication/presentation/pages/medicine_list_screen.dart';
 import '../../features/medication/presentation/pages/medicine_detail_screen.dart';
 import '../../features/medication/presentation/pages/medicine_form_screen.dart';
@@ -138,11 +139,12 @@ final appRouter = GoRouter(
                   name: 'patient_medication_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final initialMedicineJson =
-                        state.extra as Map<String, dynamic>?;
+                    final initialLog = state.extra is MedicineLog
+                        ? state.extra as MedicineLog
+                        : null;
                     return MedicineDetailScreen(
                       medicationId: id,
-                      initialMedicineJson: initialMedicineJson,
+                      initialMedicationLog: initialLog,
                     );
                   },
                 ),
@@ -155,12 +157,9 @@ final appRouter = GoRouter(
                     final patientId = authState is AuthAuthenticated
                         ? authState.user.id
                         : '';
-                    final initialMedicineJson =
-                        state.extra as Map<String, dynamic>?;
                     return MedicineFormScreen(
                       medicationId: id,
                       patientId: patientId,
-                      initialMedicineJson: initialMedicineJson,
                     );
                   },
                 ),
@@ -233,11 +232,12 @@ final appRouter = GoRouter(
                   name: 'caregiver_medication_detail',
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    final initialMedicineJson =
-                        state.extra as Map<String, dynamic>?;
+                    final initialLog = state.extra is MedicineLog
+                        ? state.extra as MedicineLog
+                        : null;
                     return MedicineDetailScreen(
                       medicationId: id,
-                      initialMedicineJson: initialMedicineJson,
+                      initialMedicationLog: initialLog,
                     );
                   },
                 ),
@@ -248,12 +248,9 @@ final appRouter = GoRouter(
                     final id = state.uri.queryParameters['id'];
                     final patientId =
                         state.uri.queryParameters['patientId'] ?? '';
-                    final initialMedicineJson =
-                        state.extra as Map<String, dynamic>?;
                     return MedicineFormScreen(
                       medicationId: id,
                       patientId: patientId,
-                      initialMedicineJson: initialMedicineJson,
                     );
                   },
                 ),

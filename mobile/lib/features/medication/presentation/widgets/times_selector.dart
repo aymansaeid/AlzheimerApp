@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 class TimesSelector extends StatelessWidget {
   final List<TimeOfDay> selectedTimes;
   final ValueChanged<List<TimeOfDay>> onChanged;
-  final bool isEditing;
 
   const TimesSelector({
     super.key,
     required this.selectedTimes,
     required this.onChanged,
-    required this.isEditing,
   });
 
   @override
@@ -63,7 +61,7 @@ class TimesSelector extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (!isEditing && selectedTimes.length > 1) ...[
+                if (selectedTimes.length > 1) ...[
                   const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(
@@ -81,7 +79,7 @@ class TimesSelector extends StatelessWidget {
             ),
           );
         }),
-        if (!isEditing)
+        if (selectedTimes.length < 12)
           TextButton.icon(
             onPressed: () {
               final newList = List<TimeOfDay>.from(selectedTimes);

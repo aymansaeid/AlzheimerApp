@@ -6,6 +6,7 @@ class MedicineLogModel extends MedicineLog {
     required super.medicineId,
     required super.medicineName,
     required super.dosage,
+    super.instructions,
     required super.status,
     required super.scheduledAt,
     super.takenAt,
@@ -29,11 +30,18 @@ class MedicineLogModel extends MedicineLog {
       } catch (_) {}
     }
 
+    final rawInstructions = json['instructions']?.toString().trim();
+    final String? parsedInstructions =
+        (rawInstructions == null || rawInstructions.isEmpty)
+        ? null
+        : rawInstructions;
+
     return MedicineLogModel(
       id: (json['id'] ?? '').toString(),
       medicineId: (json['medicineId'] ?? json['medicine_id'] ?? json['medicineScheduleId'] ?? '').toString(),
       medicineName: (json['medicineName'] ?? json['medicine_name'] ?? json['name'] ?? '').toString(),
       dosage: (json['dosage'] ?? '').toString(),
+      instructions: parsedInstructions,
       status: json['status'] ?? 0,
       scheduledAt: parsedScheduled,
       takenAt: parsedTaken,
@@ -47,6 +55,7 @@ class MedicineLogModel extends MedicineLog {
       'medicineId': medicineId,
       'medicineName': medicineName,
       'dosage': dosage,
+      'instructions': instructions,
       'status': status,
       'scheduledAt': scheduledAt.toIso8601String(),
       'takenAt': takenAt?.toIso8601String(),

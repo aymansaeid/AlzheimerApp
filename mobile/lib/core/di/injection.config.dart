@@ -85,6 +85,10 @@ import '../../features/medication/domain/usecases/delete_medicine_usecase.dart'
     as _i886;
 import '../../features/medication/domain/usecases/get_daily_logs_usecase.dart'
     as _i788;
+import '../../features/medication/domain/usecases/get_medicine_by_id_usecase.dart'
+    as _i947;
+import '../../features/medication/domain/usecases/get_medicines_usecase.dart'
+    as _i660;
 import '../../features/medication/domain/usecases/mark_medicine_as_taken_usecase.dart'
     as _i669;
 import '../../features/medication/domain/usecases/update_medicine_usecase.dart'
@@ -269,6 +273,12 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i418.UpdateMemoryUseCase>(
       () => _i418.UpdateMemoryUseCase(gh<_i472.MemoryRepository>()),
     );
+    gh.lazySingleton<_i445.DashboardRepository>(
+      () => _i598.DashboardRepositoryImpl(
+        gh<_i368.DashboardRemoteDataSource>(),
+        gh<_i558.FlutterSecureStorage>(),
+      ),
+    );
     gh.lazySingleton<_i1068.NotificationRepository>(
       () => _i362.NotificationRepositoryImpl(
         gh<_i757.NotificationRemoteDataSource>(),
@@ -282,10 +292,6 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i856.LocationRepositoryImpl(
         remoteDataSource: gh<_i60.LocationRemoteDataSource>(),
       ),
-    );
-    gh.lazySingleton<_i445.DashboardRepository>(
-      () =>
-          _i598.DashboardRepositoryImpl(gh<_i368.DashboardRemoteDataSource>()),
     );
     gh.lazySingleton<_i787.AuthRepository>(
       () => _i153.AuthRepositoryImpl(
@@ -408,14 +414,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i647.GetPatientDashboardUseCase>(
       () => _i647.GetPatientDashboardUseCase(gh<_i233.PatientRepository>()),
     );
-    gh.factory<_i844.DashboardBloc>(
-      () => _i844.DashboardBloc(
-        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
-        getDashboardSummary: gh<_i1051.GetDashboardSummary>(),
-        careNetworkRepository: gh<_i83.CareNetworkRepository>(),
-        followerRepository: gh<_i1019.FollowerRepository>(),
-      ),
-    );
     gh.lazySingleton<_i702.AcceptInviteUseCase>(
       () => _i702.AcceptInviteUseCase(gh<_i1019.FollowerRepository>()),
     );
@@ -465,6 +463,17 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i314.FileStorageRepository>(),
       ),
     );
+    gh.factory<_i844.DashboardBloc>(
+      () => _i844.DashboardBloc(
+        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
+        getDashboardSummary: gh<_i1051.GetDashboardSummary>(),
+        dashboardRepository: gh<_i445.DashboardRepository>(),
+        careNetworkRepository: gh<_i83.CareNetworkRepository>(),
+        followerRepository: gh<_i1019.FollowerRepository>(),
+        medicineRepository: gh<_i185.MedicineRepository>(),
+        notificationService: gh<_i105.NotificationService>(),
+      ),
+    );
     gh.factory<_i784.RecordAudioCubit>(
       () => _i784.RecordAudioCubit(
         gh<_i492.AudioRecordService>(),
@@ -488,8 +497,25 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i886.DeleteMedicineUseCase>(
       () => _i886.DeleteMedicineUseCase(gh<_i185.MedicineRepository>()),
     );
+    gh.lazySingleton<_i947.GetMedicineByIdUseCase>(
+      () => _i947.GetMedicineByIdUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.lazySingleton<_i660.GetMedicinesUseCase>(
+      () => _i660.GetMedicinesUseCase(gh<_i185.MedicineRepository>()),
+    );
     gh.lazySingleton<_i310.UpdateMedicineUseCase>(
       () => _i310.UpdateMedicineUseCase(gh<_i185.MedicineRepository>()),
+    );
+    gh.factory<_i1015.MedicineBloc>(
+      () => _i1015.MedicineBloc(
+        getDailyLogsUseCase: gh<_i788.GetDailyLogsUseCase>(),
+        getMedicinesUseCase: gh<_i660.GetMedicinesUseCase>(),
+        getMedicineByIdUseCase: gh<_i947.GetMedicineByIdUseCase>(),
+        addMedicine: gh<_i670.AddMedicineUseCase>(),
+        updateMedicine: gh<_i310.UpdateMedicineUseCase>(),
+        deleteMedicine: gh<_i886.DeleteMedicineUseCase>(),
+        markMedicineAsTaken: gh<_i669.MarkMedicineAsTakenUseCase>(),
+      ),
     );
     gh.factory<_i490.PatientDashboardBloc>(
       () => _i490.PatientDashboardBloc(
@@ -501,17 +527,6 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i1069.PatientSetupBloc(
         gh<_i411.CheckHasAdminUseCase>(),
         gh<_i470.GenerateInviteUseCase>(),
-      ),
-    );
-    gh.factory<_i1015.MedicineBloc>(
-      () => _i1015.MedicineBloc(
-        getDailyLogsUseCase: gh<_i788.GetDailyLogsUseCase>(),
-        addMedicine: gh<_i670.AddMedicineUseCase>(),
-        updateMedicine: gh<_i310.UpdateMedicineUseCase>(),
-        deleteMedicine: gh<_i886.DeleteMedicineUseCase>(),
-        markMedicineAsTaken: gh<_i669.MarkMedicineAsTakenUseCase>(),
-        medicineRepository: gh<_i185.MedicineRepository>(),
-        medicineLogRepository: gh<_i1048.MedicineLogRepository>(),
       ),
     );
     gh.factory<_i100.CareNetworkBloc>(

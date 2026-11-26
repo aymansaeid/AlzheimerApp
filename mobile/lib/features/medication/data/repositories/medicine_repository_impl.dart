@@ -13,6 +13,8 @@ import '../models/medicine_model.dart';
 class MedicineRepositoryImpl implements MedicineRepository {
   final MedicineRemoteDataSource remoteDataSource;
   final NotificationRepository notificationRepository;
+  final StreamController<void> _medicinesChangedController =
+      StreamController<void>.broadcast();
 
   MedicineRepositoryImpl(
     this.remoteDataSource,
@@ -20,10 +22,14 @@ class MedicineRepositoryImpl implements MedicineRepository {
   );
 
   @override
+  Stream<void> get onMedicinesChanged => _medicinesChangedController.stream;
+
+  @override
   Future<Either<Failure, Medicine>> addMedicine(Medicine medicine) async {
     try {
       final model = MedicineModel.fromEntity(medicine);
       final newMedicine = await remoteDataSource.addMedicine(model);
+      _medicinesChangedController.add(null);
       return Right(newMedicine);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -49,12 +55,25 @@ class MedicineRepositoryImpl implements MedicineRepository {
   }
 
   @override
+  Future<Either<Failure, Medicine>> getMedicineById(String id) async {
+    try {
+      final medicine = await remoteDataSource.getMedicineById(id);
+      return Right(medicine);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, Medicine>> updateMedicine(
     Medicine medicine,
   ) async {
     try {
       final model = MedicineModel.fromEntity(medicine);
       final updatedMedicine = await remoteDataSource.updateMedicine(model);
+      _medicinesChangedController.add(null);
       return Right(updatedMedicine);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -69,6 +88,7 @@ class MedicineRepositoryImpl implements MedicineRepository {
       await remoteDataSource.deleteMedicine(id);
       // Silinen ilacın yerel bildirimini de temizle
       unawaited(notificationRepository.cancelMedicationReminders(id));
+      _medicinesChangedController.add(null);
       return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

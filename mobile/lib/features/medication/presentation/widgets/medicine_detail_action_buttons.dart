@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile/features/medication/data/models/medicine_model.dart';
 import '../bloc/medicine_bloc.dart';
 import '../bloc/medicine_event.dart';
 import '../bloc/medicine_state.dart';
@@ -64,7 +63,7 @@ class MedicineDetailActionButtons extends StatelessWidget {
                 context.read<MedicineBloc>().add(
                   MarkAsTakenEvent(id: medication.id, date: DateTime.now()),
                 );
-                context.pop();
+                context.pop(true);
               }
             : null,
         style: ElevatedButton.styleFrom(
@@ -96,29 +95,23 @@ class MedicineDetailActionButtons extends StatelessWidget {
             width: double.infinity,
             height: 60,
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 final state = context.read<MedicineBloc>().state;
                 final patientId = state is MedicineLoaded
                     ? state.patientId ?? ''
                     : '';
 
-                Map<String, dynamic>? medicineJson;
-                if (state is MedicineLoaded) {
-                  try {
-                    final match = state.allMedicines.firstWhere((m) => m.id == medication.medicineId);
-                    medicineJson = MedicineModel.fromEntity(match).toJson();
-                  } catch (_) {}
-                }
-
-                context.pushNamed(
+                final result = await context.pushNamed<bool>(
                   'caregiver_medication_form',
                   queryParameters: {
                     'id': medication.medicineId,
                     'patientId': patientId,
                     'date': selectedDate.toIso8601String(),
                   },
-                  extra: medicineJson,
                 );
+                if (result == true && context.mounted) {
+                  context.pop(true);
+                }
               },
               icon: const Icon(Icons.edit, color: Colors.white),
               label: const Text(

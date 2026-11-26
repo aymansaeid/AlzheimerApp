@@ -52,6 +52,15 @@ class MedicineSummary extends StatelessWidget {
       itemCount: medicines.length,
       itemBuilder: (context, index) {
         final med = medicines[index];
+        final formattedTimes = med.scheduleTimes
+            .map((t) => t.length >= 5 ? t.substring(0, 5) : t)
+            .join(', ');
+        final hasInstructions =
+            med.instructions != null && med.instructions!.trim().isNotEmpty;
+        final subtitle = hasInstructions
+            ? '${med.dosage} • ${med.instructions!.trim()}'
+            : med.dosage;
+
         return Card(
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 12),
@@ -79,14 +88,12 @@ class MedicineSummary extends StatelessWidget {
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(
-                      color: med.isTaken
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : theme.primaryColor.withValues(alpha: 0.1),
+                      color: theme.primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.medication,
-                      color: med.isTaken ? Colors.green : theme.primaryColor,
+                      color: theme.primaryColor,
                       size: 24,
                     ),
                   ),
@@ -104,7 +111,7 @@ class MedicineSummary extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${med.dosage} • ${med.instructions}',
+                          subtitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -120,53 +127,34 @@ class MedicineSummary extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        med.scheduleTime,
+                        formattedTimes,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: theme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      if (med.isTaken)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.check_circle_rounded,
-                              color: Colors.green,
-                              size: 14,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            med.isActive
+                                ? Icons.check_circle_rounded
+                                : Icons.pause_circle_rounded,
+                            color: med.isActive ? Colors.green : Colors.grey,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            med.isActive ? 'Aktif' : 'Durduruldu',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: med.isActive ? Colors.green : Colors.grey,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Alındı',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        )
-                      else
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.access_time_filled_rounded,
-                              color: Colors.orange,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Alınmadı',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.orange,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ],

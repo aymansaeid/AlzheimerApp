@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/di/injection.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../bloc/care_network_bloc.dart';
@@ -35,31 +34,14 @@ class CareNetworkScreen extends StatelessWidget {
       patients = dashboardState.patients ?? [];
     }
 
-    return BlocProvider(
-      create: (context) =>
-          getIt<CareNetworkBloc>()
-            ..add(FetchCareNetwork(currentUserId ?? '', patients: patients)),
-      child: BlocListener<DashboardBloc, DashboardState>(
-        listener: (context, state) {
-          if (state is DashboardLoaded) {
-            context.read<CareNetworkBloc>().add(
-                  FetchCareNetwork(
-                    currentUserId ?? '',
-                    patients: state.patients,
-                  ),
-                );
-          } else if (state is DashboardError && state.patients != null) {
-            context.read<CareNetworkBloc>().add(
-                  FetchCareNetwork(
-                    currentUserId ?? '',
-                    patients: state.patients!,
-                  ),
-                );
-          }
-        },
-        child: const CareNetworkView(),
-      ),
-    );
+    final careNetworkBloc = context.read<CareNetworkBloc>();
+    if (careNetworkBloc.state is CareNetworkInitial) {
+      careNetworkBloc.add(
+        FetchCareNetwork(currentUserId ?? '', patients: patients),
+      );
+    }
+
+    return const CareNetworkView();
   }
 }
 
@@ -89,7 +71,28 @@ class CareNetworkView extends StatelessWidget {
       ),
       body: BlocListener<CareNetworkBloc, CareNetworkState>(
         listener: (context, state) {
-          if (state is CareNetworkActionSuccess) {
+          if (state is CareNetworkLoaded) {
+            final dashboardBloc = context.read<DashboardBloc>();
+            final dashboardState = dashboardBloc.state;
+            if (dashboardState is DashboardLoaded) {
+              for (final entry in state.isAdminForPatient.entries) {
+                final existing = dashboardState.patients
+                    .cast<FollowedPatient?>()
+                    .firstWhere(
+                      (p) => p?.patientId == entry.key,
+                      orElse: () => null,
+                    );
+                if (existing != null && existing.isPrimaryAdmin != entry.value) {
+                  dashboardBloc.add(
+                    UpdateLocalPatientAdminStatus(
+                      patientId: entry.key,
+                      isPrimaryAdmin: entry.value,
+                    ),
+                  );
+                }
+              }
+            }
+          } else if (state is CareNetworkActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -200,7 +203,9 @@ class CareNetworkView extends StatelessWidget {
   }) {
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<DashboardBloc>().add(const LoadDashboard(null));
+        context.read<CareNetworkBloc>().add(
+          FetchCareNetwork(currentUserId ?? '', patients: patients),
+        );
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16.0),

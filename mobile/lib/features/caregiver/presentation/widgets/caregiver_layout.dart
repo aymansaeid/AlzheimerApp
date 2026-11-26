@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
+import 'package:mobile/features/care_network/presentation/bloc/care_network_bloc.dart';
+import 'package:mobile/features/care_network/presentation/bloc/care_network_event.dart';
+import 'package:mobile/features/caregiver/domain/entities/followed_patient.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
 import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
@@ -40,6 +45,22 @@ class CaregiverLayout extends StatelessWidget {
             }
             context.read<MedicineBloc>().add(
               LoadDailyMedicinesEvent(patientId ?? '', DateTime.now()),
+            );
+          } else if (index == 3) {
+            final authState = context.read<AuthBloc>().state;
+            final currentUserId =
+                authState is AuthAuthenticated ? authState.user.id : '';
+            final dashboardState = context.read<DashboardBloc>().state;
+            List<FollowedPatient> patients = [];
+            if (dashboardState is DashboardLoaded) {
+              patients = dashboardState.patients;
+            } else if (dashboardState is DashboardLoading) {
+              patients = dashboardState.patients ?? [];
+            } else if (dashboardState is DashboardError) {
+              patients = dashboardState.patients ?? [];
+            }
+            context.read<CareNetworkBloc>().add(
+              FetchCareNetwork(currentUserId, patients: patients),
             );
           }
         },

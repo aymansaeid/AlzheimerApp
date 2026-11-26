@@ -127,8 +127,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> updateFcmToken(String fcmToken) async {
-    await dio.post(
-      '/api/Auth/update-fcm-token',
+    await dio.put(
+      '/api/Users/fcm-token',
       data: {'fcmToken': fcmToken},
     );
   }

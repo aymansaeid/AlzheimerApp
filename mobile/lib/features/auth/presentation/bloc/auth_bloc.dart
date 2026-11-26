@@ -31,6 +31,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthUserAvatarUpdated>(_onUserAvatarUpdated);
     on<AuthUserProfileUpdated>(_onUserProfileUpdated);
+    on<AuthUserRefreshed>(_onUserRefreshed);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthCheckRequested>(_onCheckAuthStatus);
   }
@@ -116,6 +117,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(
         AuthAuthenticated(
           updatedUser,
+          isSetupComplete: currentState.isSetupComplete,
+        ),
+      );
+    }
+  }
+
+  void _onUserRefreshed(
+    AuthUserRefreshed event,
+    Emitter<AuthState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      emit(
+        AuthAuthenticated(
+          event.user,
           isSetupComplete: currentState.isSetupComplete,
         ),
       );

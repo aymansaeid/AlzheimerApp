@@ -37,7 +37,11 @@ class PatientLayout extends StatelessWidget {
             if (authState is AuthAuthenticated) {
               final patientId = authState.user.id;
               context.read<MedicineBloc>().add(
-                LoadDailyMedicinesEvent(patientId, DateTime.now()),
+                LoadDailyMedicinesEvent(
+                  patientId,
+                  DateTime.now(),
+                  loadMedicinesList: true,
+                ),
               );
             }
           }

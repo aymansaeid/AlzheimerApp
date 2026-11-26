@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/medicine.dart';
-import '../../data/models/medicine_model.dart';
 import '../bloc/medicine_bloc.dart';
 import '../bloc/medicine_event.dart';
 import '../bloc/medicine_state.dart';
-import '../../../auth/presentation/bloc/auth_bloc.dart';
-import '../../../auth/presentation/bloc/auth_state.dart';
 import '../widgets/days_selector.dart';
 import '../widgets/date_picker_group.dart';
 import '../widgets/times_selector.dart';
@@ -15,13 +12,11 @@ import '../widgets/times_selector.dart';
 class MedicineFormScreen extends StatefulWidget {
   final String? medicationId;
   final String? patientId;
-  final Map<String, dynamic>? initialMedicineJson;
 
   const MedicineFormScreen({
     super.key,
     this.medicationId,
     this.patientId,
-    this.initialMedicineJson,
   });
 
   @override
@@ -48,39 +43,10 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
     _dosageController = TextEditingController();
     _instructionsController = TextEditingController();
 
-    if (widget.initialMedicineJson != null) {
-      _populateFromValues(widget.initialMedicineJson!);
-    } else if (widget.medicationId != null && widget.patientId != null) {
+    if (widget.medicationId != null && widget.medicationId!.isNotEmpty) {
       context.read<MedicineBloc>().add(
-        LoadMedicineDetailsEvent(
-          patientId: widget.patientId!,
-          medicineId: widget.medicationId!,
-        ),
+        LoadMedicineDetailsEvent(medicineId: widget.medicationId!),
       );
-    }
-  }
-
-  void _populateFromValues(Map<String, dynamic> json) {
-    try {
-      final medicine = MedicineModel.fromJson(json);
-      _existingMedication = medicine;
-      _nameController.text = medicine.name;
-      _dosageController.text = medicine.dosage;
-      _instructionsController.text = medicine.instructions;
-      _selectedDays = List<int>.from(medicine.daysOfWeek);
-      _startDate = medicine.startDate;
-      _endDate = medicine.endDate;
-
-      final timeParts = medicine.scheduleTime.split(':');
-      if (timeParts.isNotEmpty) {
-        final hour = int.tryParse(timeParts[0]) ?? 8;
-        final minute = timeParts.length > 1
-            ? (int.tryParse(timeParts[1]) ?? 0)
-            : 0;
-        _selectedTimes = [TimeOfDay(hour: hour, minute: minute)];
-      }
-    } catch (e) {
-      debugPrint('Error parsing initial medicine json: $e');
     }
   }
 
@@ -88,19 +54,30 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
     _existingMedication = medicine;
     _nameController.text = medicine.name;
     _dosageController.text = medicine.dosage;
-    _instructionsController.text = medicine.instructions;
+    _instructionsController.text = medicine.instructions ?? '';
     _selectedDays = List<int>.from(medicine.daysOfWeek);
     _startDate = medicine.startDate;
     _endDate = medicine.endDate;
 
-    final timeParts = medicine.scheduleTime.split(':');
-    if (timeParts.isNotEmpty) {
-      final hour = int.tryParse(timeParts[0]) ?? 8;
-      final minute = timeParts.length > 1
-          ? (int.tryParse(timeParts[1]) ?? 0)
-          : 0;
-      _selectedTimes = [TimeOfDay(hour: hour, minute: minute)];
+    final parsedTimes = <TimeOfDay>[];
+    for (final rawTime in medicine.scheduleTimes) {
+      final parts = rawTime.trim().split(':');
+      if (parts.length >= 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null &&
+            minute != null &&
+            hour >= 0 &&
+            hour <= 23 &&
+            minute >= 0 &&
+            minute <= 59) {
+          parsedTimes.add(TimeOfDay(hour: hour, minute: minute));
+        }
+      }
     }
+    _selectedTimes = parsedTimes.isNotEmpty
+        ? parsedTimes
+        : [const TimeOfDay(hour: 8, minute: 0)];
   }
 
   @override
@@ -111,6 +88,9 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
     super.dispose();
   }
 
+  String _toApiTime(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
+
   void _saveForm() {
     if (_formKey.currentState!.validate()) {
       if (_selectedDays.isEmpty) {
@@ -120,51 +100,77 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
         return;
       }
 
-      if (_existingMedication != null) {
-        // Update
-        final time = _selectedTimes.first;
-        final formattedTime =
-            '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+      if (_selectedTimes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lütfen en az bir saat ekleyin')),
+        );
+        return;
+      }
 
+      if (_selectedTimes.length > 12) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Günde en fazla 12 saat eklenebilir')),
+        );
+        return;
+      }
+
+      if (_endDate != null) {
+        final startOnly = DateTime(
+          _startDate.year,
+          _startDate.month,
+          _startDate.day,
+        );
+        final endOnly = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+        );
+        if (endOnly.isBefore(startOnly)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bitiş tarihi başlangıç tarihinden önce olamaz'),
+            ),
+          );
+          return;
+        }
+      }
+
+      final formattedTimes = _selectedTimes.map(_toApiTime).toSet().toList()
+        ..sort();
+      final trimmedName = _nameController.text.trim();
+      final trimmedDosage = _dosageController.text.trim();
+      final rawInstructions = _instructionsController.text.trim();
+      final String? trimmedInstructions = rawInstructions.isEmpty
+          ? null
+          : rawInstructions;
+
+      if (_existingMedication != null) {
         final updated = _existingMedication!.copyWith(
-          name: _nameController.text,
-          dosage: _dosageController.text,
-          instructions: _instructionsController.text,
-          scheduleTime: formattedTime,
+          name: trimmedName,
+          dosage: trimmedDosage,
+          instructions: trimmedInstructions,
+          clearInstructions: trimmedInstructions == null,
+          scheduleTimes: formattedTimes,
           daysOfWeek: _selectedDays,
           startDate: _startDate,
           endDate: _endDate,
+          clearEndDate: _endDate == null,
         );
         context.read<MedicineBloc>().add(UpdateMedicineEvent(updated));
       } else {
-        // Resolve patientId and createdBy dynamically
-        String creatorId = '';
-        final authState = context.read<AuthBloc>().state;
-        if (authState is AuthAuthenticated) {
-          creatorId = authState.user.id;
-        }
-
-        // Add multiple medications if multiple times selected
-        for (var time in _selectedTimes) {
-          final formattedTime =
-              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-
-          final newMed = Medicine(
-            id: '',
-            patientId: widget.patientId!,
-            creatorId: creatorId,
-            name: _nameController.text,
-            dosage: _dosageController.text,
-            instructions: _instructionsController.text,
-            scheduleTime: formattedTime,
-            daysOfWeek: _selectedDays,
-            startDate: _startDate,
-            endDate: _endDate,
-            isActive: true,
-            isTaken: false,
-          );
-          context.read<MedicineBloc>().add(AddMedicineEvent(newMed));
-        }
+        final newMed = Medicine(
+          id: '',
+          patientId: widget.patientId ?? '',
+          name: trimmedName,
+          dosage: trimmedDosage,
+          instructions: trimmedInstructions,
+          scheduleTimes: formattedTimes,
+          daysOfWeek: _selectedDays,
+          startDate: _startDate,
+          endDate: _endDate,
+          isActive: true,
+        );
+        context.read<MedicineBloc>().add(AddMedicineEvent(newMed));
       }
     }
   }
@@ -176,7 +182,9 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
     return BlocConsumer<MedicineBloc, MedicineState>(
       listener: (context, state) {
         if (state is MedicineDetailsLoaded) {
-          _populateFromMedicine(state.medicine);
+          setState(() {
+            _populateFromMedicine(state.medicine);
+          });
         } else if (state is MedicineError) {
           ScaffoldMessenger.of(
             context,
@@ -285,7 +293,6 @@ class _MedicineFormScreenState extends State<MedicineFormScreen> {
                           const SizedBox(height: 8),
                           TimesSelector(
                             selectedTimes: _selectedTimes,
-                            isEditing: isEditing,
                             onChanged: (times) {
                               setState(() {
                                 _selectedTimes = times;

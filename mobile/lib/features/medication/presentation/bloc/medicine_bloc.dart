@@ -7,34 +7,34 @@ import '../../domain/entities/medicine.dart';
 import '../../domain/usecases/add_medicine_usecase.dart';
 import '../../domain/usecases/delete_medicine_usecase.dart';
 import '../../domain/usecases/get_daily_logs_usecase.dart';
+import '../../domain/usecases/get_medicine_by_id_usecase.dart';
+import '../../domain/usecases/get_medicines_usecase.dart';
 import '../../domain/usecases/mark_medicine_as_taken_usecase.dart';
 import '../../domain/usecases/update_medicine_usecase.dart';
-import '../../domain/repositories/medicine_repository.dart';
-import '../../domain/repositories/medicine_log_repository.dart';
 import 'medicine_event.dart';
 import 'medicine_state.dart';
 
 @injectable
 class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
   final GetDailyLogsUseCase getDailyLogsUseCase;
+  final GetMedicinesUseCase getMedicinesUseCase;
+  final GetMedicineByIdUseCase getMedicineByIdUseCase;
   final AddMedicineUseCase addMedicine;
   final UpdateMedicineUseCase updateMedicine;
   final DeleteMedicineUseCase deleteMedicine;
   final MarkMedicineAsTakenUseCase markMedicineAsTaken;
-  final MedicineRepository medicineRepository;
-  final MedicineLogRepository medicineLogRepository;
 
   DateTime _currentSelectedDate = DateTime.now();
   String? _currentPatientId;
 
   MedicineBloc({
     required this.getDailyLogsUseCase,
+    required this.getMedicinesUseCase,
+    required this.getMedicineByIdUseCase,
     required this.addMedicine,
     required this.updateMedicine,
     required this.deleteMedicine,
     required this.markMedicineAsTaken,
-    required this.medicineRepository,
-    required this.medicineLogRepository,
   }) : super(MedicineInitial()) {
     on<LoadDailyMedicinesEvent>(_onLoadDailyMedications);
     on<AddMedicineEvent>(_onAddMedicine);
@@ -45,8 +45,6 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
     on<LoadMedicineDetailsEvent>(_onLoadMedicineDetails);
     on<LoadAllMedicinesEvent>(_onLoadAllMedicines);
   }
-
-
 
   void _onResetMedications(
     ResetMedications event,
@@ -76,7 +74,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
 
     if (patientId.isEmpty) {
       emit(
-        MedicineError(
+        const MedicineError(
           'Hasta bilgisi henüz yüklenemedi. Lütfen tekrar deneyin.',
         ),
       );
@@ -90,7 +88,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
         patientId,
         event.selectedDate,
       );
-      final medicinesResult = await medicineRepository.getMedicines(patientId);
+      final medicinesResult = await getMedicinesUseCase(patientId);
 
       logsResult.fold(
         (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
@@ -140,7 +138,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
       selectedDate = currentState.selectedDate;
     }
 
-    final result = await medicineRepository.getMedicines(event.patientId);
+    final result = await getMedicinesUseCase(event.patientId);
     result.fold(
       (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
       (allMedicines) => emit(
@@ -182,7 +180,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
 
         emit(
           MedicineOperationSuccess(
-            "Medication added successfully",
+            'İlaç başarıyla eklendi.',
             medicines: medicines,
             allMedicines: allMedicines,
             selectedDate: selectedDate,
@@ -190,6 +188,15 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
             selectedMedicineDetails: selectedMedicineDetails,
           ),
         );
+        if (_currentPatientId != null && _currentPatientId!.isNotEmpty) {
+          add(
+            LoadDailyMedicinesEvent(
+              _currentPatientId!,
+              _currentSelectedDate,
+              loadMedicinesList: true,
+            ),
+          );
+        }
       },
     );
   }
@@ -205,34 +212,38 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
 
     result.fold(
       (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
-      (_) {
+      (updatedMedicine) {
         List<MedicineLog> medicines = [];
         List<Medicine> allMedicines = [];
         DateTime selectedDate = _currentSelectedDate;
         String? patientId = _currentPatientId;
-        Medicine? selectedMedicineDetails;
 
         if (currentState is MedicineLoaded) {
           medicines = currentState.medicines;
-          allMedicines = currentState.allMedicines;
+          allMedicines = currentState.allMedicines
+              .map((m) => m.id == updatedMedicine.id ? updatedMedicine : m)
+              .toList();
           selectedDate = currentState.selectedDate;
           patientId = currentState.patientId;
-          selectedMedicineDetails = currentState.selectedMedicineDetails;
         }
 
         emit(
           MedicineOperationSuccess(
-            "Medication updated successfully",
+            'İlaç başarıyla güncellendi.',
             medicines: medicines,
             allMedicines: allMedicines,
             selectedDate: selectedDate,
             patientId: patientId,
-            selectedMedicineDetails: selectedMedicineDetails,
+            selectedMedicineDetails: updatedMedicine,
           ),
         );
-        if (_currentPatientId != null) {
+        if (_currentPatientId != null && _currentPatientId!.isNotEmpty) {
           add(
-            LoadDailyMedicinesEvent(_currentPatientId!, _currentSelectedDate),
+            LoadDailyMedicinesEvent(
+              _currentPatientId!,
+              _currentSelectedDate,
+              loadMedicinesList: true,
+            ),
           );
         }
       },
@@ -267,7 +278,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
 
         emit(
           MedicineOperationSuccess(
-            "Medication deleted successfully",
+            'İlaç başarıyla silindi.',
             medicines: medicines,
             allMedicines: allMedicines,
             selectedDate: selectedDate,
@@ -275,6 +286,15 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
             selectedMedicineDetails: selectedMedicineDetails,
           ),
         );
+        if (_currentPatientId != null && _currentPatientId!.isNotEmpty) {
+          add(
+            LoadDailyMedicinesEvent(
+              _currentPatientId!,
+              _currentSelectedDate,
+              loadMedicinesList: true,
+            ),
+          );
+        }
       },
     );
   }
@@ -312,7 +332,7 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
 
         emit(
           MedicineOperationSuccess(
-            "İlaç alındı olarak işaretlendi.",
+            'İlaç alındı olarak işaretlendi.',
             medicines: medicines,
             allMedicines: allMedicines,
             selectedDate: selectedDate,
@@ -335,34 +355,32 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
   ) async {
     final currentState = state;
     List<MedicineLog> currentLogs = [];
-    DateTime selectedDate = DateTime.now();
-    String? patientId = event.patientId;
+    List<Medicine> currentAllMedicines = [];
+    DateTime selectedDate = _currentSelectedDate;
+    String? patientId = _currentPatientId;
 
     if (currentState is MedicineLoaded) {
       currentLogs = currentState.medicines;
+      currentAllMedicines = currentState.allMedicines;
       selectedDate = currentState.selectedDate;
       patientId = currentState.patientId;
     }
 
     emit(MedicineLoading());
-    final result = await medicineRepository.getMedicines(event.patientId);
+    final result = await getMedicineByIdUseCase(event.medicineId);
     result.fold(
       (failure) => emit(MedicineError(_mapFailureToMessage(failure))),
-      (medicines) {
-        try {
-          final match = medicines.firstWhere((m) => m.id == event.medicineId);
-          emit(MedicineDetailsLoaded(match));
-          emit(
-            MedicineLoaded(
-              medicines: currentLogs,
-              selectedDate: selectedDate,
-              patientId: patientId,
-              selectedMedicineDetails: match,
-            ),
-          );
-        } catch (_) {
-          emit(const MedicineError('İlaç bulunamadı.'));
-        }
+      (medicine) {
+        emit(MedicineDetailsLoaded(medicine));
+        emit(
+          MedicineLoaded(
+            medicines: currentLogs,
+            allMedicines: currentAllMedicines,
+            selectedDate: selectedDate,
+            patientId: patientId,
+            selectedMedicineDetails: medicine,
+          ),
+        );
       },
     );
   }
