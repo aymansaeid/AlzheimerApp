@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- Konum İzni Açıklamaları (Geolocator için) -->
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Güvenli bölge takibi için konumunuza her zaman ihtiyaç duyuyoruz.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Güvenli bölge takibi için konumunuza her zaman ihtiyaç duyuyoruz.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Uygulama açıkken konumunuza ihtiyaç duyuyoruz.</string>
+
 	<!-- Mikrofon izni -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Sesli gönderi oluşturabilmek için mikrofon erişimine ihtiyaç duyulmaktadır.</string>
@@ -38,10 +46,6 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Arka planda da konumunuzun güncellenmesi ve arkadaşlarınızın sizi takip edebilmesi için bu izin gereklidir.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Uygulamayı kullanırken diğer kullanıcıları haritada görebilmeniz için konum izni vermeniz gerekmektedir.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -69,7 +73,17 @@
 	<array>
 		<string>location</string>
 		<string>fetch</string>
+		<string>processing</string>
 		<string>remote-notification</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>dev.flutter.background.refresh</string>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>comgooglemaps</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

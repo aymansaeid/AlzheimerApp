@@ -9,6 +9,8 @@ class DashboardSummary extends Equatable {
   final double? lastLatitude;
   final double? lastLongitude;
   final bool? isCurrentlyOutside;
+  final int? batteryLevel;
+  final bool? isCharging;
 
   const DashboardSummary({
     required this.patientId,
@@ -19,6 +21,8 @@ class DashboardSummary extends Equatable {
     this.lastLatitude,
     this.lastLongitude,
     this.isCurrentlyOutside,
+    this.batteryLevel,
+    this.isCharging,
   });
 
   bool get isPatientSafe => !(isCurrentlyOutside ?? false);
@@ -33,6 +37,7 @@ class DashboardSummary extends Equatable {
         lastLatitude,
         lastLongitude,
         isCurrentlyOutside,
+        batteryLevel,
+        isCharging,
       ];
 }
-

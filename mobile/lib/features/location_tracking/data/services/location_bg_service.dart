@@ -1,83 +1,274 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+
+import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:get_it/get_it.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:mobile/core/di/injection.dart';
 import 'package:mobile/features/location_tracking/domain/usecases/log_location_usecase.dart';
 
-// background service için ayrı bir GetIt örneği oluşturuyoruz
-final bgGetIt = GetIt.asNewInstance();
-
 class LocationBgService {
-  static Future<void> initializeService() async {
-    final service = FlutterBackgroundService();
+  static const String _notificationChannelId = 'location_channel';
+  static const int _foregroundNotificationId = 888;
+  static bool _isInitialized = false;
 
+  static Future<void> initializeService() async {
+    if (_isInitialized) return;
+
+    final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+    final androidPlugin =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _notificationChannelId,
+        'Hasta Konum Takibi',
+        description:
+            'Hastanın güvenliği için konum ve pil durumunu arka planda paylaşır.',
+        importance: Importance.low,
+      ),
+    );
+
+    final service = FlutterBackgroundService();
     await service.configure(
       androidConfiguration: AndroidConfiguration(
-        onStart: onStart, // Aşağıdaki giriş noktasını bağlıyoruz
-        autoStart: true,
-        isForegroundMode: true, // Android için zorunlu bildirim
-        notificationChannelId: 'location_channel',
+        onStart: onStart,
+        autoStart: false,
+        autoStartOnBoot: false,
+        isForegroundMode: true,
+        notificationChannelId: _notificationChannelId,
         initialNotificationTitle: 'Hasta Takibi Aktif',
         initialNotificationContent:
             'Konumunuz güvenliğiniz için arka planda takip ediliyor.',
+        foregroundServiceNotificationId: _foregroundNotificationId,
+        foregroundServiceTypes: [AndroidForegroundType.location],
       ),
       iosConfiguration: IosConfiguration(
-        autoStart: true,
+        autoStart: false,
         onForeground: onStart,
         onBackground: onIosBackground,
       ),
     );
+
+    _isInitialized = true;
+  }
+
+  static Future<void> startTrackingIfNeeded() async {
+    await initializeService();
+    final service = FlutterBackgroundService();
+    final isRunning = await service.isRunning();
+    if (!isRunning) {
+      await service.startService();
+    }
+  }
+
+  static Future<void> stopTracking() async {
+    final service = FlutterBackgroundService();
+    final isRunning = await service.isRunning();
+    if (isRunning) {
+      service.invoke('stop');
+    }
   }
 }
 
-// İŞLETİM SİSTEMİN RETİKLEYECEĞİ GİRİŞ NOKTASI (ENTRY POINT)
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
+  DartPluginRegistrant.ensureInitialized();
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Arka plan izole alanı için .env dosyasını tekrar yüklüyoruz
-  // (DioClient içindeki dotenv.env['BASE_URL'] hata vermemesi için)
-  await dotenv.load(fileName: ".env");
+  StreamSubscription<Position>? positionSubscription;
+  Timer? heartbeatTimer;
 
-  // 2. Injectable kullanarak arka plan için bgGetIt havuzunu otomatik kuruyoruz
-  // Bu fonksiyon içeride DioClient'ı da eagerly resolve edecektir.
-  configureBackgroundDependencies();
+  service.on('stop').listen((_) async {
+    await positionSubscription?.cancel();
+    heartbeatTimer?.cancel();
+    await service.stopSelf();
+  });
 
-  // 3. UseCase'i artık enjeksiyon dosyanızda tanımladığımız bgGetIt havuzundan çekiyoruz
-  final logLocationUseCase = bgGetIt<LogLocationUseCase>();
+  await dotenv.load(fileName: '.env');
+  if (!bgGetIt.isRegistered<LogLocationUseCase>()) {
+    configureBackgroundDependencies();
+  }
 
-  // Konum akışını dinlemeye başlıyoruz
-  Geolocator.getPositionStream(
-    locationSettings: const LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 20, // 20 metrede bir backend'e gönderir
-    ),
-  ).listen((Position position) async {
-    // NOT: Gerçek projede bu ID'yi yerel hafızadan (SharedPreferences/Hive) çekmelisiniz
-    const String currentPatientId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+  final secureStorage = bgGetIt<FlutterSecureStorage>();
+  if (!await _isActivePatientSession(secureStorage)) {
+    debugPrint('LocationBgService: Aktif hasta oturumu yok, servis durduruluyor.');
+    await service.stopSelf();
+    return;
+  }
 
-    // UseCase tetikleniyor
-    final result = await logLocationUseCase(
+  final logLocation = bgGetIt<LogLocationUseCase>();
+  final battery = bgGetIt<Battery>();
+  var lastSent = DateTime.fromMillisecondsSinceEpoch(0);
+
+  Future<void> send(Position position, {bool force = false}) async {
+    if (!force &&
+        DateTime.now().difference(lastSent) < const Duration(seconds: 30)) {
+      return;
+    }
+    if (!await _isActivePatientSession(secureStorage)) {
+      await positionSubscription?.cancel();
+      heartbeatTimer?.cancel();
+      await service.stopSelf();
+      return;
+    }
+
+    lastSent = DateTime.now();
+
+    int? level;
+    bool? charging;
+    try {
+      final rawLevel = await battery.batteryLevel;
+      if (rawLevel >= 0 && rawLevel <= 100) {
+        level = rawLevel;
+      }
+      final state = await battery.batteryState;
+      charging = state == BatteryState.charging || state == BatteryState.full;
+    } catch (e) {
+      debugPrint('LocationBgService pil okunamadı: $e');
+    }
+
+    final result = await logLocation(
       LogLocationParams(
-        patientId: currentPatientId,
         latitude: position.latitude,
         longitude: position.longitude,
         accuracy: position.accuracy,
+        batteryLevel: level,
+        isCharging: charging,
       ),
     );
-
     result.fold(
-      (failure) =>
-          debugPrint("Arka plan konum gönderim hatası: ${failure.message}"),
-      (success) => debugPrint("Konum başarıyla .NET API'ye post edildi."),
+      (f) => debugPrint('Konum gönderilemedi: ${f.message}'),
+      (_) => debugPrint('Konum ve pil bilgisi gönderildi.'),
     );
+  }
+
+  // Servis başladığında ilk konumu beklemeden gönder
+  try {
+    final initialPosition = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    );
+    await send(initialPosition, force: true);
+  } catch (e) {
+    debugPrint('İlk konum alınamadı: $e');
+  }
+
+  positionSubscription =
+      Geolocator.getPositionStream(locationSettings: _locationSettings())
+          .listen(send);
+
+  // Hasta hareketsizken de veri ve pil durumu güncellensin
+  heartbeatTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+    try {
+      final p = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
+      );
+      await send(p);
+    } catch (e) {
+      debugPrint('Heartbeat konum alınamadı: $e');
+    }
   });
 }
 
-// iOS için arka plan uyku modu tetikleyicisi
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: '.env');
+    if (!bgGetIt.isRegistered<LogLocationUseCase>()) {
+      configureBackgroundDependencies();
+    }
+
+    final secureStorage = bgGetIt<FlutterSecureStorage>();
+    if (!await _isActivePatientSession(secureStorage)) {
+      return true;
+    }
+
+    final p = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+      ),
+    );
+
+    final battery = bgGetIt<Battery>();
+    int? level;
+    bool? charging;
+    try {
+      final rawLevel = await battery.batteryLevel;
+      if (rawLevel >= 0 && rawLevel <= 100) {
+        level = rawLevel;
+      }
+      final state = await battery.batteryState;
+      charging = state == BatteryState.charging || state == BatteryState.full;
+    } catch (_) {}
+
+    await bgGetIt<LogLocationUseCase>()(
+      LogLocationParams(
+        latitude: p.latitude,
+        longitude: p.longitude,
+        accuracy: p.accuracy,
+        batteryLevel: level,
+        isCharging: charging,
+      ),
+    );
+  } catch (e) {
+    debugPrint('onIosBackground hatası: $e');
+  }
+
   return true;
+}
+
+Future<bool> _isActivePatientSession(
+  FlutterSecureStorage secureStorage,
+) async {
+  try {
+    final token = await secureStorage.read(key: 'jwt_token');
+    if (token == null || token.isEmpty) return false;
+
+    const roleClaimKey =
+        'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+    final payload = JwtDecoder.decode(token);
+    final rawRole =
+        (payload[roleClaimKey] ?? payload['role'] ?? '')
+            .toString()
+            .toLowerCase();
+    return rawRole == 'patient' || rawRole == '0';
+  } catch (_) {
+    return false;
+  }
+}
+
+LocationSettings _locationSettings() {
+  if (Platform.isAndroid) {
+    return AndroidSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 20,
+    );
+  }
+  if (Platform.isIOS) {
+    return AppleSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 20,
+      activityType: ActivityType.otherNavigation,
+      pauseLocationUpdatesAutomatically: false,
+      allowBackgroundLocationUpdates: true,
+      showBackgroundLocationIndicator: true,
+    );
+  }
+  return const LocationSettings(
+    accuracy: LocationAccuracy.high,
+    distanceFilter: 20,
+  );
 }

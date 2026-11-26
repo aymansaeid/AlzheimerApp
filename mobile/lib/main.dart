@@ -8,6 +8,7 @@ import 'package:mobile/features/auth/presentation/bloc/auth_event.dart';
 import 'core/theme/app_theme.dart';
 import 'core/di/injection.dart';
 import 'core/router/app_router.dart';
+import 'features/location_tracking/data/services/location_bg_service.dart';
 import 'features/notifications/data/datasources/notification_local_data_source.dart';
 import 'features/notifications/service/notification_service.dart';
 import 'features/notifications/presentation/widgets/notification_permission_guard.dart';
@@ -37,6 +38,7 @@ Future<void> main() async {
   configureDependencies();
 
   await getIt<NotificationLocalDataSource>().init();
+  await LocationBgService.initializeService();
   await getIt<NotificationService>().initialize();
 
   getIt<AuthBloc>().add(AuthCheckRequested());

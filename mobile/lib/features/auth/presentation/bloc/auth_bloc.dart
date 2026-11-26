@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
+import 'package:mobile/features/location_tracking/data/services/location_bg_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 import '../../domain/usecases/login_usecase.dart';
@@ -57,6 +60,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await result.fold(
       (failure) async => emit(AuthError(failure.message)),
       (user) async {
+        if (user.role != 'patient') {
+          unawaited(LocationBgService.stopTracking());
+        }
         final isSetup = await _checkSetupComplete(user);
         emit(AuthAuthenticated(user, isSetupComplete: isSetup));
       },
@@ -143,6 +149,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
+    await LocationBgService.stopTracking();
     await _logoutUseCase();
     emit(AuthUnauthenticated());
   }
@@ -162,10 +169,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     await result.fold(
       (failure) async {
+        unawaited(LocationBgService.stopTracking());
         // Token yoksa, süresi dolmuşsa veya geçersizse
         emit(AuthUnauthenticated());
       },
       (user) async {
+        if (user.role != 'patient') {
+          unawaited(LocationBgService.stopTracking());
+        }
         // Token geçerli, kullanıcının kurulum durumunu kontrol et
         final isSetup = await _checkSetupComplete(user);
         emit(AuthAuthenticated(user, isSetupComplete: isSetup));

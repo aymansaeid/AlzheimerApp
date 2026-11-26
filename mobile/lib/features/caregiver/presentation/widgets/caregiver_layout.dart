@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:mobile/features/auth/presentation/bloc/auth_state.dart';
 import 'package:mobile/features/care_network/presentation/bloc/care_network_bloc.dart';
 import 'package:mobile/features/care_network/presentation/bloc/care_network_event.dart';
 import 'package:mobile/features/caregiver/domain/entities/followed_patient.dart';
+import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
+import 'package:mobile/features/map_viewer/presentation/bloc/tracker_map_bloc.dart';
+import 'package:mobile/features/map_viewer/presentation/bloc/tracker_map_event.dart';
+import 'package:mobile/features/map_viewer/presentation/bloc/tracker_map_state.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
-import 'package:mobile/features/caregiver/presentation/bloc/dashboard_bloc.dart';
 import '../../../../core/widgets/app_bottom_nav_bar.dart';
-import 'package:go_router/go_router.dart';
 
 class CaregiverLayout extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -25,8 +28,7 @@ class CaregiverLayout extends StatelessWidget {
         items: const [
           AppNavItem(icon: Icons.dashboard_rounded, label: 'Özet'),
           AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlar'),
-          // AppNavItem(icon: Icons.map_rounded, label: 'Konum'),
-          // AppNavItem(icon: Icons.warning_rounded, label: 'Uyarılar'),
+          AppNavItem(icon: Icons.map_rounded, label: 'Konum'),
           AppNavItem(icon: Icons.photo_album_rounded, label: 'Anılar'),
           AppNavItem(icon: Icons.people_rounded, label: 'Ağım'),
           AppNavItem(icon: Icons.person, label: 'Profil'),
@@ -46,7 +48,14 @@ class CaregiverLayout extends StatelessWidget {
             context.read<MedicineBloc>().add(
               LoadDailyMedicinesEvent(patientId ?? '', DateTime.now()),
             );
-          } else if (index == 3) {
+          } else if (index == 2) {
+            final mapBloc = context.read<TrackerMapBloc>();
+            if (mapBloc.state.status == TrackerMapStatus.initial) {
+              mapBloc.add(const TrackerMapStarted());
+            } else {
+              mapBloc.add(const TrackerMapRefreshRequested());
+            }
+          } else if (index == 4) {
             final authState = context.read<AuthBloc>().state;
             final currentUserId =
                 authState is AuthAuthenticated ? authState.user.id : '';

@@ -1,4 +1,6 @@
+import 'package:battery_plus/battery_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:injectable/injectable.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -25,4 +27,11 @@ abstract class RegisterModule {
 
   @lazySingleton
   ImageCropper get imageCropper => ImageCropper();
+
+  @lazySingleton
+  FlutterLocalNotificationsPlugin get localNotificationsPlugin =>
+      FlutterLocalNotificationsPlugin();
+
+  @lazySingleton
+  Battery get battery => Battery();
 }
