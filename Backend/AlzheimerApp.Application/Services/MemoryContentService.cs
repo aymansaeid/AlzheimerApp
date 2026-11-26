@@ -3,6 +3,7 @@ using AlzheimerApp.Application.DTOs.MemoryContents;
 using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
+using AlzheimerApp.Domain.Enums;
 
 namespace AlzheimerApp.Application.Services;
 
@@ -17,18 +18,22 @@ public class MemoryContentService : IMemoryContentService
         _contentRepository = contentRepository;
         _userRepository = userRepository;
     }
-    public async Task<MemoryContentResponse> AddContentAsync(MemoryContentRequest request)
+    public async Task<MemoryContentResponse> AddContentAsync(Guid uploaderId, MemoryContentRequest request)
     {
+        if (!Enum.IsDefined(request.ContentType))
+            throw new ArgumentException("contentType must be 0 (Photo), 1 (Voice) or 2 (IdentityCard).");
+
+        var personName = Clean(request.PersonName);
         var memoryContent = new MemoryContent
         {
             PatientId = request.PatientId,
-            UploadedBy = request.UploadedBy,
+            UploadedBy = uploaderId,
             ContentType = request.ContentType,
-            Title = request.Title,
-            Description = request.Description,
-            FileUrl = string.IsNullOrWhiteSpace(request.FileUrl) ? null : request.FileUrl.Trim(),
-            PersonName = request.PersonName,
-            Relationship = request.Relationship,
+            Title = Clean(request.Title) ?? personName ?? DefaultTitle(request.ContentType),
+            Description = Clean(request.Description),
+            FileUrl = Clean(request.FileUrl),
+            PersonName = personName,
+            Relationship = Clean(request.Relationship),
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -93,21 +98,40 @@ public class MemoryContentService : IMemoryContentService
         };
     }
 
-    public async Task UpdateContentAsync(Guid id, UpdateMemoryContentRequest request)
+    public async Task<MemoryContentResponse> UpdateContentAsync(Guid id, UpdateMemoryContentRequest request)
     {
-        var content = await _contentRepository.GetByIdAsync(id);
-        if (content == null) throw new Exception("Memory content not found.");
+        var content = await _contentRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException("Memory content not found.");
 
-        content.ContentType = request.ContentType;
-        content.Title = request.Title;
-        content.Description = request.Description;
-        content.FileUrl = string.IsNullOrWhiteSpace(request.FileUrl) ? null : request.FileUrl.Trim();
-        content.PersonName = request.PersonName;
-        content.Relationship = request.Relationship;
-        content.IsActive = request.IsActive;
+        // PARTIAL update: null = keep the current value (the app sends only the fields it changed).
+        if (request.ContentType.HasValue)
+        {
+            if (!Enum.IsDefined(request.ContentType.Value))
+                throw new ArgumentException("contentType must be 0 (Photo), 1 (Voice) or 2 (IdentityCard).");
+            content.ContentType = request.ContentType.Value;
+        }
+        if (request.PersonName != null) content.PersonName = Clean(request.PersonName);
+        if (request.Title != null) content.Title = Clean(request.Title) ?? content.PersonName ?? DefaultTitle(content.ContentType);
+        if (request.Description != null) content.Description = Clean(request.Description);
+        if (request.FileUrl != null) content.FileUrl = Clean(request.FileUrl);
+        if (request.Relationship != null) content.Relationship = Clean(request.Relationship);
+        if (request.IsActive.HasValue) content.IsActive = request.IsActive.Value;
 
         await _contentRepository.UpdateAsync(content);
+
+        content.Uploader ??= await _userRepository.GetByIdAsync(content.UploadedBy);
+        return MapToResponse(content);
     }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string DefaultTitle(MemoryContentType type) => type switch
+    {
+        MemoryContentType.Photo => "Fotoğraf",
+        MemoryContentType.Voice => "Ses kaydı",
+        MemoryContentType.IdentityCard => "Kimlik kartı",
+        _ => "Anı"
+    };
 
     public async Task DeleteContentAsync(Guid id)
     {

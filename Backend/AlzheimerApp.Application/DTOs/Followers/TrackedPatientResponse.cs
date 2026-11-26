@@ -7,6 +7,8 @@
         public string? ProfilePhotoUrl { get; set; }
 
         public bool IsPrimaryAdmin { get; set; }
+
+        public PatientPermissions Permissions { get; set; } = PatientPermissions.None;
         public DateTime JoinedAt { get; set; }
 
     }

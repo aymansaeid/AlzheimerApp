@@ -10,11 +10,13 @@ namespace AlzheimerApp.API.BackgroundJobs;
 public class MedicineAlarmWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly WorkerHeartbeat _heartbeat;
     private readonly ILogger<MedicineAlarmWorker> _logger;
 
-    public MedicineAlarmWorker(IServiceScopeFactory scopeFactory, ILogger<MedicineAlarmWorker> logger)
+    public MedicineAlarmWorker(IServiceScopeFactory scopeFactory, WorkerHeartbeat heartbeat, ILogger<MedicineAlarmWorker> logger)
     {
         _scopeFactory = scopeFactory;
+        _heartbeat = heartbeat;
         _logger = logger;
     }
 
@@ -31,10 +33,12 @@ public class MedicineAlarmWorker : BackgroundService
                 var logService = scope.ServiceProvider.GetRequiredService<IMedicineLogService>();
 
                 int sent = await logService.SendDueRemindersAsync();
+                _heartbeat.Success(nameof(MedicineAlarmWorker), sent);
                 if (sent > 0) _logger.LogInformation("Sent {Count} medicine reminders.", sent);
             }
             catch (Exception ex)
             {
+                _heartbeat.Failure(nameof(MedicineAlarmWorker), ex);
                 _logger.LogError(ex, "Failed to process medicine reminders.");
             }
         }

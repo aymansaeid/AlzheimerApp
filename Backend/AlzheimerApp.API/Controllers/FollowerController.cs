@@ -3,7 +3,8 @@ using AlzheimerApp.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-
+using AlzheimerApp.API.Extensions;
+using AlzheimerApp.Domain.Enums;
 namespace AlzheimerApp.API.Controllers;
 
 /// <summary>
@@ -15,10 +16,12 @@ namespace AlzheimerApp.API.Controllers;
 public class FollowerController : ControllerBase
 {
     private readonly IPatientFollowerService _followerService;
+    private readonly ICareTeamAccessService _access;
 
-    public FollowerController(IPatientFollowerService followerService)
+    public FollowerController(IPatientFollowerService followerService, ICareTeamAccessService access)
     {
         _followerService = followerService;
+        _access = access;
     }
 
     /// <summary>
@@ -29,6 +32,7 @@ public class FollowerController : ControllerBase
     /// </remarks>
     /// <response code="200">Returns the newly created relationship details.</response>
     /// <response code="400">If the users are already linked or validation fails.</response>
+    [Authorize(Roles = nameof(UserRole.Admin))] // System admins only: everyone else joins via invite codes.
     [HttpPost("link")]
     [ProducesResponseType(typeof(FollowerResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -69,8 +73,12 @@ public class FollowerController : ControllerBase
             var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             Guid.TryParse(userIdString, out Guid requesterId);
 
-            var response = await _followerService.GenerateInviteAsync(requesterId, request);
+            var response = await _followerService.GenerateInviteAsync(requesterId, request, User.IsSystemAdmin());
             return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return this.NoPermission(ex.Message);
         }
         catch (Exception ex)
         {
@@ -216,6 +224,7 @@ public class FollowerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetCareTeam(Guid patientId)
     {
+        if (!(await _access.GetPermissionsAsync(User, patientId)).CanView) return this.NoPermission();
         try
         {
             var response = await _followerService.GetCareTeamAsync(patientId);

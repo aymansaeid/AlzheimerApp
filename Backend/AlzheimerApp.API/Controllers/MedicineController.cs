@@ -4,8 +4,9 @@ using AlzheimerApp.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-
+using AlzheimerApp.API.Extensions;
 namespace AlzheimerApp.API.Controllers;
+
 
 /// <summary>
 /// Manages the master medication schedules for Patients.
@@ -26,11 +27,13 @@ public class MedicineController : ControllerBase
     private const string CareTeamRoles = $"{nameof(UserRole.Follower)},{nameof(UserRole.Admin)}";
 
     private readonly IMedicineService _medicineService;
+    private readonly ICareTeamAccessService _access;
     private readonly ILogger<MedicineController> _logger;
 
-    public MedicineController(IMedicineService medicineService, ILogger<MedicineController> logger)
+    public MedicineController(IMedicineService medicineService, ICareTeamAccessService access, ILogger<MedicineController> logger)
     {
         _medicineService = medicineService;
+        _access = access;
         _logger = logger;
     }
 
@@ -75,6 +78,9 @@ public class MedicineController : ControllerBase
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var creatorId))
             return Unauthorized(new { Error = "Invalid token claims." });
 
+        if (!(await _access.GetPermissionsAsync(User, request.PatientId)).CanManageMedicines)
+            return this.NoPermission("Only the patient's primary caregiver can add medicines.");
+
         return await Run(() => _medicineService.AddMedicineAsync(creatorId, request));
     }
 
@@ -92,6 +98,8 @@ public class MedicineController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetPatientMedicines(Guid patientId)
     {
+        if (!(await _access.GetPermissionsAsync(User, patientId)).CanView) return this.NoPermission();
+
         return await Run(() => _medicineService.GetPatientMedicinesAsync(patientId));
     }
 
@@ -110,6 +118,11 @@ public class MedicineController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMedicine(Guid id)
     {
+
+        var patientId = await _access.GetMedicinePatientIdAsync(id);
+        if (patientId == null) return NotFound(new { Error = "Medicine not found." });
+        if (!(await _access.GetPermissionsAsync(User, patientId.Value)).CanView) return this.NoPermission();
+
         return await Run(() => _medicineService.GetMedicineAsync(id));
     }
 
@@ -151,6 +164,10 @@ public class MedicineController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateMedicine(Guid id, [FromBody] UpdateMedicineRequest request)
     {
+
+        var check = await CheckCanManageAsync(id);
+        if (check != null) return check;
+
         return await Run(() => _medicineService.UpdateMedicineAsync(id, request));
     }
 
@@ -172,6 +189,9 @@ public class MedicineController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteMedicine(Guid id)
     {
+        var check = await CheckCanManageAsync(id);
+        if (check != null) return check;
+
         try
         {
             await _medicineService.DeleteMedicineAsync(id);
@@ -186,6 +206,17 @@ public class MedicineController : ControllerBase
             _logger.LogError(ex, "Failed to delete medicine {MedicineId}.", id);
             return StatusCode(StatusCodes.Status500InternalServerError, new { Error = "The medicine could not be deleted." });
         }
+    }
+
+    /// <summary>404 if the medicine does not exist, 403 if the caller is not the patient's primary caregiver; null when allowed.</summary>
+    private async Task<IActionResult?> CheckCanManageAsync(Guid medicineId)
+    {
+        var patientId = await _access.GetMedicinePatientIdAsync(medicineId);
+        if (patientId == null) return NotFound(new { Error = "Medicine not found." });
+
+        return (await _access.GetPermissionsAsync(User, patientId.Value)).CanManageMedicines
+            ? null
+            : this.NoPermission("Only the patient's primary caregiver can change medicines.");
     }
 
     /// <summary>Runs a service call and maps validation / not-found errors to 400 / 404.</summary>

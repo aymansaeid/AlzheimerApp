@@ -16,6 +16,12 @@ public class PatientFollowerService : IPatientFollowerService
     private readonly ILocationLogRepository _locationRepository;
     private readonly IAlertHistoryRepository _alertRepository;
     private readonly IMedicineLogService _medicineLogService;
+    private readonly INotificationService _notificationService;
+
+    // FCM data "type" values for care team changes. The app only needs to re-fetch /api/Follower/my-patients.
+    public const string PushTypeRoleUpdated = "ROLE_UPDATED";
+    public const string PushTypeCareTeamRemoved = "CARE_TEAM_REMOVED";
+    public const string PushTypeCareTeamJoined = "CARE_TEAM_JOINED";
 
     public PatientFollowerService(
             IPatientFollowerRepository followerRepository,
@@ -23,7 +29,8 @@ public class PatientFollowerService : IPatientFollowerService
             IUserRepository userRepository,
             ILocationLogRepository locationRepository,
             IAlertHistoryRepository alertRepository,
-            IMedicineLogService medicineLogService)
+            IMedicineLogService medicineLogService,
+            INotificationService notificationService)
     {
         _followerRepository = followerRepository;
         _inviteRepository = inviteRepository;
@@ -31,7 +38,26 @@ public class PatientFollowerService : IPatientFollowerService
         _locationRepository = locationRepository;
         _alertRepository = alertRepository;
         _medicineLogService = medicineLogService;
+        _notificationService = notificationService;
     }
+
+    /// <summary>Best-effort push to one user; a notification failure never fails the team operation.</summary>
+    private async Task TryNotifyUserAsync(Guid userId, string title, string body, Dictionary<string, string> data)
+    {
+        try
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (string.IsNullOrWhiteSpace(user?.FcmToken)) return;
+            await _notificationService.SendMulticastAsync(new List<string> { user.FcmToken }, title, body, data);
+        }
+        catch
+        {
+            // Swallowed on purpose: the change is saved; the app also refreshes on next open.
+        }
+    }
+
+    private async Task<string> PatientNameAsync(Guid patientId) =>
+        (await _userRepository.GetByIdAsync(patientId))?.FullName ?? "Hasta";
 
     public async Task<FollowerResponse> AddFollowerAsync(FollowerRequest request)
     {
@@ -101,12 +127,15 @@ public class PatientFollowerService : IPatientFollowerService
         if (exists) throw new Exception("You are already linked to this patient.");
 
         // 3. Create the relationship using the role from the invite!
+        //    A primary invite only makes the user primary if the patient still has no primary caregiver
+        //    (two primary invites created before either was accepted must not produce two admins).
+        bool becomesPrimary = invite.IsPrimaryInvite && !await _followerRepository.HasPrimaryFollowerAsync(invite.PatientId);
         var relationship = new PatientFollower
         {
             PatientId = invite.PatientId,
             FollowerId = newFollowerId,
             Relationship = request.Relationship,
-            IsPrimary = invite.IsPrimaryInvite, // 🔥 Here is where the magic happens!
+            IsPrimary = becomesPrimary,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -117,6 +146,28 @@ public class PatientFollowerService : IPatientFollowerService
         {
             invite.IsActive = false;
             await _inviteRepository.UpdateAsync(invite);
+        }
+
+        // 5. Let the primary caregiver know a new member joined (their team list can refresh).
+        if (!relationship.IsPrimary)
+        {
+            var admins = await _followerRepository.GetFollowersByPatientIdAsync(invite.PatientId);
+            var primary = admins.FirstOrDefault(a => a.IsPrimary);
+            if (primary != null)
+            {
+                var memberName = (await _userRepository.GetByIdAsync(newFollowerId))?.FullName ?? "Yeni üye";
+                var patientName = await PatientNameAsync(invite.PatientId);
+                await TryNotifyUserAsync(primary.FollowerId,
+                    "Bakım ekibine yeni üye katıldı",
+                    $"{memberName}, {patientName} hastasının bakım ekibine katıldı.",
+                    new Dictionary<string, string>
+                    {
+                        ["type"] = PushTypeCareTeamJoined,
+                        ["patientId"] = invite.PatientId.ToString(),
+                        ["patientName"] = patientName,
+                        ["memberName"] = memberName
+                    });
+            }
         }
 
         return new FollowerResponse
@@ -149,6 +200,19 @@ public class PatientFollowerService : IPatientFollowerService
         // 4. Save to Database
         await _followerRepository.UpdateAsync(currentAdminRel);
         await _followerRepository.UpdateAsync(newAdminRel);
+
+        // 5. Tell the new admin's phone, so its UI unlocks admin actions without polling.
+        var patientName = await PatientNameAsync(patientId);
+        await TryNotifyUserAsync(newAdminId,
+            "👑 Bakım ekibi yöneticisi oldunuz",
+            $"{patientName} için yönetici yetkisi size devredildi.",
+            new Dictionary<string, string>
+            {
+                ["type"] = PushTypeRoleUpdated,
+                ["patientId"] = patientId.ToString(),
+                ["patientName"] = patientName,
+                ["isPrimaryAdmin"] = "true"
+            });
     }
     public async Task<bool> CheckHasAdminAsync(Guid patientId)
     {
@@ -180,7 +244,7 @@ public class PatientFollowerService : IPatientFollowerService
 
             // Pass the specific permissions flag back down
             CurrentUserIsAdmin = relationship.IsPrimary,
-
+            Permissions = PatientPermissions.ForFollower(relationship.IsPrimary),
             LastLatitude = lastLocation?.Latitude,
             LastLongitude = lastLocation?.Longitude,
             IsCurrentlyOutside = lastLocation?.IsOutsideZone ?? false,
@@ -203,51 +267,58 @@ public class PatientFollowerService : IPatientFollowerService
 
     // Paste these new/updated methods right into your existing service class:
 
-public async Task<InviteResponse> GenerateInviteAsync(Guid requesterId, GenerateInviteRequest request)
-{
-    bool hasAdmin = await _followerRepository.HasPrimaryFollowerAsync(request.PatientId);
-
-    if (hasAdmin)
+    public async Task<InviteResponse> GenerateInviteAsync(Guid requesterId, GenerateInviteRequest request, bool isSystemAdmin = false)
     {
-        // 🚨 SECURITY VALIDATION: If the group has an admin, only THAT admin can generate new invites!
-        var currentRelationship = await _followerRepository.GetRelationshipAsync(request.PatientId, requesterId);
-        if (currentRelationship == null || !currentRelationship.IsPrimary)
+        bool hasAdmin = await _followerRepository.HasPrimaryFollowerAsync(request.PatientId);
+
+        // 🚨 Without an admin yet, only the patient themself (their QR screen) or a system admin may create the
+        //    "genesis" primary invite. Otherwise anyone could make themselves admin of any patient.
+        if (!hasAdmin && requesterId != request.PatientId && !isSystemAdmin)
         {
-            throw new Exception("Unauthorized. Only the Primary Caregiver can invite other family members.");
+            throw new UnauthorizedAccessException("Only the patient can create the first (primary) caregiver invite.");
         }
-        
-        // Force the invite type to be standard secondary if an admin already occupies the slot
-        request.IsPrimaryInvite = false;
+
+        if (hasAdmin)
+        {
+            // 🚨 SECURITY VALIDATION: If the group has an admin, only THAT admin can generate new invites!
+            var currentRelationship = await _followerRepository.GetRelationshipAsync(request.PatientId, requesterId);
+            if (currentRelationship == null || !currentRelationship.IsPrimary)
+            {
+                throw new Exception("Unauthorized. Only the Primary Caregiver can invite other family members.");
+            }
+
+            // Force the invite type to be standard secondary if an admin already occupies the slot
+            request.IsPrimaryInvite = false;
+        }
+        else
+        {
+            // If there is no admin yet, this is the master genesis invite
+            request.IsPrimaryInvite = true;
+        }
+
+        // Generate a clean, 6-character alphanumeric code
+        string randomCode = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
+
+        var invite = new PatientInvite
+        {
+            PatientId = request.PatientId,
+            InviteCode = randomCode,
+            IsPrimaryInvite = request.IsPrimaryInvite,
+            ExpiresAt = DateTime.UtcNow.AddDays(2), // Reduced to 2 days for tight medical security
+            IsActive = true
+        };
+
+        await _inviteRepository.AddAsync(invite);
+
+        return new InviteResponse
+        {
+            InviteCode = invite.InviteCode,
+            DeepLinkUrl = $"alzheimerapp://invite?code={invite.InviteCode}",
+            ExpiresAt = invite.ExpiresAt
+        };
     }
-    else
-    {
-        // If there is no admin yet, this is the master genesis invite
-        request.IsPrimaryInvite = true;
-    }
 
-    // Generate a clean, 6-character alphanumeric code
-    string randomCode = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
-
-    var invite = new PatientInvite
-    {
-        PatientId = request.PatientId,
-        InviteCode = randomCode,
-        IsPrimaryInvite = request.IsPrimaryInvite,
-        ExpiresAt = DateTime.UtcNow.AddDays(2), // Reduced to 2 days for tight medical security
-        IsActive = true
-    };
-
-    await _inviteRepository.AddAsync(invite);
-
-    return new InviteResponse
-    {
-        InviteCode = invite.InviteCode,
-        DeepLinkUrl = $"alzheimerapp://invite?code={invite.InviteCode}",
-        ExpiresAt = invite.ExpiresAt
-    };
-}
-
-public async Task<List<CareTeamMemberResponse>> GetCareTeamAsync(Guid patientId)
+    public async Task<List<CareTeamMemberResponse>> GetCareTeamAsync(Guid patientId)
 {
     var relationships = await _followerRepository.GetFollowersByPatientIdAsync(patientId);
     
@@ -285,7 +356,18 @@ public async Task RemoveFollowerAsync(Guid patientId, Guid adminId, Guid followe
     }
 
     await _followerRepository.RemoveAsync(targetRel);
-}
+
+        var patientName = await PatientNameAsync(patientId);
+        await TryNotifyUserAsync(followerId,
+            "Bakım ekibinden çıkarıldınız",
+            $"Artık {patientName} hastasının bakım ekibinde değilsiniz.",
+            new Dictionary<string, string>
+            {
+                ["type"] = PushTypeCareTeamRemoved,
+                ["patientId"] = patientId.ToString(),
+                ["patientName"] = patientName
+            });
+    }
     public async Task LeavePatientAsync(Guid patientId, Guid followerId)
     {
         // Find the relationship record
@@ -315,6 +397,7 @@ public async Task RemoveFollowerAsync(Guid patientId, Guid adminId, Guid followe
             FullName = l.Patient?.FullName ?? "Unknown Patient",
             ProfilePhotoUrl = l.Patient?.ProfilePhotoUrl,
             IsPrimaryAdmin = l.IsPrimary,
+            Permissions = PatientPermissions.ForFollower(l.IsPrimary),
             JoinedAt = l.CreatedAt
         }).ToList();
     }

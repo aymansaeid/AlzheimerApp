@@ -4,7 +4,7 @@ using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
 using BCrypt.Net;
-
+using AlzheimerApp.Domain.Enums;
 namespace AlzheimerApp.Application.Services;
 
 public class AuthService : IAuthService
@@ -18,6 +18,13 @@ public class AuthService : IAuthService
 
     public async Task<User> RegisterAsync(RegisterDto dto)
     {
+
+        // 0. Public sign-up may only create Patient or Follower accounts. System admins are created manually.
+        if (dto.Role != UserRole.Patient && dto.Role != UserRole.Follower)
+        {
+            throw new Exception("Only Patient (0) or Follower (1) accounts can be registered.");
+        }
+
         // 1. Check if user already exists
         var existingUser = await _userRepository.GetByEmailAsync(dto.Email);
         if (existingUser != null)

@@ -9,17 +9,20 @@ namespace AlzheimerApp.API.BackgroundJobs;
 public class MedicineDailyGeneratorWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly WorkerHeartbeat _heartbeat;
     private readonly IMedicineScheduleSettings _settings;
     private readonly TimeProvider _clock;
     private readonly ILogger<MedicineDailyGeneratorWorker> _logger;
 
     public MedicineDailyGeneratorWorker(
         IServiceScopeFactory scopeFactory,
+        WorkerHeartbeat heartbeat,
         IMedicineScheduleSettings settings,
         TimeProvider clock,
         ILogger<MedicineDailyGeneratorWorker> logger)
     {
         _scopeFactory = scopeFactory;
+        _heartbeat = heartbeat;
         _settings = settings;
         _clock = clock;
         _logger = logger;
@@ -37,10 +40,12 @@ public class MedicineDailyGeneratorWorker : BackgroundService
                 var logService = scope.ServiceProvider.GetRequiredService<IMedicineLogService>();
 
                 int created = await logService.GenerateLogsForTodayAsync();
+                _heartbeat.Success(nameof(MedicineDailyGeneratorWorker), created);
                 _logger.LogInformation("Medicine daily generator created {Count} dose logs for today.", created);
             }
             catch (Exception ex)
             {
+                _heartbeat.Failure(nameof(MedicineDailyGeneratorWorker), ex);
                 _logger.LogError(ex, "CRITICAL ERROR: Medicine daily generator failed to generate logs.");
             }
 

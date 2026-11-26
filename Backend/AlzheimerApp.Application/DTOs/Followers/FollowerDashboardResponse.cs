@@ -29,4 +29,5 @@ public class FollowerDashboardResponse
     public int TotalMedsToday { get; set; }
     public List<MedicineLogResponse> UpcomingMeds { get; set; } = new();
     public bool CurrentUserIsAdmin { get; set; }
+    public PatientPermissions Permissions { get; set; } = PatientPermissions.None;
 }

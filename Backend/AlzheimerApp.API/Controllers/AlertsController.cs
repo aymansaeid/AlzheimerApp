@@ -2,7 +2,7 @@
 using AlzheimerApp.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
+using AlzheimerApp.API.Extensions;
 namespace AlzheimerApp.API.Controllers;
 
 /// <summary>
@@ -14,10 +14,12 @@ namespace AlzheimerApp.API.Controllers;
 public class AlertsController : ControllerBase
 {
     private readonly IAlertService _alertService;
+    private readonly ICareTeamAccessService _access;
 
-    public AlertsController(IAlertService alertService)
+    public AlertsController(IAlertService alertService, ICareTeamAccessService access)
     {
         _alertService = alertService;
+        _access = access;
     }
 
     /// <summary>
@@ -36,6 +38,7 @@ public class AlertsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetPatientAlerts(Guid patientId)
     {
+        if (!(await _access.GetPermissionsAsync(User, patientId)).CanView) return this.NoPermission();
         try
         {
             var response = await _alertService.GetPatientAlertsAsync(patientId);
@@ -62,6 +65,9 @@ public class AlertsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkAsRead(Guid id)
     {
+        var patientId = await _access.GetAlertPatientIdAsync(id);
+        if (patientId == null) return NotFound(new { Error = "Alert not found." });
+        if (!(await _access.GetPermissionsAsync(User, patientId.Value)).CanView) return this.NoPermission();
         try
         {
             await _alertService.MarkAlertAsReadAsync(id);

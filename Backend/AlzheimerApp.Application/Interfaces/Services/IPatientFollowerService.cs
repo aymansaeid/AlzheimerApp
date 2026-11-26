@@ -5,7 +5,9 @@ namespace AlzheimerApp.Application.Interfaces.Services;
 public interface IPatientFollowerService
 {
     Task<FollowerResponse> AddFollowerAsync(FollowerRequest request);
-    Task<InviteResponse> GenerateInviteAsync(Guid requesterId, GenerateInviteRequest request);
+
+    /// <exception cref="UnauthorizedAccessException">A first (primary) invite requested by someone other than the patient.</exception>
+    Task<InviteResponse> GenerateInviteAsync(Guid requesterId, GenerateInviteRequest request, bool isSystemAdmin = false);
     Task<FollowerResponse> AcceptInviteAsync(Guid newFollowerId, AcceptInviteRequest request);
     Task TransferAdminRightsAsync(Guid patientId, Guid currentAdminId, Guid newAdminId);
     Task<bool> CheckHasAdminAsync(Guid patientId);

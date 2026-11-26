@@ -48,6 +48,7 @@ public class MedicineLogService : IMedicineLogService
     {
         var localDate = ScheduleCalendar.ResolveLocalDate(date, Tz);
         var (fromUtc, toUtc) = ScheduleCalendar.LocalDayRangeUtc(localDate, Tz);
+        await MarkOverdueLogsAsMissedAsync(patientId);
 
         // 1. O gün (Türkiye saatiyle) için HALİHAZIRDA var olan loglar
         var existingLogs = await _logRepository.GetLogsByPatientInRangeAsync(patientId, fromUtc, toUtc);
@@ -191,10 +192,10 @@ public class MedicineLogService : IMedicineLogService
 
     // ------------------------------------------------------------------ missed → care team (+60 min)
 
-    public async Task<int> MarkOverdueLogsAsMissedAsync()
+    public async Task<int> MarkOverdueLogsAsMissedAsync(Guid? patientId = null)
     {
         var now = UtcNow;
-        var overdueLogs = await _logRepository.GetPendingLogsBeforeAsync(now - _settings.MissedAfter);
+        var overdueLogs = await _logRepository.GetPendingLogsBeforeAsync(now - _settings.MissedAfter, patientId);
         if (overdueLogs.Count == 0) return 0;
 
         // 1. Status change first: Pending → Missed happens once, so the alert below is sent at most once.

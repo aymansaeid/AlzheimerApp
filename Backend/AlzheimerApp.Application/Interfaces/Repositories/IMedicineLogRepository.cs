@@ -13,8 +13,8 @@ public interface IMedicineLogRepository
     /// <summary>Pending logs due at or before <paramref name="scheduledBeforeUtc"/> whose patient reminder was not sent yet. Medicine + Patient included.</summary>
     Task<List<MedicineLog>> GetPendingWithoutReminderAsync(DateTime scheduledBeforeUtc);
 
-    /// <summary>Pending logs due at or before <paramref name="cutoffUtc"/>. Medicine + Patient included.</summary>
-    Task<List<MedicineLog>> GetPendingLogsBeforeAsync(DateTime cutoffUtc);
+    /// <summary>Pending logs due at or before <paramref name="cutoffUtc"/> (optionally one patient's). Medicine + Patient included.</summary>
+    Task<List<MedicineLog>> GetPendingLogsBeforeAsync(DateTime cutoffUtc, Guid? patientId = null);
 
     Task<MedicineLog?> GetByIdAsync(Guid id);
     Task UpdateAsync(MedicineLog log);

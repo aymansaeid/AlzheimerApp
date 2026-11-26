@@ -2,7 +2,7 @@
 using AlzheimerApp.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
+using AlzheimerApp.API.Extensions;
 namespace AlzheimerApp.API.Controllers;
 
 /// <summary>
@@ -18,10 +18,12 @@ namespace AlzheimerApp.API.Controllers;
 public class MedicineLogsController : ControllerBase
 {
     private readonly IMedicineLogService _logService;
+    private readonly ICareTeamAccessService _access;
 
-    public MedicineLogsController(IMedicineLogService logService)
+    public MedicineLogsController(IMedicineLogService logService, ICareTeamAccessService access)
     {
         _logService = logService;
+        _access = access;
     }
 
     /// <summary>
@@ -42,6 +44,8 @@ public class MedicineLogsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetDailyLogs(Guid patientId, DateTime date)
     {
+        if (!(await _access.GetPermissionsAsync(User, patientId)).CanView) return this.NoPermission();
+
         try
         {
             var response = await _logService.GetDailyLogsAsync(patientId, date);
@@ -73,6 +77,10 @@ public class MedicineLogsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateLogStatus(Guid id, [FromBody] UpdateLogStatusRequest request)
     {
+        var patientId = await _access.GetMedicineLogPatientIdAsync(id);
+        if (patientId == null) return NotFound(new { Error = "Medicine log not found." });
+        if (!(await _access.GetPermissionsAsync(User, patientId.Value)).CanMarkDoses) return this.NoPermission();
+
         try
         {
             await _logService.UpdateLogStatusAsync(id, request);

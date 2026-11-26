@@ -28,6 +28,7 @@ public interface IMedicineLogService
     /// <summary>
     /// Marks doses still Pending <c>MissedAfter</c> after their time as Missed, records a MedicineMissed alert and
     /// push-notifies the care team (<c>type = MEDICATION_MISSED</c>). Returns the number of doses marked missed.
+    /// <paramref name="patientId"/> limits it to one patient (used before returning a daily list).
     /// </summary>
-    Task<int> MarkOverdueLogsAsMissedAsync();
+    Task<int> MarkOverdueLogsAsMissedAsync(Guid? patientId = null);
 }

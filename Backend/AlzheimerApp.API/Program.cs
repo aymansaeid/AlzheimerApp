@@ -69,6 +69,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<WorkerHeartbeat>();
 builder.Services.AddHostedService<MedicineDailyGeneratorWorker>();
 builder.Services.AddHostedService<MedicineAlarmWorker>();
 builder.Services.AddHostedService<MedicineStatusSweeperWorker>();
@@ -144,7 +145,14 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<LocationHub>("/hubs/location");
 // Lightweight liveness check (also handy for an uptime pinger so background workers keep running).
-app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }));
+app.MapGet("/health", (WorkerHeartbeat heartbeat) => Results.Ok(new
+{
+    status = "ok",
+    utc = DateTime.UtcNow,
+    // If this keeps moving forward, the host restarts/sleeps the app and background workers stop meanwhile.
+    processStartedAt = heartbeat.ProcessStartedAtUtc,
+    workers = heartbeat.Snapshot()
+}));
 
 using (var scope = app.Services.CreateScope())
 {

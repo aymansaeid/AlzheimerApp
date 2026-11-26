@@ -9,11 +9,13 @@ namespace AlzheimerApp.API.BackgroundJobs;
 public class MedicineStatusSweeperWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly WorkerHeartbeat _heartbeat;
     private readonly ILogger<MedicineStatusSweeperWorker> _logger;
 
-    public MedicineStatusSweeperWorker(IServiceScopeFactory scopeFactory, ILogger<MedicineStatusSweeperWorker> logger)
+    public MedicineStatusSweeperWorker(IServiceScopeFactory scopeFactory, WorkerHeartbeat heartbeat, ILogger<MedicineStatusSweeperWorker> logger)
     {
         _scopeFactory = scopeFactory;
+        _heartbeat = heartbeat;
         _logger = logger;
     }
 
@@ -31,10 +33,12 @@ public class MedicineStatusSweeperWorker : BackgroundService
                 var logService = scope.ServiceProvider.GetRequiredService<IMedicineLogService>();
 
                 int missed = await logService.MarkOverdueLogsAsMissedAsync();
+                _heartbeat.Success(nameof(MedicineStatusSweeperWorker), missed);
                 if (missed > 0) _logger.LogInformation("Marked {Count} medicine doses as missed.", missed);
             }
             catch (Exception ex)
             {
+                _heartbeat.Failure(nameof(MedicineStatusSweeperWorker), ex);
                 _logger.LogError(ex, "An error occurred while sweeping for missed medicines.");
             }
         }

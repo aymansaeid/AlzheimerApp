@@ -41,13 +41,16 @@ public class MedicineLogRepository : IMedicineLogRepository
             .ToListAsync();
     }
 
-    public async Task<List<MedicineLog>> GetPendingLogsBeforeAsync(DateTime cutoffUtc)
+    public async Task<List<MedicineLog>> GetPendingLogsBeforeAsync(DateTime cutoffUtc, Guid? patientId = null)
     {
-        return await _context.MedicineLogs
+        var query = _context.MedicineLogs
             .Include(ml => ml.Medicine)
             .Include(ml => ml.Patient)
-            .Where(ml => ml.Status == MedicineStatus.Pending && ml.ScheduledAt <= cutoffUtc)
-            .ToListAsync();
+            .Where(ml => ml.Status == MedicineStatus.Pending && ml.ScheduledAt <= cutoffUtc);
+
+        if (patientId.HasValue) query = query.Where(ml => ml.PatientId == patientId.Value);
+
+        return await query.ToListAsync();
     }
 
     public async Task<MedicineLog?> GetByIdAsync(Guid id)

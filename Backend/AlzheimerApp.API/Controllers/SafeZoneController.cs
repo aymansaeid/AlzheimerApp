@@ -2,7 +2,7 @@
 using AlzheimerApp.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
+using AlzheimerApp.API.Extensions;
 namespace AlzheimerApp.API.Controllers;
 
 /// <summary>
@@ -20,10 +20,23 @@ namespace AlzheimerApp.API.Controllers;
 public class SafeZoneController : ControllerBase
 {
     private readonly ISafeZoneService _safeZoneService;
+    private readonly ICareTeamAccessService _access;
 
-    public SafeZoneController(ISafeZoneService safeZoneService)
+    public SafeZoneController(ISafeZoneService safeZoneService, ICareTeamAccessService access)
     {
         _safeZoneService = safeZoneService;
+        _access = access;
+    }
+
+    /// <summary>404 if the zone does not exist, 403 unless the caller is the primary caregiver; null when allowed.</summary>
+    private async Task<IActionResult?> CheckCanManageAsync(Guid safeZoneId)
+    {
+        var patientId = await _access.GetSafeZonePatientIdAsync(safeZoneId);
+        if (patientId == null) return NotFound(new { Error = "Safe zone not found." });
+
+        return (await _access.GetPermissionsAsync(User, patientId.Value)).CanManageSafeZones
+            ? null
+            : this.NoPermission("Only the patient's primary caregiver can change safe zones.");
     }
 
     /// <summary>
@@ -45,6 +58,9 @@ public class SafeZoneController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreateSafeZone([FromBody] CreateSafeZoneDto dto)
     {
+        if (!(await _access.GetPermissionsAsync(User, dto.PatientId)).CanManageSafeZones)
+            return this.NoPermission("Only the patient's primary caregiver can add safe zones.");
+
         try
         {
             var zone = await _safeZoneService.CreateSafeZoneAsync(dto);
@@ -76,6 +92,8 @@ public class SafeZoneController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateSafeZone(Guid id, [FromBody] UpdateSafeZoneRequest request)
     {
+        var check = await CheckCanManageAsync(id);
+        if (check != null) return check;
         try
         {
             await _safeZoneService.UpdateSafeZoneAsync(id, request);
