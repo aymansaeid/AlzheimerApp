@@ -63,6 +63,7 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
       return;
     }
 
+    emit(MemoryLoading());
     try {
       final memories = await _getMemoriesUseCase(targetPatientId);
       emit(
@@ -125,7 +126,8 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
     Emitter<MemoryState> emit,
   ) async {
     final currentState = state;
-    final currentUserId = (event.uploaderId != null && event.uploaderId!.isNotEmpty)
+    final currentUserId =
+        (event.uploaderId != null && event.uploaderId!.isNotEmpty)
         ? event.uploaderId!
         : (currentState is MemoryLoaded ? currentState.currentUserId : '');
 

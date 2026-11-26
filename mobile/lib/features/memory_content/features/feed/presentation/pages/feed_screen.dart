@@ -241,64 +241,74 @@ class _FeedScreenState extends State<FeedScreen> {
               }
 
               if (state is MemoryLoaded) {
-                if (state.memories.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.photo_library_outlined,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Henüz bir anı paylaşılmamış.',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
                 return RefreshIndicator(
                   onRefresh: () async {
                     _refreshMemories();
                   },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 80, top: 4),
-                    itemCount: state.memories.length,
-                    itemBuilder: (context, index) {
-                      final memory = state.memories[index];
-                      final isOwner =
-                          state.currentUserId.isNotEmpty &&
-                          memory.uploaderId == state.currentUserId;
-                      final canDelete = isOwner || state.isPrimaryAdmin;
+                  child: state.memories.isEmpty
+                      ? LayoutBuilder(
+                          builder: (context, constraints) =>
+                              SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight,
+                              ),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.photo_library_outlined,
+                                      size: 64,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Henüz bir anı paylaşılmamış.',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80, top: 4),
+                          itemCount: state.memories.length,
+                          itemBuilder: (context, index) {
+                            final memory = state.memories[index];
+                            final isOwner =
+                                state.currentUserId.isNotEmpty &&
+                                memory.uploaderId == state.currentUserId;
+                            final canDelete = isOwner || state.isPrimaryAdmin;
 
-                      void onDelete() {
-                        context.read<MemoryBloc>().add(
-                          DeleteMemory(memory.id),
-                        );
-                      }
+                            void onDelete() {
+                              context.read<MemoryBloc>().add(
+                                DeleteMemory(memory.id),
+                              );
+                            }
 
-                      if (memory.contentType == MemoryContentType.voice) {
-                        return AudioPostCard(
-                          memory: memory,
-                          canDelete: canDelete,
-                          onDelete: onDelete,
-                        );
-                      }
-                      return TextPostCard(
-                        memory: memory,
-                        canDelete: canDelete,
-                        onDelete: onDelete,
-                      );
-                    },
-                  ),
+                            if (memory.contentType == MemoryContentType.voice) {
+                              return AudioPostCard(
+                                memory: memory,
+                                canDelete: canDelete,
+                                onDelete: onDelete,
+                              );
+                            }
+                            return TextPostCard(
+                              memory: memory,
+                              canDelete: canDelete,
+                              onDelete: onDelete,
+                            );
+                          },
+                        ),
                 );
               }
 

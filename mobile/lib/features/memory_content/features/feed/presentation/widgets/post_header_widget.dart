@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../../core/widgets/avatar_circle.dart';
+
 class PostHeaderWidget extends StatelessWidget {
   final String userName;
   final String? userAvatarUrl;
@@ -61,15 +63,15 @@ class PostHeaderWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 22,
+          AvatarCircle(
+            initials: userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+            size: 44,
+            imageUrl: userAvatarUrl,
             backgroundColor: Colors.grey.shade300,
-            backgroundImage: userAvatarUrl != null
-                ? NetworkImage(userAvatarUrl!)
-                : null,
-            child: userAvatarUrl == null
-                ? Text(userName.isNotEmpty ? userName[0].toUpperCase() : '?')
-                : null,
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(

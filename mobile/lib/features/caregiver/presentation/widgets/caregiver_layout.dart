@@ -12,6 +12,9 @@ import 'package:mobile/features/map_viewer/presentation/bloc/tracker_map_event.d
 import 'package:mobile/features/map_viewer/presentation/bloc/tracker_map_state.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
+import 'package:mobile/features/memory_content/features/feed/presentation/bloc/memory_bloc.dart';
+import 'package:mobile/features/memory_content/features/feed/presentation/bloc/memory_event.dart';
+import 'package:mobile/features/memory_content/features/feed/presentation/bloc/memory_state.dart';
 import '../../../../core/widgets/app_bottom_nav_bar.dart';
 
 class CaregiverLayout extends StatelessWidget {
@@ -54,6 +57,27 @@ class CaregiverLayout extends StatelessWidget {
               mapBloc.add(const TrackerMapStarted());
             } else {
               mapBloc.add(const TrackerMapRefreshRequested());
+            }
+          } else if (index == 3) {
+            final dashboardState = context.read<DashboardBloc>().state;
+            if (dashboardState is DashboardLoaded) {
+              final patientId = dashboardState.summary.patientId;
+              final memoryState = context.read<MemoryBloc>().state;
+              final needsLoad = memoryState is! MemoryLoading &&
+                  (memoryState is! MemoryLoaded ||
+                      memoryState.patientId != patientId);
+              if (needsLoad && patientId.isNotEmpty) {
+                final authState = context.read<AuthBloc>().state;
+                final currentUserId =
+                    authState is AuthAuthenticated ? authState.user.id : '';
+                context.read<MemoryBloc>().add(
+                  LoadMemories(
+                    patientId: patientId,
+                    currentUserId: currentUserId,
+                    isPrimaryAdmin: dashboardState.isCurrentPatientAdmin,
+                  ),
+                );
+              }
             }
           } else if (index == 4) {
             final authState = context.read<AuthBloc>().state;
