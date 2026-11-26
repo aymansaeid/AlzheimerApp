@@ -199,6 +199,7 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
     TransferAdminClicked event,
     Emitter<CareNetworkState> emit,
   ) async {
+    final previousState = state;
     emit(CareNetworkLoading());
 
     final result = await transferAdminUseCase(
@@ -206,10 +207,44 @@ class CareNetworkBloc extends Bloc<CareNetworkEvent, CareNetworkState> {
       event.newAdminId,
     );
 
-    result.fold((failure) => emit(_errorState(failure.message)), (_) {
-      emit(const CareNetworkActionSuccess('Yöneticilik devredildi.'));
-      add(FetchCareNetwork(_currentUserId ?? '', patients: _patients));
-    });
+    await result.fold(
+      (failure) async => emit(_errorState(failure.message)),
+      (_) async {
+        emit(const CareNetworkActionSuccess('Yöneticilik devredildi.'));
+
+        if (previousState is CareNetworkLoaded) {
+          final teamResult = await getCareTeamUseCase(event.patientId);
+          teamResult.fold(
+            (_) => add(FetchCareNetwork(_currentUserId ?? '', patients: _patients)),
+            (updatedTeam) {
+              final updatedTeams = Map<String, List<CareTeamMember>>.from(
+                previousState.patientTeams,
+              )..[event.patientId] = updatedTeam;
+              final updatedAdminMap = Map<String, bool>.from(
+                previousState.isAdminForPatient,
+              )..[event.patientId] = false;
+              final updatedPatients = previousState.patients.map((p) {
+                if (p.patientId == event.patientId) {
+                  return p.copyWith(isPrimaryAdmin: false);
+                }
+                return p;
+              }).toList();
+
+              _patients = updatedPatients;
+              emit(
+                CareNetworkLoaded(
+                  patients: updatedPatients,
+                  patientTeams: updatedTeams,
+                  isAdminForPatient: updatedAdminMap,
+                ),
+              );
+            },
+          );
+        } else {
+          add(FetchCareNetwork(_currentUserId ?? '', patients: _patients));
+        }
+      },
+    );
   }
 
   CareNetworkError _errorState(String message) {

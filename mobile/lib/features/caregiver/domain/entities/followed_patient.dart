@@ -15,6 +15,22 @@ class FollowedPatient extends Equatable {
     this.profilePhotoUrl,
   });
 
+  FollowedPatient copyWith({
+    String? patientId,
+    String? fullName,
+    bool? isPrimaryAdmin,
+    DateTime? joinedAt,
+    String? profilePhotoUrl,
+  }) {
+    return FollowedPatient(
+      patientId: patientId ?? this.patientId,
+      fullName: fullName ?? this.fullName,
+      isPrimaryAdmin: isPrimaryAdmin ?? this.isPrimaryAdmin,
+      joinedAt: joinedAt ?? this.joinedAt,
+      profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
+    );
+  }
+
   @override
   List<Object?> get props => [
         patientId,

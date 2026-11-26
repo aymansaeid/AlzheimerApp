@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/di/injection.dart';
 import '../../../../core/widgets/section_title.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/followed_patient.dart';
-import '../../domain/usecases/get_followed_patients.dart';
 import '../../../medication/presentation/bloc/medicine_bloc.dart';
 import '../../../medication/presentation/bloc/medicine_event.dart';
 import '../bloc/dashboard_bloc.dart';
@@ -22,12 +20,27 @@ class CaregiverDashboardScreen extends StatefulWidget {
       _CaregiverDashboardScreenState();
 }
 
-class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
+class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen>
+    with WidgetsBindingObserver {
   String? _selectedPatientId;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<DashboardBloc>().add(const RefreshFollowedPatients());
+    }
   }
 
   @override
@@ -68,7 +81,6 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen> {
                 context.read<DashboardBloc>().add(
                   LoadDashboard(_selectedPatientId),
                 );
-                getIt<GetFollowedPatients>().call();
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),

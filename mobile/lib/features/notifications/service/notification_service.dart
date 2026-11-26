@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,13 @@ import '../domain/repository/notification_repository.dart';
 class NotificationService {
   final NotificationRepository _repository;
   final FlutterSecureStorage _secureStorage;
+
+  final StreamController<String> _careTeamUpdatedController =
+      StreamController<String>.broadcast();
+
+  /// Emits FCM `type` (`ROLE_UPDATED`, `CARE_TEAM_REMOVED`, `CARE_TEAM_JOINED`)
+  /// when care-team membership or primary-admin status changes.
+  Stream<String> get onCareTeamUpdated => _careTeamUpdatedController.stream;
 
   NotificationService(
     this._repository,
@@ -97,9 +105,20 @@ class NotificationService {
         payload: jsonEncode(message.data),
       );
     }
-    // 3. Senaryo: Admin Yetkisi Devri (ROLE_UPDATED)
-    else if (type == 'ROLE_UPDATED' || type == 'ADMIN_GRANTED') {
-      // getIt<AuthBloc>().add(const AuthEvent.refreshRole());
+    // 3. Senaryo: Ekip / Admin Yetkisi Değişikliği (ROLE_UPDATED, CARE_TEAM_REMOVED, CARE_TEAM_JOINED)
+    else if (type == 'ROLE_UPDATED' ||
+        type == 'ADMIN_GRANTED' ||
+        type == 'CARE_TEAM_REMOVED' ||
+        type == 'CARE_TEAM_JOINED') {
+      _careTeamUpdatedController.add(type.toString());
+      if (message.notification != null) {
+        await _repository.showLocalNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: message.notification!.title ?? 'Ekip Güncellemesi',
+          body: message.notification!.body ?? '',
+          payload: jsonEncode(message.data),
+        );
+      }
     }
     // Standart bildirim (eğer özel type eşleşmediyse ve notification alanı doluysa)
     else if (message.notification != null) {
@@ -126,6 +145,11 @@ class NotificationService {
       appRouter.go('/patient/medications');
     } else if (type == 'MEDICATION_MISSED' || type == 'MEDICATION_DELAYED') {
       appRouter.go('/caregiver/medications');
+    } else if (type == 'ROLE_UPDATED' ||
+        type == 'ADMIN_GRANTED' ||
+        type == 'CARE_TEAM_REMOVED' ||
+        type == 'CARE_TEAM_JOINED') {
+      _careTeamUpdatedController.add(type.toString());
     }
   }
 }

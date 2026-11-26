@@ -411,16 +411,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i506.CreateMemoryUseCase>(),
       ),
     );
-    gh.factory<_i844.DashboardBloc>(
-      () => _i844.DashboardBloc(
-        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
-        getDashboardSummary: gh<_i1051.GetDashboardSummary>(),
-        dashboardRepository: gh<_i445.DashboardRepository>(),
-        careNetworkRepository: gh<_i83.CareNetworkRepository>(),
-        followerRepository: gh<_i1019.FollowerRepository>(),
-        medicineRepository: gh<_i185.MedicineRepository>(),
-      ),
-    );
     gh.lazySingleton<_i647.GetPatientDashboardUseCase>(
       () => _i647.GetPatientDashboardUseCase(gh<_i233.PatientRepository>()),
     );
@@ -471,6 +461,17 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i586.MediaService>(),
         gh<_i165.PermissionService>(),
         gh<_i314.FileStorageRepository>(),
+      ),
+    );
+    gh.factory<_i844.DashboardBloc>(
+      () => _i844.DashboardBloc(
+        getFollowedPatients: gh<_i1031.GetFollowedPatients>(),
+        getDashboardSummary: gh<_i1051.GetDashboardSummary>(),
+        dashboardRepository: gh<_i445.DashboardRepository>(),
+        careNetworkRepository: gh<_i83.CareNetworkRepository>(),
+        followerRepository: gh<_i1019.FollowerRepository>(),
+        medicineRepository: gh<_i185.MedicineRepository>(),
+        notificationService: gh<_i105.NotificationService>(),
       ),
     );
     gh.factory<_i784.RecordAudioCubit>(

@@ -10,11 +10,15 @@ import '../datasources/care_network_remote_data_source.dart';
 class CareNetworkRepositoryImpl implements CareNetworkRepository {
   final CareNetworkRemoteDataSource remoteDataSource;
   final StreamController<void> _onNetworkChangedController = StreamController<void>.broadcast();
+  final StreamController<String> _onAdminTransferredController = StreamController<String>.broadcast();
 
   CareNetworkRepositoryImpl(this.remoteDataSource);
 
   @override
   Stream<void> get onNetworkChanged => _onNetworkChangedController.stream;
+
+  @override
+  Stream<String> get onAdminTransferred => _onAdminTransferredController.stream;
 
   @override
   Future<Either<Failure, List<CareTeamMember>>> getCareTeam(String patientId) async {
@@ -61,7 +65,7 @@ class CareNetworkRepositoryImpl implements CareNetworkRepository {
   Future<Either<Failure, void>> transferAdminRights(String patientId, String newAdminId) async {
     try {
       await remoteDataSource.transferAdminRights(patientId, newAdminId);
-      _onNetworkChangedController.add(null);
+      _onAdminTransferredController.add(patientId);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
