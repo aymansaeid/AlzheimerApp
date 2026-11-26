@@ -40,6 +40,47 @@ public class SafeZoneController : ControllerBase
     }
 
     /// <summary>
+    /// Lists a patient's safe zones (to draw them on the map / show them in the safe zone screen).
+    /// </summary>
+    /// <remarks>
+    /// **Security:** the patient, any care team member, or a system admin (`permissions.canView`).
+    /// Adding / editing / deleting stays primary-caregiver only (`permissions.canManageSafeZones`).
+    ///
+    /// By default only **active** zones are returned (the ones the breach check uses).
+    /// Send `?includeInactive=true` on the management screen to also list paused zones.
+    ///
+    /// **Tip:** for the overview map you do not need this per patient: `GET /api/Location/patients/latest`
+    /// already contains every patient's active `safeZones`.
+    ///
+    ///     GET /api/SafeZone/patient/{patientId}
+    ///     [
+    ///       {
+    ///         "id": "6a1f...",
+    ///         "patientId": "019e...",
+    ///         "name": "Ev",
+    ///         "centerLat": 41.0082,
+    ///         "centerLng": 28.9784,
+    ///         "radiusMeters": 500,
+    ///         "isActive": true,
+    ///         "createdAt": "2026-11-20T10:15:00Z"
+    ///       }
+    ///     ]
+    /// </remarks>
+    /// <param name="patientId">The patient's user id.</param>
+    /// <param name="includeInactive">Also return paused (inactive) zones. Default false.</param>
+    /// <response code="200">The zones, oldest first. Empty list if none.</response>
+    /// <response code="403">If the caller may not see this patient.</response>
+    [HttpGet("patient/{patientId}")]
+    [ProducesResponseType(typeof(List<SafeZoneResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetPatientSafeZones(Guid patientId, [FromQuery] bool includeInactive = false)
+    {
+        if (!(await _access.GetPermissionsAsync(User, patientId)).CanView) return this.NoPermission();
+
+        return Ok(await _safeZoneService.GetPatientSafeZonesAsync(patientId, includeInactive));
+    }
+
+    /// <summary>
     /// Creates a new geographic Safe Zone for a patient.
     /// </summary>
     /// <remarks>

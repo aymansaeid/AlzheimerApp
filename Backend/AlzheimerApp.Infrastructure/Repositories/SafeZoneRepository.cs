@@ -20,6 +20,27 @@ public class SafeZoneRepository : ISafeZoneRepository
             .Where(sz => sz.PatientId == patientId && sz.IsActive)
             .ToListAsync();
     }
+
+    public async Task<List<SafeZone>> GetByPatientIdAsync(Guid patientId, bool includeInactive)
+    {
+        return await _context.SafeZones
+            .AsNoTracking()
+            .Where(sz => sz.PatientId == patientId && (includeInactive || sz.IsActive))
+            .OrderBy(sz => sz.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<SafeZone>> GetActiveByPatientIdsAsync(IReadOnlyCollection<Guid> patientIds, CancellationToken cancellationToken = default)
+    {
+        if (patientIds.Count == 0) return new List<SafeZone>();
+
+        return await _context.SafeZones
+            .AsNoTracking()
+            .Where(sz => sz.IsActive && patientIds.Contains(sz.PatientId))
+            .OrderBy(sz => sz.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<SafeZone> AddAsync(SafeZone safeZone)
     {
         await _context.SafeZones.AddAsync(safeZone);

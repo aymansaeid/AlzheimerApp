@@ -1,5 +1,7 @@
 ﻿namespace AlzheimerApp.Application.DTOs.Locations;
 
+using AlzheimerApp.Application.DTOs.SafeZones;
+
 /// <summary>
 /// One entry of <c>GET /api/Location/patients/latest</c>: a patient and their most recent known position.
 /// </summary>
@@ -11,8 +13,14 @@ public class PatientLatestLocationResponse
     /// <summary>The patient's profile photo URL, or null.</summary>
     public string? ProfilePhotoUrl { get; set; }
 
+    /// <summary>The patient's phone number (for the "Ara" / call button), or null if not set.</summary>
+    public string? Phone { get; set; }
+
     /// <summary>The most recent location record, or <c>null</c> if the patient has never sent a location.</summary>
     public LatestLocationResponse? LatestLocation { get; set; }
+
+    /// <summary>The patient's ACTIVE safe zones (circles to draw on the map). Empty list if none.</summary>
+    public List<SafeZoneResponse> SafeZones { get; set; } = new();
 }
 
 /// <summary>

@@ -74,6 +74,7 @@ public class LocationLogRepository : ILocationLogRepository
                 u.Id,
                 u.FullName,
                 u.ProfilePhotoUrl,
+                u.Phone,
                 Timestamp = u.LocationLogs
                     .OrderByDescending(l => l.RecordedAt).ThenByDescending(l => l.Id)
                     .Select(l => (DateTime?)l.RecordedAt).FirstOrDefault(),
@@ -101,6 +102,7 @@ public class LocationLogRepository : ILocationLogRepository
             PatientId = r.Id,
             FullName = r.FullName,
             ProfilePhotoUrl = r.ProfilePhotoUrl,
+            Phone = string.IsNullOrWhiteSpace(r.Phone) ? null : r.Phone,
             LatestLocation = r.Timestamp == null
                 ? null
                  : new LatestLocationResponse

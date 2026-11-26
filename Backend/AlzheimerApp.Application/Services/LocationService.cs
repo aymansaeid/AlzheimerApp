@@ -3,7 +3,7 @@ using AlzheimerApp.Application.Interfaces.Repositories;
 using AlzheimerApp.Application.Interfaces.Services;
 using AlzheimerApp.Domain.Entities;
 using AlzheimerApp.Domain.Enums;
-
+using AlzheimerApp.Application.DTOs.SafeZones;
 namespace AlzheimerApp.Application.Services;
 
 public class LocationService : ILocationService
@@ -160,9 +160,20 @@ public class LocationService : ILocationService
     {
         // System admins see every patient; caregivers only see patients they are linked to.
         Guid? followerFilter = isSystemAdmin ? null : requesterId;
-        return await _locationRepository.GetLatestLocationsForPatientsAsync(followerFilter, cancellationToken);
-    }
+        var patients = await _locationRepository.GetLatestLocationsForPatientsAsync(followerFilter, cancellationToken);
 
+        // Attach every patient's active safe zones with ONE extra query, so the map needs no request per patient.
+        var zones = await _safeZoneRepository.GetActiveByPatientIdsAsync(
+            patients.Select(p => p.PatientId).ToList(), cancellationToken);
+        var zonesByPatient = zones.ToLookup(z => z.PatientId);
+
+        foreach (var patient in patients)
+        {
+            patient.SafeZones = zonesByPatient[patient.PatientId].Select(SafeZoneResponse.FromEntity).ToList();
+        }
+
+        return patients;
+    }
     private static LocationLogResponse MapToResponse(LocationLog log, string? profilePhotoUrl) => new()
     {
         PatientId = log.PatientId,

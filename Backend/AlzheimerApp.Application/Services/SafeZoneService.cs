@@ -14,6 +14,12 @@ public class SafeZoneService : ISafeZoneService
         _safeZoneRepository = safeZoneRepository;
     }
 
+    public async Task<List<SafeZoneResponse>> GetPatientSafeZonesAsync(Guid patientId, bool includeInactive = false)
+    {
+        var zones = await _safeZoneRepository.GetByPatientIdAsync(patientId, includeInactive);
+        return zones.Select(SafeZoneResponse.FromEntity).ToList();
+    }
+
     public async Task<SafeZoneResponse> CreateSafeZoneAsync(CreateSafeZoneDto dto)
     {
         var safeZone = new SafeZone
@@ -30,17 +36,7 @@ public class SafeZoneService : ISafeZoneService
         // Save it to the database
         var savedEntity = await _safeZoneRepository.AddAsync(safeZone);
 
-        return new SafeZoneResponse
-        {
-            Id = savedEntity.Id,
-            PatientId = savedEntity.PatientId,
-            Name = savedEntity.Name,
-            CenterLat = savedEntity.CenterLat,
-            CenterLng = savedEntity.CenterLng,
-            RadiusMeters = savedEntity.RadiusMeters,
-            IsActive = savedEntity.IsActive,
-            CreatedAt = savedEntity.CreatedAt
-        };
+        return SafeZoneResponse.FromEntity(savedEntity);
     }
 
     public async Task UpdateSafeZoneAsync(Guid id, UpdateSafeZoneRequest request)
