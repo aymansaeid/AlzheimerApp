@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:injectable/injectable.dart';
@@ -19,11 +18,8 @@ import '../models/safe_zone_model.dart';
 
 @LazySingleton(as: ITrackingRepository)
 class TrackingRepositoryImpl implements ITrackingRepository {
-  static const String _safeZoneCachePrefix = 'safezone_cache_';
-
   final TrackingRemoteDataSource _remoteDataSource;
   final LocationHubDataSource _hubDataSource;
-  final FlutterSecureStorage _secureStorage;
   final LocationPermissionService _permissionService;
 
   final StreamController<List<PatientEntity>> _patientsController =
@@ -36,7 +32,6 @@ class TrackingRepositoryImpl implements ITrackingRepository {
   TrackingRepositoryImpl(
     this._remoteDataSource,
     this._hubDataSource,
-    this._secureStorage,
     this._permissionService,
   );
 
@@ -54,31 +49,7 @@ class TrackingRepositoryImpl implements ITrackingRepository {
     try {
       final remotePatients = await _remoteDataSource.getLatestPatients();
 
-      final hydrated = <PatientEntity>[];
-      for (final patient in remotePatients) {
-        SafeZoneModel? activeZone;
-
-        // TODO(Backend SafeZone GET): Backend'de SafeZone GET endpoint'i hazır olduğunda yorumdan çıkarılacak.
-        // final remoteZones = await _remoteDataSource.getPatientSafeZones(patient.id);
-        // activeZone = remoteZones.cast<SafeZoneModel?>().firstWhere(
-        //       (z) => z?.isActive == true,
-        //       orElse: () => remoteZones.isNotEmpty ? remoteZones.first : null,
-        //     );
-
-        // Geçici yerel önbellek: Backend'de SafeZone GET olmadığı için PUT/DELETE ID'sini ve çemberi korur.
-        final cachedRaw = await _secureStorage.read(
-          key: '$_safeZoneCachePrefix${patient.id}',
-        );
-        activeZone = SafeZoneModel.fromStorageJsonString(cachedRaw);
-
-        hydrated.add(
-          activeZone != null
-              ? patient.copyWith(safeZone: activeZone)
-              : patient,
-        );
-      }
-
-      _patients = hydrated;
+      _patients = remotePatients;
       _patientsController.add(List.unmodifiable(_patients));
 
       await _hubSubscription?.cancel();
@@ -135,29 +106,32 @@ class TrackingRepositoryImpl implements ITrackingRepository {
     }
   }
 
+  bool _isOutsideAllSafeZones(LatLng? location, List<SafeZoneEntity> zones) {
+    if (location == null || zones.isEmpty) return false;
+    final isInsideAny = zones.any(
+      (z) => _distanceCalc.as(LengthUnit.Meter, z.center, location) <=
+          z.radiusInMeters,
+    );
+    return !isInsideAny;
+  }
+
   @override
   Future<Either<Failure, void>> setSafeZone({
     required String patientId,
     required SafeZoneEntity safeZone,
   }) async {
     try {
-      final existingPatient = _patients.cast<PatientEntity?>().firstWhere(
-            (p) => p?.id == patientId,
-            orElse: () => null,
-          );
-      final existingZone = existingPatient?.safeZone;
-      final existingZoneId = existingZone?.id;
-
-      late final SafeZoneModel savedZone;
       final requestModel = SafeZoneModel.fromEntity(safeZone);
+      final existingId = safeZone.id;
+      late final SafeZoneModel savedZone;
 
-      if (existingZoneId != null && existingZoneId.isNotEmpty) {
+      if (existingId != null && existingId.isNotEmpty) {
         await _remoteDataSource.updateSafeZone(
-          safeZoneId: existingZoneId,
+          safeZoneId: existingId,
           safeZone: requestModel,
         );
         savedZone = SafeZoneModel(
-          id: existingZoneId,
+          id: existingId,
           name: requestModel.name,
           center: requestModel.center,
           radiusInMeters: requestModel.radiusInMeters,
@@ -170,26 +144,24 @@ class TrackingRepositoryImpl implements ITrackingRepository {
         );
       }
 
-      await _secureStorage.write(
-        key: '$_safeZoneCachePrefix$patientId',
-        value: savedZone.toStorageJsonString(),
-      );
-
       _patients = _patients.map((patient) {
         if (patient.id != patientId) return patient;
 
-        bool isOut = patient.isOutOfSafeZone;
-        if (patient.currentLocation != null) {
-          final dist = _distanceCalc.as(
-            LengthUnit.Meter,
-            savedZone.center,
-            patient.currentLocation!,
-          );
-          isOut = dist > savedZone.radiusInMeters;
+        final updatedZones = List<SafeZoneEntity>.from(patient.safeZones);
+        final idx = updatedZones.indexWhere((z) => z.id == savedZone.id);
+        if (idx >= 0) {
+          updatedZones[idx] = savedZone;
+        } else {
+          updatedZones.add(savedZone);
         }
 
+        final isOut = _isOutsideAllSafeZones(
+          patient.currentLocation,
+          updatedZones,
+        );
+
         return patient.copyWith(
-          safeZone: savedZone,
+          safeZones: updatedZones,
           isOutOfSafeZone: isOut,
         );
       }).toList();
@@ -204,25 +176,27 @@ class TrackingRepositoryImpl implements ITrackingRepository {
   }
 
   @override
-  Future<Either<Failure, void>> removeSafeZone(String patientId) async {
+  Future<Either<Failure, void>> removeSafeZone({
+    required String patientId,
+    required String safeZoneId,
+  }) async {
     try {
-      final existingPatient = _patients.cast<PatientEntity?>().firstWhere(
-            (p) => p?.id == patientId,
-            orElse: () => null,
-          );
-      final existingZoneId = existingPatient?.safeZone?.id;
-
-      if (existingZoneId != null && existingZoneId.isNotEmpty) {
-        await _remoteDataSource.deleteSafeZone(existingZoneId);
-      }
-
-      await _secureStorage.delete(key: '$_safeZoneCachePrefix$patientId');
+      await _remoteDataSource.deleteSafeZone(safeZoneId);
 
       _patients = _patients.map((patient) {
         if (patient.id != patientId) return patient;
+
+        final updatedZones = patient.safeZones
+            .where((z) => z.id != safeZoneId)
+            .toList();
+        final isOut = _isOutsideAllSafeZones(
+          patient.currentLocation,
+          updatedZones,
+        );
+
         return patient.copyWith(
-          clearSafeZone: true,
-          isOutOfSafeZone: false,
+          safeZones: updatedZones,
+          isOutOfSafeZone: isOut,
         );
       }).toList();
 

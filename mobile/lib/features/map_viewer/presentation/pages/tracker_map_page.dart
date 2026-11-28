@@ -5,7 +5,10 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../core/di/injection.dart';
 import '../../../../core/utils/safe_zone_calculator.dart';
+import '../../../caregiver/domain/entities/followed_patient.dart';
+import '../../../caregiver/presentation/bloc/dashboard_bloc.dart';
 import '../../domain/entities/patient_entity.dart';
+import '../../domain/entities/safe_zone_entity.dart';
 import '../bloc/tracker_map_bloc.dart';
 import '../bloc/tracker_map_event.dart';
 import '../bloc/tracker_map_state.dart';
@@ -57,6 +60,7 @@ class _TrackerMapViewState extends State<_TrackerMapView>
   bool _isMapReady = false;
   bool _hasAutoCentered = false;
   bool _isCenteredOnFollower = false;
+  String? _focusedSafeZoneId;
 
   @override
   void initState() {
@@ -89,7 +93,7 @@ class _TrackerMapViewState extends State<_TrackerMapView>
       orElse: () => null,
     );
     if (target != null) {
-      final hasMissingBanner = state.patients.any((p) => p.safeZone == null);
+      final hasMissingBanner = state.patients.any((p) => !p.hasSafeZones);
       _focusOnPatient(target, hasMissingBanner: hasMissingBanner);
     }
   }
@@ -101,14 +105,15 @@ class _TrackerMapViewState extends State<_TrackerMapView>
     if (!_isMapReady) return;
     _isCenteredOnFollower = false;
 
-    final safeZone = patient.safeZone;
-    if (safeZone != null) {
+    if (patient.hasSafeZones) {
       const distance = Distance();
       final points = <LatLng>[
-        distance.offset(safeZone.center, safeZone.radiusInMeters, 0),
-        distance.offset(safeZone.center, safeZone.radiusInMeters, 90),
-        distance.offset(safeZone.center, safeZone.radiusInMeters, 180),
-        distance.offset(safeZone.center, safeZone.radiusInMeters, 270),
+        for (final zone in patient.safeZones) ...[
+          distance.offset(zone.center, zone.radiusInMeters, 0),
+          distance.offset(zone.center, zone.radiusInMeters, 90),
+          distance.offset(zone.center, zone.radiusInMeters, 180),
+          distance.offset(zone.center, zone.radiusInMeters, 270),
+        ],
         if (patient.currentLocation != null) patient.currentLocation!,
       ];
 
@@ -119,7 +124,7 @@ class _TrackerMapViewState extends State<_TrackerMapView>
           36,
           hasMissingBanner ? 175 : 120,
           36,
-          200,
+          236,
         ),
         maxZoom: 16.5,
         minZoom: 3.0,
@@ -138,13 +143,44 @@ class _TrackerMapViewState extends State<_TrackerMapView>
     }
   }
 
+  void _focusOnSafeZone(
+    SafeZoneEntity zone, {
+    required bool hasMissingBanner,
+  }) {
+    if (!_isMapReady) return;
+    _isCenteredOnFollower = false;
+
+    const distance = Distance();
+    final points = <LatLng>[
+      distance.offset(zone.center, zone.radiusInMeters, 0),
+      distance.offset(zone.center, zone.radiusInMeters, 90),
+      distance.offset(zone.center, zone.radiusInMeters, 180),
+      distance.offset(zone.center, zone.radiusInMeters, 270),
+    ];
+
+    final bounds = LatLngBounds.fromPoints(points);
+    final fitted = CameraFit.bounds(
+      bounds: bounds,
+      padding: EdgeInsets.fromLTRB(
+        36,
+        hasMissingBanner ? 175 : 120,
+        36,
+        236,
+      ),
+      maxZoom: 16.5,
+      minZoom: 3.0,
+    ).fit(_mapController.camera);
+
+    _animatedMapMove(fitted.center, fitted.zoom);
+  }
+
   void _tryAutoCenter(TrackerMapState state) {
     if (_hasAutoCentered || !_isMapReady) return;
     final selected = state.selectedPatient;
     if (selected != null &&
-        (selected.safeZone != null || selected.currentLocation != null)) {
+        (selected.hasSafeZones || selected.currentLocation != null)) {
       _hasAutoCentered = true;
-      final hasMissingBanner = state.patients.any((p) => p.safeZone == null);
+      final hasMissingBanner = state.patients.any((p) => !p.hasSafeZones);
       _focusOnPatient(selected, hasMissingBanner: hasMissingBanner);
       return;
     }
@@ -261,8 +297,26 @@ class _TrackerMapViewState extends State<_TrackerMapView>
     super.dispose();
   }
 
+  List<FollowedPatient> _watchFollowedPatients(BuildContext context) {
+    try {
+      final dashboardState = context.watch<DashboardBloc>().state;
+      if (dashboardState is DashboardLoaded) {
+        return dashboardState.patients;
+      }
+      if (dashboardState is DashboardLoading) {
+        return dashboardState.patients ?? const [];
+      }
+      if (dashboardState is DashboardError) {
+        return dashboardState.patients ?? const [];
+      }
+    } catch (_) {}
+    return const [];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final followedPatients = _watchFollowedPatients(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Takipçi Haritası'),
@@ -283,6 +337,11 @@ class _TrackerMapViewState extends State<_TrackerMapView>
         builder: (context, state) {
           final bloc = context.read<TrackerMapBloc>();
           final selectedPatient = state.selectedPatient;
+          final canManageSelectedPatient =
+              selectedPatient != null &&
+              followedPatients.any(
+                (p) => p.patientId == selectedPatient.id && p.isPrimaryAdmin,
+              );
 
           return Stack(
             children: [
@@ -315,6 +374,7 @@ class _TrackerMapViewState extends State<_TrackerMapView>
                     // Haritanın boş bir yerine tıklanırsa seçimi kaldır (marker küçülür)
                     if (!state.isEditingSafeZone &&
                         state.selectedPatientId != null) {
+                      setState(() => _focusedSafeZoneId = null);
                       bloc.add(const PatientSelected(null));
                     }
                   },
@@ -342,43 +402,66 @@ class _TrackerMapViewState extends State<_TrackerMapView>
 
                   // 2. KAYITLI SAFE-ZONE ÇEMBERLERİ KATMANI
                   CircleLayer(
-                    circles: state.patients
-                        .where((patient) {
-                          // 1. Safe-zone tanımlanmamışsa çizme
-                          if (patient.safeZone == null) return false;
+                    circles: state.patients.expand((patient) {
+                      if (!patient.hasSafeZones) return const <CircleMarker>[];
 
-                          // 2. DÜZENLEME MODU: Eğer bu hastanın safe-zone'unu şu an düzenliyorsak, haritadaki eski çemberi gizle.
-                          // (Çünkü ekranın ortasında mor renkli SafeZoneSetupOverlay çemberi var. Üst üste binmesinler.)
-                          if (state.isEditingSafeZone &&
-                              patient.id == state.selectedPatientId) {
-                            return false;
-                          }
+                      final shouldShowAllForPatient =
+                          patient.isOutOfSafeZone ||
+                          patient.id == state.selectedPatientId;
+                      if (!shouldShowAllForPatient) {
+                        return const <CircleMarker>[];
+                      }
 
-                          // 3. İHLAL DURUMU (KIRMIZI): Sınır dışındaysa her zaman göster.
-                          if (patient.isOutOfSafeZone) return true;
-
-                          // 4. GÜVENDE OLMA DURUMU (YEŞİL): İhlal yoksa, SADECE marker expanded (seçili) ise göster.
-                          if (patient.id == state.selectedPatientId) {
-                            return true;
-                          }
-
-                          // 5. Diğer tüm durumlar (Güvende ve marker'ı kapalı olanlar): Gizle.
-                          return false;
-                        })
-                        .map((patient) {
-                          final isOut = patient.isOutOfSafeZone;
-                          return CircleMarker(
-                            point: patient.safeZone!.center,
-                            radius: patient.safeZone!.radiusInMeters,
-                            useRadiusInMeter: true,
-                            color: isOut
-                                ? Colors.red.withValues(alpha: 0.22)
-                                : Colors.green.withValues(alpha: 0.18),
-                            borderColor: isOut ? Colors.red : Colors.green,
-                            borderStrokeWidth: 2.5,
+                      final isOut = patient.isOutOfSafeZone;
+                      final editingId = state.editingSafeZone?.id;
+                      final isSelectedPatient =
+                          patient.id == state.selectedPatientId;
+                      final hasFocusedZone =
+                          isSelectedPatient &&
+                          !state.isEditingSafeZone &&
+                          _focusedSafeZoneId != null &&
+                          patient.safeZones.any(
+                            (z) => z.id == _focusedSafeZoneId,
                           );
-                        })
-                        .toList(),
+
+                      return patient.safeZones
+                          .where((zone) {
+                            // Düzenlenmekte olan çemberi gizle (ekran ortasındaki mor çember ile çakışmasın)
+                            if (state.isEditingSafeZone &&
+                                isSelectedPatient &&
+                                editingId != null &&
+                                zone.id == editingId) {
+                              return false;
+                            }
+                            return true;
+                          })
+                          .map((zone) {
+                            final isFocusedZone =
+                                hasFocusedZone && zone.id == _focusedSafeZoneId;
+                            final double fillAlpha;
+                            final double strokeWidth;
+                            if (hasFocusedZone) {
+                              fillAlpha = isFocusedZone
+                                  ? (isOut ? 0.26 : 0.24)
+                                  : 0.08;
+                              strokeWidth = isFocusedZone ? 3.5 : 1.5;
+                            } else {
+                              fillAlpha = isOut ? 0.22 : 0.18;
+                              strokeWidth = 2.5;
+                            }
+
+                            return CircleMarker(
+                              point: zone.center,
+                              radius: zone.radiusInMeters,
+                              useRadiusInMeter: true,
+                              color: isOut
+                                  ? Colors.red.withValues(alpha: fillAlpha)
+                                  : Colors.green.withValues(alpha: fillAlpha),
+                              borderColor: isOut ? Colors.red : Colors.green,
+                              borderStrokeWidth: strokeWidth,
+                            );
+                          });
+                    }).toList(),
                   ),
 
                   // 3. MARKER KATMANI (Takipçi + Hastalar)
@@ -403,7 +486,7 @@ class _TrackerMapViewState extends State<_TrackerMapView>
                                 patient.id == state.selectedPatientId &&
                                 !state.isEditingSafeZone;
                             final hasMissingBanner = state.patients.any(
-                              (p) => p.safeZone == null,
+                              (p) => !p.hasSafeZones,
                             );
 
                             return Marker(
@@ -424,6 +507,11 @@ class _TrackerMapViewState extends State<_TrackerMapView>
                                     isSelected: isSelected,
                                     scale: markerScale,
                                     onTap: () {
+                                      if (_focusedSafeZoneId != null) {
+                                        setState(
+                                          () => _focusedSafeZoneId = null,
+                                        );
+                                      }
                                       bloc.add(PatientSelected(patient.id));
                                       _focusOnPatient(
                                         patient,
@@ -454,11 +542,14 @@ class _TrackerMapViewState extends State<_TrackerMapView>
                     patients: state.patients,
                     selectedPatientId: state.selectedPatientId,
                     onPatientTap: (patient) {
+                      if (_focusedSafeZoneId != null) {
+                        setState(() => _focusedSafeZoneId = null);
+                      }
                       bloc.add(PatientSelected(patient.id));
                       if (patient.currentLocation != null ||
-                          patient.safeZone != null) {
+                          patient.hasSafeZones) {
                         final hasMissingBanner = state.patients.any(
-                          (p) => p.safeZone == null,
+                          (p) => !p.hasSafeZones,
                         );
                         _focusOnPatient(
                           patient,
@@ -482,7 +573,7 @@ class _TrackerMapViewState extends State<_TrackerMapView>
                 Builder(
                   builder: (context) {
                     final missingSafeZonePatients = state.patients
-                        .where((p) => p.safeZone == null)
+                        .where((p) => !p.hasSafeZones)
                         .toList();
 
                     if (missingSafeZonePatients.isEmpty) {
@@ -551,16 +642,63 @@ class _TrackerMapViewState extends State<_TrackerMapView>
                   bottom: 16,
                   child: PatientQuickActionsBar(
                     selectedPatient: selectedPatient,
-                    onClose: () => bloc.add(const PatientSelected(null)),
-                    onEditSafeZone: () {
+                    focusedSafeZoneId:
+                        selectedPatient.safeZones.any(
+                          (z) => z.id == _focusedSafeZoneId,
+                        )
+                        ? _focusedSafeZoneId
+                        : null,
+                    canManageSafeZones: canManageSelectedPatient,
+                    onClose: () {
+                      setState(() => _focusedSafeZoneId = null);
+                      bloc.add(const PatientSelected(null));
+                    },
+                    onAddSafeZone: () {
+                      if (!canManageSelectedPatient) return;
+                      setState(() => _focusedSafeZoneId = null);
                       final target =
                           selectedPatient.currentLocation ??
-                          selectedPatient.safeZone?.center ??
+                          (selectedPatient.hasSafeZones
+                              ? selectedPatient.safeZones.last.center
+                              : null) ??
                           state.followerLocation;
                       if (target != null) {
                         _animatedMapMove(target, _cameraZoom);
                       }
                       bloc.add(const SafeZoneEditModeToggled(true));
+                    },
+                    onFocusSafeZone: (zone) {
+                      final hasMissingBanner = state.patients.any(
+                        (p) => !p.hasSafeZones,
+                      );
+                      if (_focusedSafeZoneId == zone.id) {
+                        setState(() => _focusedSafeZoneId = null);
+                        _focusOnPatient(
+                          selectedPatient,
+                          hasMissingBanner: hasMissingBanner,
+                        );
+                      } else {
+                        setState(() => _focusedSafeZoneId = zone.id);
+                        _focusOnSafeZone(
+                          zone,
+                          hasMissingBanner: hasMissingBanner,
+                        );
+                      }
+                    },
+                    onEditSafeZone: (zone) {
+                      if (!canManageSelectedPatient) return;
+                      setState(() => _focusedSafeZoneId = null);
+                      final targetZoom =
+                          SafeZoneCalculator.calculateZoomForRadius(
+                            latitude: zone.center.latitude,
+                            radiusInMeters: zone.radiusInMeters,
+                            circleRadiusInPixels:
+                                SafeZoneSetupOverlay.circleRadius,
+                          );
+                      _animatedMapMove(zone.center, targetZoom);
+                      bloc.add(
+                        SafeZoneEditModeToggled(true, editingZone: zone),
+                      );
                     },
                   ),
                 ),
@@ -570,7 +708,9 @@ class _TrackerMapViewState extends State<_TrackerMapView>
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 250),
                   right: 16,
-                  bottom: selectedPatient != null ? 172 : 24,
+                  bottom: selectedPatient == null
+                      ? 24
+                      : (selectedPatient.hasSafeZones ? 216 : 172),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -621,19 +761,27 @@ class _TrackerMapViewState extends State<_TrackerMapView>
                 ),
 
               // 7. SAFE-ZONE AYARLAMA OVERLAY KATMANI
-              if (state.isEditingSafeZone && selectedPatient != null)
+              if (state.isEditingSafeZone &&
+                  selectedPatient != null &&
+                  canManageSelectedPatient)
                 ValueListenableBuilder<double>(
                   valueListenable: _safeZoneRadiusNotifier,
                   builder: (context, radius, child) {
                     return SafeZoneSetupOverlay(
                       patientName: selectedPatient.name,
+                      initialName:
+                          state.editingSafeZone?.name ??
+                          (selectedPatient.hasSafeZones ? '' : 'Ev'),
                       currentRadiusInMeters: radius,
-                      hasExistingSafeZone: selectedPatient.safeZone != null,
+                      hasExistingSafeZone: state.editingSafeZone != null,
                       onCancel: () =>
                           bloc.add(const SafeZoneEditModeToggled(false)),
-                      onRemove: () => bloc.add(const SafeZoneRemoved()),
-                      onSave: () => bloc.add(
+                      onRemove: () => bloc.add(
+                        SafeZoneRemoved(safeZoneId: state.editingSafeZone?.id),
+                      ),
+                      onSave: (name) => bloc.add(
                         SafeZoneSaved(
+                          name: name,
                           center: _mapController.camera.center,
                           radiusInMeters: radius,
                         ),

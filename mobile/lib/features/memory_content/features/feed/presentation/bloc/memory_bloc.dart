@@ -12,6 +12,9 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
   final DeleteMemoryUseCase _deleteMemoryUseCase;
   final CreateMemoryUseCase _createMemoryUseCase;
 
+  DateTime? _lastFetchedAt;
+  bool _isRefreshing = false;
+
   MemoryBloc(
     this._getMemoriesUseCase,
     this._deleteMemoryUseCase,
@@ -19,6 +22,7 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
   ) : super(MemoryInitial()) {
     on<LoadMemories>(_onLoadMemories);
     on<RefreshMemories>(_onRefreshMemories);
+    on<RefreshMemoriesIfStale>(_onRefreshMemoriesIfStale);
     on<DeleteMemory>(_onDeleteMemory);
     on<CreateMemory>(_onCreateMemory);
     on<AddMemoryContentEvent>(_onAddMemoryDirectly);
@@ -31,6 +35,7 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
     emit(MemoryLoading());
     try {
       final memories = await _getMemoriesUseCase(event.patientId);
+      _lastFetchedAt = DateTime.now();
       emit(
         MemoryLoaded(
           memories: memories,
@@ -48,6 +53,8 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
     RefreshMemories event,
     Emitter<MemoryState> emit,
   ) async {
+    if (_isRefreshing) return;
+
     String? targetPatientId = event.patientId;
     String? currentUserId = event.currentUserId;
     bool? isPrimaryAdmin = event.isPrimaryAdmin;
@@ -63,9 +70,15 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
       return;
     }
 
-    emit(MemoryLoading());
+    final bool isSilent = event.silent && state is MemoryLoaded;
+    if (!isSilent) {
+      emit(MemoryLoading());
+    }
+
+    _isRefreshing = true;
     try {
       final memories = await _getMemoriesUseCase(targetPatientId);
+      _lastFetchedAt = DateTime.now();
       emit(
         MemoryLoaded(
           memories: memories,
@@ -75,8 +88,46 @@ class MemoryBloc extends Bloc<MemoryEvent, MemoryState> {
         ),
       );
     } catch (e) {
-      emit(MemoryError(e.toString()));
+      if (!isSilent) {
+        emit(MemoryError(e.toString()));
+      }
+    } finally {
+      _isRefreshing = false;
     }
+  }
+
+  void _onRefreshMemoriesIfStale(
+    RefreshMemoriesIfStale event,
+    Emitter<MemoryState> emit,
+  ) {
+    if (state is MemoryLoading || _isRefreshing) return;
+
+    final currentState = state;
+    if (currentState is! MemoryLoaded ||
+        currentState.patientId != event.patientId) {
+      add(
+        LoadMemories(
+          patientId: event.patientId,
+          currentUserId: event.currentUserId,
+          isPrimaryAdmin: event.isPrimaryAdmin,
+        ),
+      );
+      return;
+    }
+
+    if (_lastFetchedAt != null &&
+        DateTime.now().difference(_lastFetchedAt!) < event.staleDuration) {
+      return;
+    }
+
+    add(
+      RefreshMemories(
+        patientId: event.patientId,
+        currentUserId: event.currentUserId,
+        isPrimaryAdmin: event.isPrimaryAdmin,
+        silent: true,
+      ),
+    );
   }
 
   void _onAddMemoryDirectly(

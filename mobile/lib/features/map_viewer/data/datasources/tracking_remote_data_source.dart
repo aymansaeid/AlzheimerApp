@@ -9,6 +9,8 @@ import '../models/tracked_patient_model.dart';
 abstract class TrackingRemoteDataSource {
   Future<List<TrackedPatientModel>> getLatestPatients();
 
+  Future<List<SafeZoneModel>> getPatientSafeZones(String patientId);
+
   Future<SafeZoneModel> createSafeZone({
     required String patientId,
     required SafeZoneModel safeZone,
@@ -20,9 +22,6 @@ abstract class TrackingRemoteDataSource {
   });
 
   Future<void> deleteSafeZone(String safeZoneId);
-
-  // TODO(Backend SafeZone GET): Backend'de SafeZone GET endpoint'i hazır olduğunda yorumdan çıkarılacak.
-  // Future<List<SafeZoneModel>> getPatientSafeZones(String patientId);
 }
 
 @LazySingleton(as: TrackingRemoteDataSource)
@@ -41,13 +40,39 @@ class TrackingRemoteDataSourceImpl implements TrackingRemoteDataSource {
             .map(TrackedPatientModel.fromLatestJson)
             .toList();
       }
-      throw ServerException(message: 'Sunucudan geçersiz hasta konum yanıtı alındı.');
+      throw ServerException(
+        message: 'Sunucudan geçersiz hasta konum yanıtı alındı.',
+      );
     } on DioException catch (e) {
       final parsedMsg = _parseError(e);
-      debugPrint('TrackingRemoteDataSource [getLatestPatients] DioException: $parsedMsg');
+      debugPrint(
+        'TrackingRemoteDataSource [getLatestPatients] DioException: $parsedMsg',
+      );
       throw ServerException(message: parsedMsg);
     } on ServerException {
       rethrow;
+    } catch (e) {
+      throw ServerException(message: e.toString());
+    }
+  }
+
+  @override
+  Future<List<SafeZoneModel>> getPatientSafeZones(String patientId) async {
+    try {
+      final response = await _dio.get('/api/SafeZone/patient/$patientId');
+      if (response.data is List) {
+        return (response.data as List)
+            .whereType<Map<String, dynamic>>()
+            .map(SafeZoneModel.fromJson)
+            .toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      final parsedMsg = _parseError(e);
+      debugPrint(
+        'TrackingRemoteDataSource [getPatientSafeZones] DioException: $parsedMsg',
+      );
+      throw ServerException(message: parsedMsg);
     } catch (e) {
       throw ServerException(message: e.toString());
     }
@@ -69,7 +94,9 @@ class TrackingRemoteDataSourceImpl implements TrackingRemoteDataSource {
       throw ServerException(message: 'Güvenli bölge oluşturma yanıtı geçersiz.');
     } on DioException catch (e) {
       final parsedMsg = _parseError(e);
-      debugPrint('TrackingRemoteDataSource [createSafeZone] DioException: $parsedMsg');
+      debugPrint(
+        'TrackingRemoteDataSource [createSafeZone] DioException: $parsedMsg',
+      );
       throw ServerException(message: parsedMsg);
     } on ServerException {
       rethrow;
@@ -90,7 +117,9 @@ class TrackingRemoteDataSourceImpl implements TrackingRemoteDataSource {
       );
     } on DioException catch (e) {
       final parsedMsg = _parseError(e);
-      debugPrint('TrackingRemoteDataSource [updateSafeZone] DioException: $parsedMsg');
+      debugPrint(
+        'TrackingRemoteDataSource [updateSafeZone] DioException: $parsedMsg',
+      );
       throw ServerException(message: parsedMsg);
     } catch (e) {
       throw ServerException(message: e.toString());
@@ -103,31 +132,14 @@ class TrackingRemoteDataSourceImpl implements TrackingRemoteDataSource {
       await _dio.delete('/api/SafeZone/$safeZoneId');
     } on DioException catch (e) {
       final parsedMsg = _parseError(e);
-      debugPrint('TrackingRemoteDataSource [deleteSafeZone] DioException: $parsedMsg');
+      debugPrint(
+        'TrackingRemoteDataSource [deleteSafeZone] DioException: $parsedMsg',
+      );
       throw ServerException(message: parsedMsg);
     } catch (e) {
       throw ServerException(message: e.toString());
     }
   }
-
-  // TODO(Backend SafeZone GET): Backend'de SafeZone GET endpoint'i hazır olduğunda yorumdan çıkarılacak.
-  // @override
-  // Future<List<SafeZoneModel>> getPatientSafeZones(String patientId) async {
-  //   try {
-  //     final response = await _dio.get('/api/SafeZone/patient/$patientId');
-  //     if (response.data is List) {
-  //       return (response.data as List)
-  //           .whereType<Map<String, dynamic>>()
-  //           .map(SafeZoneModel.fromJson)
-  //           .toList();
-  //     }
-  //     return [];
-  //   } on DioException catch (e) {
-  //     throw ServerException(message: _parseError(e));
-  //   } catch (e) {
-  //     throw ServerException(message: e.toString());
-  //   }
-  // }
 
   String _parseError(DioException e) {
     if (e.response?.statusCode == 403) {

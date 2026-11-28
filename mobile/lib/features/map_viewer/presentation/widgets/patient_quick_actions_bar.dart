@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/utils/safe_zone_calculator.dart';
 import '../../domain/entities/patient_entity.dart';
+import '../../domain/entities/safe_zone_entity.dart';
+import 'map_app_picker_sheet.dart';
 
 class PatientQuickActionsBar extends StatelessWidget {
   final PatientEntity selectedPatient;
+  final String? focusedSafeZoneId;
+  final bool canManageSafeZones;
   final VoidCallback onClose;
-  final VoidCallback onEditSafeZone;
+  final VoidCallback onAddSafeZone;
+  final ValueChanged<SafeZoneEntity> onFocusSafeZone;
+  final ValueChanged<SafeZoneEntity> onEditSafeZone;
 
   const PatientQuickActionsBar({
     super.key,
     required this.selectedPatient,
+    this.focusedSafeZoneId,
+    this.canManageSafeZones = false,
     required this.onClose,
+    required this.onAddSafeZone,
+    required this.onFocusSafeZone,
     required this.onEditSafeZone,
   });
 
@@ -59,7 +70,8 @@ class PatientQuickActionsBar extends StatelessWidget {
 
   Future<void> _callPatient(BuildContext context) async {
     final phone = selectedPatient.phoneNumber?.trim();
-    if (phone == null || phone.isEmpty) {
+    final sanitized = phone?.replaceAll(RegExp(r'[^0-9+]'), '') ?? '';
+    if (phone == null || phone.isEmpty || sanitized.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -69,9 +81,27 @@ class PatientQuickActionsBar extends StatelessWidget {
       }
       return;
     }
-    final uri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+
+    final uri = Uri(scheme: 'tel', path: sanitized);
+    var launched = false;
+    try {
+      if (await canLaunchUrl(uri)) {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      launched = false;
+    }
+
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Bu cihazda arama başlatılamadı: $phone'),
+          action: SnackBarAction(
+            label: 'Kopyala',
+            onPressed: () => Clipboard.setData(ClipboardData(text: phone)),
+          ),
+        ),
+      );
     }
   }
 
@@ -85,37 +115,41 @@ class PatientQuickActionsBar extends StatelessWidget {
       }
       return;
     }
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}',
+    await MapAppPicker.openDirections(
+      context,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      destinationName: selectedPatient.name,
     );
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final zone = selectedPatient.safeZone;
+    final zones = selectedPatient.safeZones;
+    final SafeZoneEntity? focusedZone = focusedSafeZoneId == null
+        ? null
+        : zones.cast<SafeZoneEntity?>().firstWhere(
+            (z) => z?.id == focusedSafeZoneId,
+            orElse: () => null,
+          );
     final isOut = selectedPatient.isOutOfSafeZone;
 
     final Color themeColor;
     final Color statusColor;
     final String statusText;
 
-    if (zone == null) {
+    if (zones.isEmpty) {
       themeColor = Colors.orange;
       statusColor = Colors.orange.shade800;
       statusText = 'Güvenli Bölge Tanımsız';
     } else if (isOut) {
       themeColor = Colors.red;
       statusColor = Colors.red;
-      statusText =
-          '⚠️ Bölge Dışında! • ${SafeZoneCalculator.formatRadius(zone.radiusInMeters)}';
+      statusText = '⚠️ Bölge Dışında! • ${zones.length} bölge';
     } else {
       themeColor = Colors.blueAccent;
       statusColor = Colors.green.shade700;
-      statusText =
-          'Güvenli Bölgede • ${SafeZoneCalculator.formatRadius(zone.radiusInMeters)}';
+      statusText = 'Güvenli Bölgede • ${zones.length} bölge';
     }
 
     return Container(
@@ -177,6 +211,103 @@ class PatientQuickActionsBar extends StatelessWidget {
               ),
             ],
           ),
+          if (zones.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 36,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: canManageSafeZones ? zones.length + 1 : zones.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  if (index == zones.length) {
+                    return InkWell(
+                      onTap: onAddSafeZone,
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: Colors.deepPurple.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add,
+                              size: 16,
+                              color: Colors.deepPurple,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Ekle',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.deepPurple,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final zone = zones[index];
+                  final isFocused = zone.id == focusedSafeZoneId;
+                  final zoneBorderColor = isOut
+                      ? Colors.red.withValues(alpha: 0.35)
+                      : Colors.deepPurple.withValues(alpha: 0.28);
+                  final zoneIconColor = isOut ? Colors.red : Colors.deepPurple;
+
+                  return InkWell(
+                    onTap: () => onFocusSafeZone(zone),
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isFocused
+                            ? zoneIconColor
+                            : zoneIconColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: isFocused ? zoneIconColor : zoneBorderColor,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.radar,
+                            size: 14,
+                            color: isFocused ? Colors.white : zoneIconColor,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${zone.name} • ${SafeZoneCalculator.formatRadius(zone.radiusInMeters)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isFocused ? Colors.white : zoneIconColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
           const Divider(height: 18),
           Row(
             children: [
@@ -221,25 +352,39 @@ class PatientQuickActionsBar extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 10,
+              if (canManageSafeZones) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
+                      ),
+                    ),
+                    onPressed: focusedZone != null
+                        ? () => onEditSafeZone(focusedZone)
+                        : onAddSafeZone,
+                    icon: Icon(
+                      focusedZone != null
+                          ? Icons.edit_outlined
+                          : Icons.add_location_alt_outlined,
+                      size: 18,
+                    ),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        focusedZone != null
+                            ? 'Düzenle'
+                            : (zones.isEmpty ? 'Safe-Zone Ekle' : 'Yeni Bölge'),
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ),
-                  onPressed: onEditSafeZone,
-                  icon: const Icon(Icons.radar, size: 18),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('Safe-Zone', style: TextStyle(fontSize: 12)),
-                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ],

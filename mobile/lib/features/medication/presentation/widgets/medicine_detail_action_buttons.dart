@@ -9,6 +9,7 @@ import '../../domain/entities/medicine_log.dart';
 class MedicineDetailActionButtons extends StatelessWidget {
   final MedicineLog medication;
   final bool isPatient;
+  final bool isPrimaryAdmin;
   final bool isFuture;
   final DateTime selectedDate;
 
@@ -16,6 +17,7 @@ class MedicineDetailActionButtons extends StatelessWidget {
     super.key,
     required this.medication,
     required this.isPatient,
+    this.isPrimaryAdmin = false,
     required this.isFuture,
     required this.selectedDate,
   });
@@ -24,9 +26,10 @@ class MedicineDetailActionButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isPatient) {
       return _buildPatientButton(context);
-    } else {
+    } else if (isPrimaryAdmin) {
       return _buildCaregiverButtons(context);
     }
+    return const SizedBox.shrink();
   }
 
   Widget _buildPatientButton(BuildContext context) {

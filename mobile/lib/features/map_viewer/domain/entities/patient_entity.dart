@@ -13,7 +13,7 @@ class PatientEntity extends Equatable {
   final int? batteryLevel;
   final bool isCharging;
   final bool isOutOfSafeZone;
-  final SafeZoneEntity? safeZone;
+  final List<SafeZoneEntity> safeZones;
 
   const PatientEntity({
     required this.id,
@@ -25,8 +25,10 @@ class PatientEntity extends Equatable {
     this.batteryLevel,
     this.isCharging = false,
     this.isOutOfSafeZone = false,
-    this.safeZone,
+    this.safeZones = const [],
   });
+
+  bool get hasSafeZones => safeZones.isNotEmpty;
 
   PatientEntity copyWith({
     String? id,
@@ -39,8 +41,7 @@ class PatientEntity extends Equatable {
     int? batteryLevel,
     bool? isCharging,
     bool? isOutOfSafeZone,
-    SafeZoneEntity? safeZone,
-    bool clearSafeZone = false,
+    List<SafeZoneEntity>? safeZones,
   }) {
     return PatientEntity(
       id: id ?? this.id,
@@ -54,7 +55,7 @@ class PatientEntity extends Equatable {
       batteryLevel: batteryLevel ?? this.batteryLevel,
       isCharging: isCharging ?? this.isCharging,
       isOutOfSafeZone: isOutOfSafeZone ?? this.isOutOfSafeZone,
-      safeZone: clearSafeZone ? null : (safeZone ?? this.safeZone),
+      safeZones: safeZones ?? this.safeZones,
     );
   }
 
@@ -69,6 +70,6 @@ class PatientEntity extends Equatable {
         batteryLevel,
         isCharging,
         isOutOfSafeZone,
-        safeZone,
+        safeZones,
       ];
 }

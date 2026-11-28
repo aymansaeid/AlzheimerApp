@@ -9,11 +9,23 @@ abstract class DashboardEvent extends Equatable {
 
 class LoadDashboard extends DashboardEvent {
   final String? patientId;
+  final bool silent;
 
-  const LoadDashboard(this.patientId);
+  const LoadDashboard(this.patientId, {this.silent = false});
 
   @override
-  List<Object?> get props => [patientId];
+  List<Object?> get props => [patientId, silent];
+}
+
+class RefreshDashboardIfStale extends DashboardEvent {
+  final Duration staleDuration;
+
+  const RefreshDashboardIfStale({
+    this.staleDuration = const Duration(minutes: 1),
+  });
+
+  @override
+  List<Object?> get props => [staleDuration];
 }
 
 class SelectPatient extends DashboardEvent {

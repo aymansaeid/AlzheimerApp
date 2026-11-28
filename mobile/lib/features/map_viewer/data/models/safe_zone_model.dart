@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:latlong2/latlong.dart';
 
 import '../../domain/entities/safe_zone_entity.dart';
@@ -54,27 +52,5 @@ class SafeZoneModel extends SafeZoneEntity {
       'radiusMeters': radiusInMeters.round(),
       'isActive': isActive,
     };
-  }
-
-  String toStorageJsonString() {
-    return jsonEncode({
-      'id': id,
-      'name': name,
-      'centerLat': center.latitude,
-      'centerLng': center.longitude,
-      'radiusMeters': radiusInMeters,
-      'isActive': isActive,
-    });
-  }
-
-  static SafeZoneModel? fromStorageJsonString(String? raw) {
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is Map<String, dynamic>) {
-        return SafeZoneModel.fromJson(decoded);
-      }
-    } catch (_) {}
-    return null;
   }
 }

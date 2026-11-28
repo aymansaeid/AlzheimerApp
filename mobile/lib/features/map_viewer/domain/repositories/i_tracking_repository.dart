@@ -9,17 +9,20 @@ abstract class ITrackingRepository {
   /// Takip edilen tüm hastaların anlık durumunu stream olarak yayar.
   Stream<List<PatientEntity>> watchPatients();
 
-  /// İlk açılışta REST ile son konumları çeker ve SignalR canlı hub'ına bağlanır.
+  /// İlk açılışta REST ile son konumları ve aktif Safe-Zone listelerini çeker, SignalR hub'ına bağlanır.
   Future<Either<Failure, List<PatientEntity>>> loadInitialPatientsAndConnectHub();
 
-  /// Belirli bir hastaya Safe-Zone tanımlar (POST) veya mevcut bölgeyi günceller (PUT).
+  /// Belirli bir hastaya yeni Safe-Zone tanımlar (POST) veya mevcut bölgeyi günceller (PUT).
   Future<Either<Failure, void>> setSafeZone({
     required String patientId,
     required SafeZoneEntity safeZone,
   });
 
-  /// Belirli bir hastanın Safe-Zone tanımlamasını siler (DELETE).
-  Future<Either<Failure, void>> removeSafeZone(String patientId);
+  /// Belirli bir hastanın seçilen Safe-Zone kaydını siler (DELETE).
+  Future<Either<Failure, void>> removeSafeZone({
+    required String patientId,
+    required String safeZoneId,
+  });
 
   /// Takipçinin kendi cihaz konumunu stream olarak verir.
   Stream<LatLng> getFollowerLocationStream();

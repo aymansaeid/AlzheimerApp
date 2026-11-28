@@ -1,6 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
 import '../../domain/entities/patient_entity.dart';
+import 'safe_zone_model.dart';
 
 class TrackedPatientModel extends PatientEntity {
   const TrackedPatientModel({
@@ -13,15 +14,20 @@ class TrackedPatientModel extends PatientEntity {
     super.batteryLevel,
     super.isCharging = false,
     super.isOutOfSafeZone = false,
-    super.safeZone,
+    super.safeZones = const [],
   });
 
   factory TrackedPatientModel.fromLatestJson(Map<String, dynamic> json) {
     final patientId = (json['patientId'] ?? json['id'] ?? '').toString();
     final fullName = (json['fullName'] ?? json['name'] ?? '').toString();
+    final rawPhoto =
+        (json['profilePhotoUrl'] ?? json['avatarUrl'])?.toString().trim();
     final profilePhotoUrl =
-        (json['profilePhotoUrl'] ?? json['avatarUrl'])?.toString();
-    final phone = (json['phone'] ?? json['phoneNumber'])?.toString();
+        (rawPhoto != null && rawPhoto.isNotEmpty) ? rawPhoto : null;
+
+    final rawPhone =
+        (json['phone'] ?? json['phoneNumber'])?.toString().trim();
+    final phone = (rawPhone != null && rawPhone.isNotEmpty) ? rawPhone : null;
 
     final latestRaw = json['latestLocation'];
     LatLng? location;
@@ -53,6 +59,15 @@ class TrackedPatientModel extends PatientEntity {
       isCharging = latestRaw['isCharging'] as bool? ?? false;
     }
 
+    final safeZonesRaw = json['safeZones'];
+    final safeZones = safeZonesRaw is List
+        ? safeZonesRaw
+            .whereType<Map<String, dynamic>>()
+            .map(SafeZoneModel.fromJson)
+            .where((z) => z.isActive)
+            .toList()
+        : const <SafeZoneModel>[];
+
     return TrackedPatientModel(
       id: patientId,
       name: fullName,
@@ -63,6 +78,7 @@ class TrackedPatientModel extends PatientEntity {
       batteryLevel: batteryLevel,
       isCharging: isCharging,
       isOutOfSafeZone: isOut,
+      safeZones: safeZones,
     );
   }
 }

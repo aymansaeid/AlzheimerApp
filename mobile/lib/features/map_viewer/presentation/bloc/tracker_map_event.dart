@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../domain/entities/safe_zone_entity.dart';
+
 abstract class TrackerMapEvent extends Equatable {
   const TrackerMapEvent();
 
@@ -30,7 +32,7 @@ class TrackerMapRefreshRequested extends TrackerMapEvent {
 
 /// Üstteki yatay listeden veya haritadaki marker'dan bir hasta seçildiğinde
 class PatientSelected extends TrackerMapEvent {
-  final String? patientId; // null gönderilirse seçimi kaldırır (marker küçülür)
+  final String? patientId; // null gönderilirse seçimi kaldırır
 
   const PatientSelected(this.patientId);
 
@@ -38,33 +40,42 @@ class PatientSelected extends TrackerMapEvent {
   List<Object?> get props => [patientId];
 }
 
-/// Seçili hasta için "Safe-Zone Ayarla" modunu açar veya kapatır
+/// Seçili hasta için "Safe-Zone Ekle / Düzenle" modunu açar veya kapatır.
+/// [editingZone] null ise yeni bölge ekleme, dolu ise o bölgeyi düzenleme modu açılır.
 class SafeZoneEditModeToggled extends TrackerMapEvent {
   final bool isEditing;
+  final SafeZoneEntity? editingZone;
 
-  const SafeZoneEditModeToggled(this.isEditing);
+  const SafeZoneEditModeToggled(this.isEditing, {this.editingZone});
 
   @override
-  List<Object?> get props => [isEditing];
+  List<Object?> get props => [isEditing, editingZone];
 }
 
-/// Ekrandaki sabit çemberin o anki harita merkezine ve hesaplanan yarıçapa göre kaydedilmesi
+/// Ekrandaki sabit çemberin o anki harita merkezine, yarıçapına ve adına göre kaydedilmesi
 class SafeZoneSaved extends TrackerMapEvent {
+  final String name;
   final LatLng center;
   final double radiusInMeters;
 
   const SafeZoneSaved({
+    required this.name,
     required this.center,
     required this.radiusInMeters,
   });
 
   @override
-  List<Object?> get props => [center, radiusInMeters];
+  List<Object?> get props => [name, center, radiusInMeters];
 }
 
-/// Seçili hastanın mevcut Safe-Zone tanımlamasını siler
+/// Seçili hastanın belirtilen Safe-Zone kaydını siler
 class SafeZoneRemoved extends TrackerMapEvent {
-  const SafeZoneRemoved();
+  final String? safeZoneId;
+
+  const SafeZoneRemoved({this.safeZoneId});
+
+  @override
+  List<Object?> get props => [safeZoneId];
 }
 
 /// Gösterilen anlık işlem hatasını temizler

@@ -14,20 +14,69 @@ import 'package:mobile/features/medication/presentation/bloc/medicine_bloc.dart'
 import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
 import 'package:mobile/features/memory_content/features/feed/presentation/bloc/memory_bloc.dart';
 import 'package:mobile/features/memory_content/features/feed/presentation/bloc/memory_event.dart';
-import 'package:mobile/features/memory_content/features/feed/presentation/bloc/memory_state.dart';
 import '../../../../core/widgets/app_bottom_nav_bar.dart';
 
-class CaregiverLayout extends StatelessWidget {
+class CaregiverLayout extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
 
   const CaregiverLayout({super.key, required this.navigationShell});
 
   @override
+  State<CaregiverLayout> createState() => _CaregiverLayoutState();
+}
+
+class _CaregiverLayoutState extends State<CaregiverLayout>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+
+    final currentIndex = widget.navigationShell.currentIndex;
+    if (currentIndex == 0) {
+      context.read<DashboardBloc>().add(const RefreshDashboardIfStale());
+    } else if (currentIndex == 3) {
+      _refreshMemoriesIfStale();
+    }
+  }
+
+  void _refreshMemoriesIfStale() {
+    final dashboardState = context.read<DashboardBloc>().state;
+    if (dashboardState is! DashboardLoaded) return;
+
+    final patientId = dashboardState.summary.patientId;
+    if (patientId.isEmpty) return;
+
+    final authState = context.read<AuthBloc>().state;
+    final currentUserId =
+        authState is AuthAuthenticated ? authState.user.id : '';
+
+    context.read<MemoryBloc>().add(
+      RefreshMemoriesIfStale(
+        patientId: patientId,
+        currentUserId: currentUserId,
+        isPrimaryAdmin: dashboardState.isCurrentPatientAdmin,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: widget.navigationShell,
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: navigationShell.currentIndex,
+        currentIndex: widget.navigationShell.currentIndex,
         items: const [
           AppNavItem(icon: Icons.dashboard_rounded, label: 'Özet'),
           AppNavItem(icon: Icons.medication_rounded, label: 'İlaçlar'),
@@ -37,12 +86,14 @@ class CaregiverLayout extends StatelessWidget {
           AppNavItem(icon: Icons.person, label: 'Profil'),
         ],
         onTap: (index) {
-          navigationShell.goBranch(
+          widget.navigationShell.goBranch(
             index,
-            initialLocation: index == navigationShell.currentIndex,
+            initialLocation: index == widget.navigationShell.currentIndex,
           );
 
-          if (index == 1) {
+          if (index == 0) {
+            context.read<DashboardBloc>().add(const RefreshDashboardIfStale());
+          } else if (index == 1) {
             String? patientId;
             final dashboardState = context.read<DashboardBloc>().state;
             if (dashboardState is DashboardLoaded) {
@@ -59,26 +110,7 @@ class CaregiverLayout extends StatelessWidget {
               mapBloc.add(const TrackerMapRefreshRequested());
             }
           } else if (index == 3) {
-            final dashboardState = context.read<DashboardBloc>().state;
-            if (dashboardState is DashboardLoaded) {
-              final patientId = dashboardState.summary.patientId;
-              final memoryState = context.read<MemoryBloc>().state;
-              final needsLoad = memoryState is! MemoryLoading &&
-                  (memoryState is! MemoryLoaded ||
-                      memoryState.patientId != patientId);
-              if (needsLoad && patientId.isNotEmpty) {
-                final authState = context.read<AuthBloc>().state;
-                final currentUserId =
-                    authState is AuthAuthenticated ? authState.user.id : '';
-                context.read<MemoryBloc>().add(
-                  LoadMemories(
-                    patientId: patientId,
-                    currentUserId: currentUserId,
-                    isPrimaryAdmin: dashboardState.isCurrentPatientAdmin,
-                  ),
-                );
-              }
-            }
+            _refreshMemoriesIfStale();
           } else if (index == 4) {
             final authState = context.read<AuthBloc>().state;
             final currentUserId =

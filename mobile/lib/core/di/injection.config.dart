@@ -325,14 +325,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i481.NotificationLocalDataSource>(),
       ),
     );
-    gh.lazySingleton<_i128.ITrackingRepository>(
-      () => _i298.TrackingRepositoryImpl(
-        gh<_i669.TrackingRemoteDataSource>(),
-        gh<_i168.LocationHubDataSource>(),
-        gh<_i558.FlutterSecureStorage>(),
-        gh<_i960.LocationPermissionService>(),
-      ),
-    );
     gh.factory<_i745.AuthInterceptor>(
       () => _i745.AuthInterceptor(gh<_i558.FlutterSecureStorage>()),
     );
@@ -433,6 +425,13 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i105.NotificationService(
         gh<_i1068.NotificationRepository>(),
         gh<_i558.FlutterSecureStorage>(),
+      ),
+    );
+    gh.lazySingleton<_i128.ITrackingRepository>(
+      () => _i298.TrackingRepositoryImpl(
+        gh<_i669.TrackingRemoteDataSource>(),
+        gh<_i168.LocationHubDataSource>(),
+        gh<_i960.LocationPermissionService>(),
       ),
     );
     gh.lazySingleton<_i188.LoginUseCase>(

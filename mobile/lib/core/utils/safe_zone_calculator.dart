@@ -24,6 +24,29 @@ class SafeZoneCalculator {
     return metersPerPixel * circleRadiusInPixels;
   }
 
+  /// Verilen metre yarıçapının ekranda sabit piksel çemberine oturacağı
+  /// harita zoom seviyesini hesaplar.
+  static double calculateZoomForRadius({
+    required double latitude,
+    required double radiusInMeters,
+    required double circleRadiusInPixels,
+  }) {
+    if (radiusInMeters <= 0 || circleRadiusInPixels <= 0) {
+      return 15.0;
+    }
+
+    const double earthCircumferencePerTile = 156543.03392;
+    final double latRadians = latitude * (math.pi / 180.0);
+    final double cosLat = math.cos(latRadians).abs().clamp(0.01, 1.0);
+    final double ratio =
+        (earthCircumferencePerTile * cosLat * circleRadiusInPixels) /
+        radiusInMeters;
+    if (ratio <= 0) return 15.0;
+
+    final double zoom = math.log(ratio) / math.ln2;
+    return zoom.clamp(3.0, 18.0);
+  }
+
   /// Metre değerini kullanıcıya okunaklı göstermek için formatlar (Örn: "350 m" veya "1.4 km")
   static String formatRadius(double radiusInMeters) {
     if (radiusInMeters >= 1000) {

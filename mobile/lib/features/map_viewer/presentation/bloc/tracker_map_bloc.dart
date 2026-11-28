@@ -136,15 +136,16 @@ class TrackerMapBloc extends Bloc<TrackerMapEvent, TrackerMapState> {
         state.copyWith(
           clearSelectedPatient: true,
           isEditingSafeZone: false,
+          clearEditingSafeZone: true,
         ),
       );
     } else {
-      // Başka bir hastaya geçilirse safe-zone düzenleme modunu kapat
       final isSamePatient = state.selectedPatientId == event.patientId;
       emit(
         state.copyWith(
           selectedPatientId: event.patientId,
           isEditingSafeZone: isSamePatient ? state.isEditingSafeZone : false,
+          clearEditingSafeZone: !isSamePatient,
         ),
       );
     }
@@ -155,7 +156,22 @@ class TrackerMapBloc extends Bloc<TrackerMapEvent, TrackerMapState> {
     Emitter<TrackerMapState> emit,
   ) {
     if (state.selectedPatientId == null) return;
-    emit(state.copyWith(isEditingSafeZone: event.isEditing));
+    if (!event.isEditing) {
+      emit(
+        state.copyWith(
+          isEditingSafeZone: false,
+          clearEditingSafeZone: true,
+        ),
+      );
+    } else {
+      emit(
+        state.copyWith(
+          isEditingSafeZone: true,
+          editingSafeZone: event.editingZone,
+          clearEditingSafeZone: event.editingZone == null,
+        ),
+      );
+    }
   }
 
   Future<void> _onSafeZoneSaved(
@@ -165,10 +181,13 @@ class TrackerMapBloc extends Bloc<TrackerMapEvent, TrackerMapState> {
     final patient = state.selectedPatient;
     if (patient == null) return;
 
-    final existingZone = patient.safeZone;
+    final editing = state.editingSafeZone;
+    final zoneName =
+        event.name.trim().isEmpty ? 'Güvenli Bölge' : event.name.trim();
+
     final newSafeZone = SafeZoneEntity(
-      id: existingZone?.id,
-      name: existingZone?.name ?? '${patient.name} Güvenli Bölgesi',
+      id: editing?.id,
+      name: zoneName,
       center: event.center,
       radiusInMeters: event.radiusInMeters,
       isActive: true,
@@ -181,7 +200,12 @@ class TrackerMapBloc extends Bloc<TrackerMapEvent, TrackerMapState> {
 
     result.fold(
       (failure) => emit(state.copyWith(actionErrorMessage: failure.message)),
-      (_) => emit(state.copyWith(isEditingSafeZone: false)),
+      (_) => emit(
+        state.copyWith(
+          isEditingSafeZone: false,
+          clearEditingSafeZone: true,
+        ),
+      ),
     );
   }
 
@@ -190,12 +214,21 @@ class TrackerMapBloc extends Bloc<TrackerMapEvent, TrackerMapState> {
     Emitter<TrackerMapState> emit,
   ) async {
     final patientId = state.selectedPatientId;
-    if (patientId == null) return;
+    final zoneId = event.safeZoneId ?? state.editingSafeZone?.id;
+    if (patientId == null || zoneId == null || zoneId.isEmpty) return;
 
-    final result = await _removeSafeZoneUseCase(patientId);
+    final result = await _removeSafeZoneUseCase(
+      patientId: patientId,
+      safeZoneId: zoneId,
+    );
     result.fold(
       (failure) => emit(state.copyWith(actionErrorMessage: failure.message)),
-      (_) => emit(state.copyWith(isEditingSafeZone: false)),
+      (_) => emit(
+        state.copyWith(
+          isEditingSafeZone: false,
+          clearEditingSafeZone: true,
+        ),
+      ),
     );
   }
 

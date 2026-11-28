@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../domain/entities/patient_entity.dart';
+import '../../domain/entities/safe_zone_entity.dart';
 
 enum TrackerMapStatus { initial, loading, loaded, failure }
 
@@ -10,6 +11,7 @@ class TrackerMapState extends Equatable {
   final List<PatientEntity> patients;
   final String? selectedPatientId;
   final bool isEditingSafeZone;
+  final SafeZoneEntity? editingSafeZone;
   final LatLng? followerLocation;
   final String? errorMessage;
   final String? actionErrorMessage;
@@ -19,6 +21,7 @@ class TrackerMapState extends Equatable {
     this.patients = const [],
     this.selectedPatientId,
     this.isEditingSafeZone = false,
+    this.editingSafeZone,
     this.followerLocation,
     this.errorMessage,
     this.actionErrorMessage,
@@ -40,6 +43,8 @@ class TrackerMapState extends Equatable {
     String? selectedPatientId,
     bool clearSelectedPatient = false,
     bool? isEditingSafeZone,
+    SafeZoneEntity? editingSafeZone,
+    bool clearEditingSafeZone = false,
     LatLng? followerLocation,
     String? errorMessage,
     bool clearErrorMessage = false,
@@ -53,6 +58,9 @@ class TrackerMapState extends Equatable {
           ? null
           : (selectedPatientId ?? this.selectedPatientId),
       isEditingSafeZone: isEditingSafeZone ?? this.isEditingSafeZone,
+      editingSafeZone: clearEditingSafeZone
+          ? null
+          : (editingSafeZone ?? this.editingSafeZone),
       followerLocation: followerLocation ?? this.followerLocation,
       errorMessage: clearErrorMessage
           ? null
@@ -69,6 +77,7 @@ class TrackerMapState extends Equatable {
         patients,
         selectedPatientId,
         isEditingSafeZone,
+        editingSafeZone,
         followerLocation,
         errorMessage,
         actionErrorMessage,

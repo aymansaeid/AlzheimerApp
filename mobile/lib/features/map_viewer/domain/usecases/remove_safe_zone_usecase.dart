@@ -9,6 +9,12 @@ class RemoveSafeZoneUseCase {
   final ITrackingRepository _repository;
   RemoveSafeZoneUseCase(this._repository);
 
-  Future<Either<Failure, void>> call(String patientId) =>
-      _repository.removeSafeZone(patientId);
+  Future<Either<Failure, void>> call({
+    required String patientId,
+    required String safeZoneId,
+  }) =>
+      _repository.removeSafeZone(
+        patientId: patientId,
+        safeZoneId: safeZoneId,
+      );
 }
