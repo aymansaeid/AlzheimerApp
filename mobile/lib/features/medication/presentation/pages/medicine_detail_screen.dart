@@ -7,6 +7,7 @@ import 'package:mobile/features/medication/domain/entities/medicine.dart';
 import 'package:mobile/features/medication/presentation/bloc/medicine_event.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../../caregiver/presentation/bloc/dashboard_bloc.dart';
 import '../../domain/entities/medicine_log.dart';
 import '../bloc/medicine_bloc.dart';
 import '../widgets/medicine_info_chip.dart';
@@ -36,8 +37,20 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
       bloc: getIt<AuthBloc>(),
       builder: (context, authState) {
         bool isPatient = false;
+        bool isCaregiver = false;
         if (authState is AuthAuthenticated) {
           isPatient = authState.user.role == 'patient';
+          isCaregiver = authState.user.role == 'caregiver';
+        }
+
+        bool isPrimaryAdmin = false;
+        if (isCaregiver) {
+          try {
+            final dashboardState = context.watch<DashboardBloc>().state;
+            isPrimaryAdmin =
+                dashboardState is DashboardLoaded &&
+                dashboardState.isCurrentPatientAdmin;
+          } catch (_) {}
         }
 
         return Scaffold(
@@ -269,15 +282,17 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                     ),
 
                     // Bottom Action Buttons
-                    Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: MedicineDetailActionButtons(
-                        medication: medication,
-                        isPatient: isPatient,
-                        isFuture: isFuture,
-                        selectedDate: selectedDate,
+                    if (isPatient || isPrimaryAdmin)
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: MedicineDetailActionButtons(
+                          medication: medication,
+                          isPatient: isPatient,
+                          isPrimaryAdmin: isPrimaryAdmin,
+                          isFuture: isFuture,
+                          selectedDate: selectedDate,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               );

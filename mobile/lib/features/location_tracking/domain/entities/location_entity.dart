@@ -1,18 +1,26 @@
 import 'package:equatable/equatable.dart';
 
 class LocationEntity extends Equatable {
-  final String patientId;
   final double latitude;
   final double longitude;
   final int accuracyMeters;
+  final int? batteryLevel;
+  final bool? isCharging;
 
   const LocationEntity({
-    required this.patientId,
     required this.latitude,
     required this.longitude,
     this.accuracyMeters = 0,
+    this.batteryLevel,
+    this.isCharging,
   });
 
   @override
-  List<Object?> get props => [patientId, latitude, longitude, accuracyMeters];
+  List<Object?> get props => [
+        latitude,
+        longitude,
+        accuracyMeters,
+        batteryLevel,
+        isCharging,
+      ];
 }

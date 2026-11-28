@@ -122,9 +122,12 @@ class _AudioPostCardState extends State<AudioPostCard> {
     final maxMs = totalMs > 0 ? totalMs : 1.0;
     final createdAt =
         DateTime.tryParse(widget.memory.createdAt) ?? DateTime.now();
-    final displayName = widget.memory.relationship.isNotEmpty
-        ? widget.memory.relationship
-        : 'Yakını';
+    final displayName = (widget.memory.uploaderName != null &&
+            widget.memory.uploaderName!.isNotEmpty)
+        ? widget.memory.uploaderName!
+        : (widget.memory.relationship.isNotEmpty
+            ? widget.memory.relationship
+            : 'Yakını');
     final hasTitle =
         widget.memory.title != null && widget.memory.title!.trim().isNotEmpty;
     final hasDescription = widget.memory.description != null &&
@@ -147,6 +150,7 @@ class _AudioPostCardState extends State<AudioPostCard> {
           children: [
             PostHeaderWidget(
               userName: displayName,
+              userAvatarUrl: widget.memory.uploaderProfilePhotoUrl,
               createdAt: createdAt,
               canDelete: widget.canDelete,
               onDelete: widget.onDelete,

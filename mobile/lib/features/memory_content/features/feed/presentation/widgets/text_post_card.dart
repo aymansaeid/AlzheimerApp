@@ -48,17 +48,18 @@ class TextPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = memory.fileUrl.isNotEmpty &&
+    final hasImage =
+        memory.fileUrl.isNotEmpty &&
         (memory.contentType == MemoryContentType.photo ||
             memory.contentType == MemoryContentType.identityCard);
     final hasTitle = memory.title != null && memory.title!.trim().isNotEmpty;
     final hasContent =
         memory.description != null && memory.description!.trim().isNotEmpty;
-    final createdAt =
-        DateTime.tryParse(memory.createdAt) ?? DateTime.now();
-    final displayName = memory.relationship.isNotEmpty
-        ? memory.relationship
-        : 'Yakını';
+    final createdAt = DateTime.tryParse(memory.createdAt) ?? DateTime.now();
+    final displayName =
+        (memory.uploaderName != null && memory.uploaderName!.isNotEmpty)
+        ? memory.uploaderName!
+        : (memory.relationship.isNotEmpty ? memory.relationship : 'Yakını');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -70,6 +71,7 @@ class TextPostCard extends StatelessWidget {
         children: [
           PostHeaderWidget(
             userName: displayName,
+            userAvatarUrl: memory.uploaderProfilePhotoUrl,
             createdAt: createdAt,
             canDelete: canDelete,
             onDelete: onDelete,

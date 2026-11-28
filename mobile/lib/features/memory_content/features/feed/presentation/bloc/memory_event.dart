@@ -29,15 +29,39 @@ class RefreshMemories extends MemoryEvent {
   final String? patientId;
   final String? currentUserId;
   final bool? isPrimaryAdmin;
+  final bool silent;
 
   const RefreshMemories({
     this.patientId,
     this.currentUserId,
     this.isPrimaryAdmin,
+    this.silent = false,
   });
 
   @override
-  List<Object?> get props => [patientId, currentUserId, isPrimaryAdmin];
+  List<Object?> get props => [patientId, currentUserId, isPrimaryAdmin, silent];
+}
+
+class RefreshMemoriesIfStale extends MemoryEvent {
+  final String patientId;
+  final String currentUserId;
+  final bool isPrimaryAdmin;
+  final Duration staleDuration;
+
+  const RefreshMemoriesIfStale({
+    required this.patientId,
+    required this.currentUserId,
+    required this.isPrimaryAdmin,
+    this.staleDuration = const Duration(minutes: 1),
+  });
+
+  @override
+  List<Object?> get props => [
+    patientId,
+    currentUserId,
+    isPrimaryAdmin,
+    staleDuration,
+  ];
 }
 
 class DeleteMemory extends MemoryEvent {

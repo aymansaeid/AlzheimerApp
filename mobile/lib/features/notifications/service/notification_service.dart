@@ -137,10 +137,13 @@ class NotificationService {
     final type = message.data['type'];
 
     if (type == 'SAFEZONE_EXIT') {
-      final patientId = message.data['patientId'];
+      final patientId = message.data['patientId']?.toString();
       debugPrint('SAFEZONE_EXIT for patient: $patientId');
-      // Harita takip rotasına yönlendir
-      // getIt<AppRouter>().push('/patient-tracking/$patientId');
+      if (patientId != null && patientId.isNotEmpty) {
+        appRouter.go('/caregiver/map?patientId=$patientId');
+      } else {
+        appRouter.go('/caregiver/map');
+      }
     } else if (type == 'MEDICATION_REMINDER') {
       appRouter.go('/patient/medications');
     } else if (type == 'MEDICATION_MISSED' || type == 'MEDICATION_DELAYED') {

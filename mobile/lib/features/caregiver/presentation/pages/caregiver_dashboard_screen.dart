@@ -9,6 +9,9 @@ import '../../domain/entities/followed_patient.dart';
 import '../../../medication/presentation/bloc/medicine_bloc.dart';
 import '../../../medication/presentation/bloc/medicine_event.dart';
 import '../bloc/dashboard_bloc.dart';
+import '../../../map_viewer/presentation/bloc/tracker_map_bloc.dart';
+import '../../../map_viewer/presentation/bloc/tracker_map_event.dart';
+import '../../../map_viewer/presentation/bloc/tracker_map_state.dart';
 import '../widgets/patient_selector.dart';
 import '../widgets/safety_status_card.dart';
 
@@ -135,17 +138,51 @@ class _CaregiverDashboardScreenState extends State<CaregiverDashboardScreen>
                       _buildNoPatientsFallback(theme)
                     else if (state is DashboardLoaded) ...[
                       // Safety Status Widget
-                      SafetyStatusCard(
-                        patientName: () {
+                      Builder(
+                        builder: (context) {
                           final targetId =
                               activePatientId ?? state.summary.patientId;
+                          String resolvedName = state.summary.patientName ?? '';
                           for (final p in state.patients) {
-                            if (p.patientId == targetId) return p.fullName;
+                            if (p.patientId == targetId) {
+                              resolvedName = p.fullName;
+                              break;
+                            }
                           }
-                          return state.patients.isNotEmpty
-                              ? state.patients.first.fullName
-                              : '';
-                        }(),
+                          if (resolvedName.isEmpty &&
+                              state.patients.isNotEmpty) {
+                            resolvedName = state.patients.first.fullName;
+                          }
+
+                          return SafetyStatusCard(
+                            patientName: resolvedName,
+                            isPatientSafe: state.summary.isPatientSafe,
+                            hasLocationData:
+                                state.summary.lastLatitude != null &&
+                                state.summary.lastLongitude != null,
+                            batteryLevel: state.summary.batteryLevel,
+                            isCharging: state.summary.isCharging,
+                            onTap: () {
+                              final mapBloc = context.read<TrackerMapBloc>();
+                              if (mapBloc.state.status ==
+                                  TrackerMapStatus.initial) {
+                                mapBloc.add(
+                                  TrackerMapStarted(initialPatientId: targetId),
+                                );
+                              } else {
+                                mapBloc.add(
+                                  TrackerMapRefreshRequested(
+                                    selectPatientId: targetId,
+                                  ),
+                                );
+                              }
+                              context.goNamed(
+                                'caregiver_map',
+                                queryParameters: {'patientId': targetId},
+                              );
+                            },
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
                       // Bugünkü İlaçlar başlığı

@@ -10,6 +10,8 @@ class DashboardSummaryModel extends DashboardSummary {
     super.lastLatitude,
     super.lastLongitude,
     super.isCurrentlyOutside,
+    super.batteryLevel,
+    super.isCharging,
   });
 
   factory DashboardSummaryModel.fromJson(Map<String, dynamic> json) {
@@ -18,10 +20,18 @@ class DashboardSummaryModel extends DashboardSummary {
       patientName: json['patientName'] ?? json['patient_name'],
       medsTakenToday: json['medsTakenToday'] ?? json['meds_taken_today'] ?? 0,
       totalMedsToday: json['totalMedsToday'] ?? json['total_meds_today'] ?? 0,
-      unreadAlertCount: json['unreadAlertCount'] ?? json['unread_alert_count'] ?? 0,
-      lastLatitude: json['lastLatitude'] != null ? (json['lastLatitude'] as num).toDouble() : null,
-      lastLongitude: json['lastLongitude'] != null ? (json['lastLongitude'] as num).toDouble() : null,
-      isCurrentlyOutside: json['isCurrentlyOutside'] ?? json['is_currently_outside'],
+      unreadAlertCount:
+          json['unreadAlertCount'] ?? json['unread_alert_count'] ?? 0,
+      lastLatitude: json['lastLatitude'] != null
+          ? (json['lastLatitude'] as num).toDouble()
+          : null,
+      lastLongitude: json['lastLongitude'] != null
+          ? (json['lastLongitude'] as num).toDouble()
+          : null,
+      isCurrentlyOutside:
+          json['isCurrentlyOutside'] ?? json['is_currently_outside'],
+      batteryLevel: (json['batteryLevel'] as num?)?.toInt(),
+      isCharging: json['isCharging'] as bool?,
     );
   }
 
@@ -35,7 +45,8 @@ class DashboardSummaryModel extends DashboardSummary {
       'lastLatitude': lastLatitude,
       'lastLongitude': lastLongitude,
       'isCurrentlyOutside': isCurrentlyOutside,
+      'batteryLevel': batteryLevel,
+      'isCharging': isCharging,
     };
   }
 }
-

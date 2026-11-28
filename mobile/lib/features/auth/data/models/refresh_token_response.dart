@@ -47,7 +47,7 @@ class RefreshTokenResponse {
 Future<void> syncRefreshedSession({
   required RefreshTokenResponse response,
   required FlutterSecureStorage secureStorage,
-  required AuthBloc authBloc,
+  AuthBloc? authBloc,
 }) async {
   final token = response.token;
   if (token != null && token.isNotEmpty) {
@@ -70,6 +70,6 @@ Future<void> syncRefreshedSession({
       await secureStorage.delete(key: 'user_avatar_url');
     }
 
-    authBloc.add(AuthUserRefreshed(user));
+    authBloc?.add(AuthUserRefreshed(user));
   }
 }

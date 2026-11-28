@@ -27,6 +27,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
   // Track the target patient ID currently being loaded
   String? _currentlyLoadingPatientId;
+  DateTime? _lastFetchedAt;
   StreamSubscription? _networkSubscription;
   StreamSubscription? _adminTransferredSubscription;
   StreamSubscription? _inviteSubscription;
@@ -43,6 +44,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     required this.notificationService,
   }) : super(DashboardInitial()) {
     on<LoadDashboard>(_onLoadDashboard);
+    on<RefreshDashboardIfStale>(_onRefreshDashboardIfStale);
     on<SelectPatient>(_onSelectPatient);
     on<ResetDashboard>(_onResetDashboard);
     on<RefreshFollowedPatients>(_onRefreshFollowedPatients);
@@ -91,7 +93,30 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
   void _onResetDashboard(ResetDashboard event, Emitter<DashboardState> emit) {
     _currentlyLoadingPatientId = null;
+    _lastFetchedAt = null;
     emit(DashboardInitial());
+  }
+
+  void _onRefreshDashboardIfStale(
+    RefreshDashboardIfStale event,
+    Emitter<DashboardState> emit,
+  ) {
+    if (state is DashboardLoading) return;
+
+    if (state is! DashboardLoaded) {
+      if (state is DashboardInitial || state is DashboardError) {
+        add(const LoadDashboard(null));
+      }
+      return;
+    }
+
+    if (_lastFetchedAt != null &&
+        DateTime.now().difference(_lastFetchedAt!) < event.staleDuration) {
+      return;
+    }
+
+    final currentState = state as DashboardLoaded;
+    add(LoadDashboard(currentState.summary.patientId, silent: true));
   }
 
   Future<void> _onRefreshFollowedPatients(
@@ -175,6 +200,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     final String? localPatientId = event.patientId;
     _currentlyLoadingPatientId = localPatientId;
 
+    final bool isSilent = event.silent && state is DashboardLoaded;
+
     // Dynamically extract already loaded patients list from the current state
     List<FollowedPatient>? existingPatients;
     if (state is DashboardLoaded) {
@@ -185,12 +212,14 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       existingPatients = (state as DashboardError).patients;
     }
 
-    emit(
-      DashboardLoading(
-        patients: existingPatients,
-        loadingPatientId: localPatientId,
-      ),
-    );
+    if (!isSilent) {
+      emit(
+        DashboardLoading(
+          patients: existingPatients,
+          loadingPatientId: localPatientId,
+        ),
+      );
+    }
 
     // 1. Fetch followed patients list dynamically
     final patientsResult = await getFollowedPatients();
@@ -200,7 +229,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
     await patientsResult.fold(
       (failure) async {
-        emit(DashboardError(failure.message, patients: existingPatients));
+        if (!isSilent) {
+          emit(DashboardError(failure.message, patients: existingPatients));
+        }
       },
       (patients) async {
         // 2. If caregiver has no followed patients, yield fallback state
@@ -237,8 +268,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         if (targetPatientId != _currentlyLoadingPatientId) return;
 
         summaryResult.fold(
-          (failure) =>
-              emit(DashboardError(failure.message, patients: patients)),
+          (failure) {
+            if (!isSilent) {
+              emit(DashboardError(failure.message, patients: patients));
+            }
+          },
           (summary) {
             final currentPatient = patients.cast<FollowedPatient?>().firstWhere(
               (p) => p?.patientId == targetPatientId,
@@ -246,6 +280,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             );
 
             final isAdmin = currentPatient?.isPrimaryAdmin ?? false;
+            _lastFetchedAt = DateTime.now();
 
             // Hesaplanan değer, temiz bir şekilde paketlenip State'e verilir.
             emit(
@@ -311,6 +346,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         );
 
         final isAdmin = currentPatient?.isPrimaryAdmin ?? false;
+        _lastFetchedAt = DateTime.now();
 
         emit(
           DashboardLoaded(

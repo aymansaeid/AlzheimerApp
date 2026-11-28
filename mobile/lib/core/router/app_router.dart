@@ -28,6 +28,9 @@ import '../di/injection.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/care_network/presentation/bloc/care_network_bloc.dart';
+import '../../features/map_viewer/presentation/bloc/tracker_map_bloc.dart';
+import '../../features/map_viewer/presentation/pages/tracker_map_page.dart';
+import '../../features/map_viewer/presentation/widgets/patient_location_guard.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
@@ -115,7 +118,9 @@ final appRouter = GoRouter(
           BlocProvider(create: (_) => getIt<MedicineBloc>()),
           BlocProvider(create: (_) => getIt<MemoryBloc>()),
         ],
-        child: PatientLayout(navigationShell: navigationShell),
+        child: PatientLocationGuard(
+          child: PatientLayout(navigationShell: navigationShell),
+        ),
       ),
       branches: [
         StatefulShellBranch(
@@ -205,6 +210,10 @@ final appRouter = GoRouter(
               create: (_) =>
                   getIt<DashboardBloc>()..add(const LoadDashboard(null)),
             ),
+            BlocProvider(
+              key: const ValueKey('trackerMapBloc'),
+              create: (_) => getIt<TrackerMapBloc>(),
+            ),
             BlocProvider(create: (_) => getIt<CareNetworkBloc>()),
           ],
           child: CaregiverLayout(navigationShell: navigationShell),
@@ -258,6 +267,19 @@ final appRouter = GoRouter(
             ),
           ],
         ),
+        // MAP SCREEN
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/caregiver/map',
+              name: 'caregiver_map',
+              builder: (context, state) {
+                final patientId = state.uri.queryParameters['patientId'];
+                return TrackerMapPage(initialPatientId: patientId);
+              },
+            ),
+          ],
+        ),
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -290,24 +312,6 @@ final appRouter = GoRouter(
           ],
         ),
 
-        // MAP SCREEN
-        // StatefulShellBranch(
-        //   routes: [
-        //     GoRoute(
-        //       path: '/caregiver/alerts',
-        //       name: 'caregiver_alerts',
-        //       builder: (context, state) => GeofenceAlertScreen(
-        //         patientName: 'Ahmet Bey',
-        //         locationAddress: 'Kadıköy',
-        //         distanceMeters: 50,
-        //         timeOutside: '5 dk',
-        //         onDismissAlert: () {},
-        //         onCallPatient: () {},
-        //         onOpenLiveMap: () {},
-        //       ),
-        //     ),
-        //   ],
-        // ),
         StatefulShellBranch(
           routes: [
             GoRoute(

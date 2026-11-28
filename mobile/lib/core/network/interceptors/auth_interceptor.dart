@@ -66,7 +66,7 @@ class AuthInterceptor extends Interceptor {
           options.headers['Authorization'] = 'Bearer $newToken';
 
           // Aynı Dio ile isteği yeniden yürüt (retry)
-          final dio = getIt<Dio>();
+          final dio = _resolveDio();
           final response = await dio.fetch(options);
           return handler.resolve(response);
         } else {
@@ -83,14 +83,19 @@ class AuthInterceptor extends Interceptor {
     return handler.next(err);
   }
 
+  Dio _resolveDio() => getIt.isRegistered<Dio>() ? getIt<Dio>() : bgGetIt<Dio>();
+
+  AuthBloc? _resolveAuthBloc() =>
+      getIt.isRegistered<AuthBloc>() ? getIt<AuthBloc>() : null;
+
   Future<String?> _performRefreshToken() async {
     final currentToken = await _secureStorage.read(key: _accessTokenKey);
     if (currentToken == null || currentToken.isEmpty) {
       throw Exception('No token found');
     }
 
-    // getIt içindeki mevcut Dio'yu çağırıyoruz
-    final dio = getIt<Dio>();
+    // Aktif isolate'teki mevcut Dio'yu çağırıyoruz
+    final dio = _resolveDio();
 
     final response = await dio.post(
       _refreshPath,
@@ -109,7 +114,7 @@ class AuthInterceptor extends Interceptor {
         await syncRefreshedSession(
           response: parsed,
           secureStorage: _secureStorage,
-          authBloc: getIt<AuthBloc>(),
+          authBloc: _resolveAuthBloc(),
         );
         return parsed.token;
       }
@@ -120,6 +125,6 @@ class AuthInterceptor extends Interceptor {
 
   Future<void> _handleLogout() async {
     await _secureStorage.deleteAll();
-    getIt<AuthBloc>().add(AuthLogoutRequested());
+    _resolveAuthBloc()?.add(AuthLogoutRequested());
   }
 }

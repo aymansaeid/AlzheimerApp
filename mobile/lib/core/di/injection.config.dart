@@ -10,8 +10,11 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 
+import 'package:battery_plus/battery_plus.dart' as _i117;
 import 'package:dio/dio.dart' as _i361;
 import 'package:firebase_storage/firebase_storage.dart' as _i457;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'
+    as _i163;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:image_cropper/image_cropper.dart' as _i184;
@@ -63,10 +66,34 @@ import '../../features/location_tracking/data/datasources/location_remote_dataso
     as _i60;
 import '../../features/location_tracking/data/repositories/location_repository.dart'
     as _i856;
+import '../../features/location_tracking/data/services/location_permission_service.dart'
+    as _i960;
 import '../../features/location_tracking/domain/repositories/location_repository.dart'
     as _i326;
 import '../../features/location_tracking/domain/usecases/log_location_usecase.dart'
     as _i902;
+import '../../features/map_viewer/data/datasources/location_hub_data_source.dart'
+    as _i168;
+import '../../features/map_viewer/data/datasources/tracking_remote_data_source.dart'
+    as _i669;
+import '../../features/map_viewer/data/repositories/tracking_repository_impl.dart'
+    as _i298;
+import '../../features/map_viewer/domain/repositories/i_tracking_repository.dart'
+    as _i128;
+import '../../features/map_viewer/domain/usecases/disconnect_tracking_usecase.dart'
+    as _i570;
+import '../../features/map_viewer/domain/usecases/get_follower_location_stream_usecase.dart'
+    as _i212;
+import '../../features/map_viewer/domain/usecases/load_tracked_patients_usecase.dart'
+    as _i701;
+import '../../features/map_viewer/domain/usecases/remove_safe_zone_usecase.dart'
+    as _i651;
+import '../../features/map_viewer/domain/usecases/set_safe_zone_usecase.dart'
+    as _i61;
+import '../../features/map_viewer/domain/usecases/watch_tracked_patients_usecase.dart'
+    as _i269;
+import '../../features/map_viewer/presentation/bloc/tracker_map_bloc.dart'
+    as _i87;
 import '../../features/medication/data/datasources/medicine_log_remote_data_source.dart'
     as _i640;
 import '../../features/medication/data/datasources/medicine_remote_data_source.dart'
@@ -80,7 +107,7 @@ import '../../features/medication/domain/repositories/medicine_log_repository.da
 import '../../features/medication/domain/repositories/medicine_repository.dart'
     as _i185;
 import '../../features/medication/domain/usecases/add_medicine_usecase.dart'
-    as _i670;
+    as _i671;
 import '../../features/medication/domain/usecases/delete_medicine_usecase.dart'
     as _i886;
 import '../../features/medication/domain/usecases/get_daily_logs_usecase.dart'
@@ -90,7 +117,7 @@ import '../../features/medication/domain/usecases/get_medicine_by_id_usecase.dar
 import '../../features/medication/domain/usecases/get_medicines_usecase.dart'
     as _i660;
 import '../../features/medication/domain/usecases/mark_medicine_as_taken_usecase.dart'
-    as _i669;
+    as _i670;
 import '../../features/medication/domain/usecases/update_medicine_usecase.dart'
     as _i310;
 import '../../features/medication/presentation/bloc/medicine_bloc.dart'
@@ -210,8 +237,15 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i501.AudioPlayer>(() => registerModule.audioPlayer);
     gh.lazySingleton<_i183.ImagePicker>(() => registerModule.imagePicker);
     gh.lazySingleton<_i184.ImageCropper>(() => registerModule.imageCropper);
+    gh.lazySingleton<_i163.FlutterLocalNotificationsPlugin>(
+      () => registerModule.localNotificationsPlugin,
+    );
+    gh.lazySingleton<_i117.Battery>(() => registerModule.battery);
     gh.lazySingleton<_i750.FeedAudioCoordinator>(
       () => _i750.FeedAudioCoordinator(),
+    );
+    gh.lazySingleton<_i960.LocationPermissionService>(
+      () => _i960.LocationPermissionService(),
     );
     gh.lazySingleton<_i847.ProfileRemoteDataSource>(
       () => _i847.ProfileRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -224,6 +258,9 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i481.NotificationLocalDataSource>(
       () => _i481.NotificationLocalDataSourceImpl(),
+    );
+    gh.lazySingleton<_i669.TrackingRemoteDataSource>(
+      () => _i669.TrackingRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
     gh.lazySingleton<_i237.FollowerRemoteDataSource>(
       () => _i237.FollowerRemoteDataSourceImpl(gh<_i361.Dio>()),
@@ -278,6 +315,9 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i368.DashboardRemoteDataSource>(),
         gh<_i558.FlutterSecureStorage>(),
       ),
+    );
+    gh.lazySingleton<_i168.LocationHubDataSource>(
+      () => _i168.LocationHubDataSourceImpl(gh<_i558.FlutterSecureStorage>()),
     );
     gh.lazySingleton<_i1068.NotificationRepository>(
       () => _i362.NotificationRepositoryImpl(
@@ -387,6 +427,13 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i558.FlutterSecureStorage>(),
       ),
     );
+    gh.lazySingleton<_i128.ITrackingRepository>(
+      () => _i298.TrackingRepositoryImpl(
+        gh<_i669.TrackingRemoteDataSource>(),
+        gh<_i168.LocationHubDataSource>(),
+        gh<_i960.LocationPermissionService>(),
+      ),
+    );
     gh.lazySingleton<_i188.LoginUseCase>(
       () => _i188.LoginUseCase(gh<_i787.AuthRepository>()),
     );
@@ -410,6 +457,26 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i308.DeleteMemoryUseCase>(),
         gh<_i506.CreateMemoryUseCase>(),
       ),
+    );
+    gh.factory<_i570.DisconnectTrackingUseCase>(
+      () => _i570.DisconnectTrackingUseCase(gh<_i128.ITrackingRepository>()),
+    );
+    gh.factory<_i212.GetFollowerLocationStreamUseCase>(
+      () => _i212.GetFollowerLocationStreamUseCase(
+        gh<_i128.ITrackingRepository>(),
+      ),
+    );
+    gh.factory<_i701.LoadTrackedPatientsUseCase>(
+      () => _i701.LoadTrackedPatientsUseCase(gh<_i128.ITrackingRepository>()),
+    );
+    gh.factory<_i651.RemoveSafeZoneUseCase>(
+      () => _i651.RemoveSafeZoneUseCase(gh<_i128.ITrackingRepository>()),
+    );
+    gh.factory<_i61.SetSafeZoneUseCase>(
+      () => _i61.SetSafeZoneUseCase(gh<_i128.ITrackingRepository>()),
+    );
+    gh.factory<_i269.WatchTrackedPatientsUseCase>(
+      () => _i269.WatchTrackedPatientsUseCase(gh<_i128.ITrackingRepository>()),
     );
     gh.lazySingleton<_i647.GetPatientDashboardUseCase>(
       () => _i647.GetPatientDashboardUseCase(gh<_i233.PatientRepository>()),
@@ -439,9 +506,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i788.GetDailyLogsUseCase>(
       () => _i788.GetDailyLogsUseCase(gh<_i1048.MedicineLogRepository>()),
     );
-    gh.lazySingleton<_i669.MarkMedicineAsTakenUseCase>(
+    gh.lazySingleton<_i670.MarkMedicineAsTakenUseCase>(
       () =>
-          _i669.MarkMedicineAsTakenUseCase(gh<_i1048.MedicineLogRepository>()),
+          _i670.MarkMedicineAsTakenUseCase(gh<_i1048.MedicineLogRepository>()),
     );
     gh.factory<_i86.FeedBloc>(
       () =>
@@ -491,8 +558,8 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i411.CheckHasAdminUseCase>(),
       ),
     );
-    gh.lazySingleton<_i670.AddMedicineUseCase>(
-      () => _i670.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
+    gh.lazySingleton<_i671.AddMedicineUseCase>(
+      () => _i671.AddMedicineUseCase(gh<_i185.MedicineRepository>()),
     );
     gh.lazySingleton<_i886.DeleteMedicineUseCase>(
       () => _i886.DeleteMedicineUseCase(gh<_i185.MedicineRepository>()),
@@ -511,16 +578,26 @@ extension GetItInjectableX on _i174.GetIt {
         getDailyLogsUseCase: gh<_i788.GetDailyLogsUseCase>(),
         getMedicinesUseCase: gh<_i660.GetMedicinesUseCase>(),
         getMedicineByIdUseCase: gh<_i947.GetMedicineByIdUseCase>(),
-        addMedicine: gh<_i670.AddMedicineUseCase>(),
+        addMedicine: gh<_i671.AddMedicineUseCase>(),
         updateMedicine: gh<_i310.UpdateMedicineUseCase>(),
         deleteMedicine: gh<_i886.DeleteMedicineUseCase>(),
-        markMedicineAsTaken: gh<_i669.MarkMedicineAsTakenUseCase>(),
+        markMedicineAsTaken: gh<_i670.MarkMedicineAsTakenUseCase>(),
       ),
     );
     gh.factory<_i490.PatientDashboardBloc>(
       () => _i490.PatientDashboardBloc(
         gh<_i647.GetPatientDashboardUseCase>(),
-        gh<_i669.MarkMedicineAsTakenUseCase>(),
+        gh<_i670.MarkMedicineAsTakenUseCase>(),
+      ),
+    );
+    gh.factory<_i87.TrackerMapBloc>(
+      () => _i87.TrackerMapBloc(
+        gh<_i269.WatchTrackedPatientsUseCase>(),
+        gh<_i701.LoadTrackedPatientsUseCase>(),
+        gh<_i570.DisconnectTrackingUseCase>(),
+        gh<_i61.SetSafeZoneUseCase>(),
+        gh<_i651.RemoveSafeZoneUseCase>(),
+        gh<_i212.GetFollowerLocationStreamUseCase>(),
       ),
     );
     gh.factory<_i1069.PatientSetupBloc>(

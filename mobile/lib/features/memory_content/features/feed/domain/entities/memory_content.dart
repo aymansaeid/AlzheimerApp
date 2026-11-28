@@ -11,6 +11,8 @@ class MemoryContent {
   final bool isActive;
   final String createdAt;
   final String uploaderId;
+  final String? uploaderName;
+  final String? uploaderProfilePhotoUrl;
 
   MemoryContent({
     required this.id,
@@ -23,5 +25,7 @@ class MemoryContent {
     required this.isActive,
     required this.createdAt,
     required this.uploaderId,
+    this.uploaderName,
+    this.uploaderProfilePhotoUrl,
   });
 }
